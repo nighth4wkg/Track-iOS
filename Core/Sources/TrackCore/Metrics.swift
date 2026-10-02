@@ -13,7 +13,7 @@ public enum Calendars {
 }
 
 func date(_ millis: Int) -> Date { Date(timeIntervalSince1970: Double(millis) / 1000) }
-func millis(_ date: Date) -> Int { Int((date.timeIntervalSince1970 * 1000).rounded()) }
+public func millis(_ date: Date) -> Int { Int((date.timeIntervalSince1970 * 1000).rounded()) }
 
 /// The day a time falls on, as "2026-10-02".
 public func dayKey(_ time: Int, calendar: Calendar = Calendars.local) -> String {
