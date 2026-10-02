@@ -1,0 +1,3321 @@
+{
+ "version": 1,
+ "splits": [
+  {
+   "id": "full",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "full0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "fulls00",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls01",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls02",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "full1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "fulls10",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls11",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls12",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "full2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "fulls20",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls21",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls22",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "full3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "fulls30",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls31",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls32",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "full4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "fulls40",
+       "kg": 97.5,
+       "reps": 6,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls41",
+       "kg": 97.5,
+       "reps": 6,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "fulls42",
+       "kg": 97.5,
+       "reps": 6,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "upper",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "upper0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "uppers00",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers01",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers02",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "upper1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "uppers10",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers11",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers12",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "upper2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "uppers20",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers21",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers22",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "upper3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "uppers30",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers31",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "uppers32",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "sessions": [
+  {
+   "id": "x23",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x23e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x23s00",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true,
+       "side": "left"
+      },
+      {
+       "id": "x23s01",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x23s02",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x23e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x23s10",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x23s11",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x23s12",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x23e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x23s20",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x23s21",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x23s22",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x23e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x23s30",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x23s31",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x23s32",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1790935100000,
+   "finishedAt": 1790938800000,
+   "notes": "Felt strong"
+  },
+  {
+   "id": "x22",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x22e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x22s00",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s01",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s02",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x22e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x22s10",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s11",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s12",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x22e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x22s20",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s21",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s22",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x22e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x22s30",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s31",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s32",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x22e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x22s40",
+       "kg": 97.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s41",
+       "kg": 97.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x22s42",
+       "kg": 97.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1790762300000,
+   "finishedAt": 1790766000000
+  },
+  {
+   "id": "x21",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x21e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x21s00",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x21s01",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x21s02",
+       "kg": 77.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x21e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x21s10",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x21s11",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x21s12",
+       "kg": 72.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x21e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x21s20",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x21s21",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x21s22",
+       "kg": 52.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x21e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x21s30",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x21s31",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x21s32",
+       "kg": 42.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1790589500000,
+   "finishedAt": 1790593200000
+  },
+  {
+   "id": "x20",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x20e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x20s00",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x20s01",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x20s02",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x20e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x20s10",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x20s11",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x20s12",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x20e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x20s20",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x20s21",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x20s22",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x20e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x20s30",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x20s31",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x20s32",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1790330300000,
+   "finishedAt": 1790334000000
+  },
+  {
+   "id": "x19",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x19e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x19s00",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s01",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s02",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x19e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x19s10",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s11",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s12",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x19e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x19s20",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s21",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s22",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x19e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x19s30",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s31",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s32",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x19e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x19s40",
+       "kg": 95,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s41",
+       "kg": 95,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x19s42",
+       "kg": 95,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1790157500000,
+   "finishedAt": 1790161200000
+  },
+  {
+   "id": "x18",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x18e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x18s00",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x18s01",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x18s02",
+       "kg": 75,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x18e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x18s10",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x18s11",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x18s12",
+       "kg": 70,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x18e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x18s20",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x18s21",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x18s22",
+       "kg": 50,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x18e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x18s30",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x18s31",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x18s32",
+       "kg": 40,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1789984700000,
+   "finishedAt": 1789988400000
+  },
+  {
+   "id": "x17",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x17e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x17s00",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x17s01",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x17s02",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x17e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x17s10",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x17s11",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x17s12",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x17e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x17s20",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x17s21",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x17s22",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x17e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x17s30",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x17s31",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x17s32",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1789725500000,
+   "finishedAt": 1789729200000
+  },
+  {
+   "id": "x16",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x16e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x16s00",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s01",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s02",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x16e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x16s10",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s11",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s12",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x16e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x16s20",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s21",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s22",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x16e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x16s30",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s31",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s32",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x16e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x16s40",
+       "kg": 92.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s41",
+       "kg": 92.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x16s42",
+       "kg": 92.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1789552700000,
+   "finishedAt": 1789556400000
+  },
+  {
+   "id": "x15",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x15e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x15s00",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x15s01",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x15s02",
+       "kg": 72.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x15e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x15s10",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x15s11",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x15s12",
+       "kg": 67.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x15e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x15s20",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x15s21",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x15s22",
+       "kg": 47.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x15e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x15s30",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x15s31",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x15s32",
+       "kg": 37.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1789379900000,
+   "finishedAt": 1789383600000
+  },
+  {
+   "id": "x14",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x14e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x14s00",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x14s01",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x14s02",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x14e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x14s10",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x14s11",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x14s12",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x14e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x14s20",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x14s21",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x14s22",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x14e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x14s30",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x14s31",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x14s32",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1789120700000,
+   "finishedAt": 1789124400000
+  },
+  {
+   "id": "x13",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x13e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x13s00",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s01",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s02",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x13e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x13s10",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s11",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s12",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x13e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x13s20",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s21",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s22",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x13e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x13s30",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s31",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s32",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x13e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x13s40",
+       "kg": 90,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s41",
+       "kg": 90,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x13s42",
+       "kg": 90,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1788947900000,
+   "finishedAt": 1788951600000
+  },
+  {
+   "id": "x12",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x12e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x12s00",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x12s01",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x12s02",
+       "kg": 70,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x12e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x12s10",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x12s11",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x12s12",
+       "kg": 65,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x12e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x12s20",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x12s21",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x12s22",
+       "kg": 45,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x12e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x12s30",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x12s31",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x12s32",
+       "kg": 35,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1788775100000,
+   "finishedAt": 1788778800000
+  },
+  {
+   "id": "x11",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x11e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x11s00",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x11s01",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x11s02",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x11e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x11s10",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x11s11",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x11s12",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x11e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x11s20",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x11s21",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x11s22",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x11e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x11s30",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x11s31",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x11s32",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1788515900000,
+   "finishedAt": 1788519600000
+  },
+  {
+   "id": "x10",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x10e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x10s00",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s01",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s02",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x10e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x10s10",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s11",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s12",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x10e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x10s20",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s21",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s22",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x10e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x10s30",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s31",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s32",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x10e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x10s40",
+       "kg": 87.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s41",
+       "kg": 87.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x10s42",
+       "kg": 87.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1788343100000,
+   "finishedAt": 1788346800000
+  },
+  {
+   "id": "x9",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x9e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x9s00",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x9s01",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x9s02",
+       "kg": 67.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x9e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x9s10",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x9s11",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x9s12",
+       "kg": 62.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x9e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x9s20",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x9s21",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x9s22",
+       "kg": 42.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x9e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x9s30",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x9s31",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x9s32",
+       "kg": 32.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1788170300000,
+   "finishedAt": 1788174000000
+  },
+  {
+   "id": "x8",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x8e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x8s00",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x8s01",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x8s02",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x8e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x8s10",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x8s11",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x8s12",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x8e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x8s20",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x8s21",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x8s22",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x8e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x8s30",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x8s31",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x8s32",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1787911100000,
+   "finishedAt": 1787914800000
+  },
+  {
+   "id": "x7",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x7e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x7s00",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s01",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s02",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x7e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x7s10",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s11",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s12",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x7e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x7s20",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s21",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s22",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x7e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x7s30",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s31",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s32",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x7e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x7s40",
+       "kg": 85,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s41",
+       "kg": 85,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x7s42",
+       "kg": 85,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1787738300000,
+   "finishedAt": 1787742000000
+  },
+  {
+   "id": "x6",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x6e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x6s00",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x6s01",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x6s02",
+       "kg": 65,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x6e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x6s10",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x6s11",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x6s12",
+       "kg": 60,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x6e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x6s20",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x6s21",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x6s22",
+       "kg": 40,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x6e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x6s30",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x6s31",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x6s32",
+       "kg": 30,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1787565500000,
+   "finishedAt": 1787569200000
+  },
+  {
+   "id": "x5",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x5e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x5s00",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x5s01",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x5s02",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x5e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x5s10",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x5s11",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x5s12",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x5e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x5s20",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x5s21",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x5s22",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x5e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x5s30",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x5s31",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x5s32",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1787306300000,
+   "finishedAt": 1787310000000
+  },
+  {
+   "id": "x4",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x4e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x4s00",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s01",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s02",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x4e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x4s10",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s11",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s12",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x4e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x4s20",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s21",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s22",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x4e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x4s30",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s31",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s32",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x4e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x4s40",
+       "kg": 82.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s41",
+       "kg": 82.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x4s42",
+       "kg": 82.5,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1787133500000,
+   "finishedAt": 1787137200000
+  },
+  {
+   "id": "x3",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x3e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x3s00",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x3s01",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x3s02",
+       "kg": 62.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x3e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x3s10",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x3s11",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x3s12",
+       "kg": 57.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x3e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x3s20",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x3s21",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x3s22",
+       "kg": 37.5,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x3e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x3s30",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x3s31",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x3s32",
+       "kg": 27.5,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1786960700000,
+   "finishedAt": 1786964400000
+  },
+  {
+   "id": "x2",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x2e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x2s00",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x2s01",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x2s02",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x2e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x2s10",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x2s11",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x2s12",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x2e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x2s20",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x2s21",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x2s22",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x2e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x2s30",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x2s31",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x2s32",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1786701500000,
+   "finishedAt": 1786705200000
+  },
+  {
+   "id": "x1",
+   "name": "Full body",
+   "exercises": [
+    {
+     "id": "x1e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x1s00",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s01",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s02",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x1e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x1s10",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s11",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s12",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x1e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x1s20",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s21",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s22",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x1e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x1s30",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s31",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s32",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    },
+    {
+     "id": "x1e4",
+     "name": "Back squat",
+     "sets": [
+      {
+       "id": "x1s40",
+       "kg": 80,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s41",
+       "kg": 80,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x1s42",
+       "kg": 80,
+       "reps": 6,
+       "rir": 2,
+       "done": true
+      }
+     ]
+    }
+   ],
+   "splitId": "full",
+   "startedAt": 1786528700000,
+   "finishedAt": 1786532400000
+  },
+  {
+   "id": "x0",
+   "name": "Upper",
+   "exercises": [
+    {
+     "id": "x0e0",
+     "name": "Bench Press",
+     "sets": [
+      {
+       "id": "x0s00",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x0s01",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": true
+      },
+      {
+       "id": "x0s02",
+       "kg": 60,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x0e1",
+     "name": "Lat pulldown",
+     "sets": [
+      {
+       "id": "x0s10",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x0s11",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x0s12",
+       "kg": 55,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x0e2",
+     "name": "Overhead Press",
+     "sets": [
+      {
+       "id": "x0s20",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x0s21",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x0s22",
+       "kg": 35,
+       "reps": 8,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "x0e3",
+     "name": "Barbell curl",
+     "sets": [
+      {
+       "id": "x0s30",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x0s31",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      },
+      {
+       "id": "x0s32",
+       "kg": 25,
+       "reps": 10,
+       "rir": 2,
+       "done": false
+      }
+     ]
+    }
+   ],
+   "splitId": "upper",
+   "startedAt": 1786355900000,
+   "finishedAt": 1786359600000
+  }
+ ],
+ "questVersion": 1,
+ "active": {
+  "id": "active-1",
+  "name": "Full body",
+  "exercises": [
+   {
+    "id": "ax",
+    "name": "Bench Press",
+    "sets": [
+     {
+      "id": "as1",
+      "kg": null,
+      "reps": null,
+      "rir": null,
+      "done": false
+     }
+    ]
+   }
+  ],
+  "splitId": "full",
+  "startedAt": 1790900000000,
+  "finishedAt": null
+ },
+ "settings": {
+  "unit": "kg",
+  "weeklyGoal": 3,
+  "restSeconds": 90,
+  "theme": "dark",
+  "bodyweight": 72,
+  "logSets": "manual"
+ },
+ "restUntil": null,
+ "editedAt": 1790900000000
+}

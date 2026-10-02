@@ -1,0 +1,54 @@
+# Every push: test TrackCore on Linux (cheap minutes), then build the unsigned iPhone app on macOS and attach
+# Track.ipa to the run, ready for Sideloadly.
+name: Build
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Test TrackCore
+        working-directory: Core
+        run: swift test
+  app:
+    needs: core
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode
+        run: |
+          latest=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          echo "Using $latest"
+          sudo xcode-select -s "$latest"
+          xcodebuild -version
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Build for iPhone (unsigned)
+        run: |
+          xcodebuild -project Track.xcodeproj -scheme Track -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build > build.log 2>&1 \
+            || { grep -E "error:" -A4 build.log | head -n 200; tail -n 40 build.log; exit 1; }
+          grep -E "warning:" build.log | sort -u | head -n 40 || true
+          tail -n 3 build.log
+      - name: Package Track.ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/Track.app Payload/
+          zip -qry Track.ipa Payload
+          ls -lh Track.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Track-ipa-${{ github.run_number }}
+          path: Track.ipa
+          retention-days: 14
