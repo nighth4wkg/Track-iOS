@@ -24,17 +24,16 @@ struct RankPage: View {
                 let ranked = ranks.filter { $0.best != nil }
                 let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + Double($1.rank) + $1.progress } / Double(ranked.count)
                 let overall = min(Ranks.names.count - 1, Int(score))
-                Section { overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit).bareRow() }
+                overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit)
                 if let closest = ranked.filter({ $0.next != nil }).max(by: { $0.progress < $1.progress }), let next = closest.next, let best = closest.best {
-                    Section {
+                    GlassList {
                         ListRow(icon: "scope", title: "Closest win: \(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])",
                                 detail: "\(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps) on \(best.exercise) gets you there") { EmptyView() }
-                            .glassRow()
                     }
                 }
-                Section { ForEach(ranks, id: \.muscle) { MuscleRow(rank: $0, unit: unit).glassRow() } }
+                GlassList { ForEach(ranks, id: \.muscle) { MuscleRow(rank: $0, unit: unit) } }
             } else {
-                Section { setup(unit: unit).bareRow() }
+                setup(unit: unit)
             }
         }
     }
@@ -106,28 +105,31 @@ private struct MuscleRow: View {
 
     var body: some View {
         let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
-        Button { withAnimation(.smooth(duration: 0.3)) { open.toggle() } } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(rank.muscle.rawValue).font(.headline).foregroundStyle(Palette.text)
-                    Spacer()
-                    Text(rank.best == nil ? "Unranked" : rank.name).font(.subheadline.weight(.bold)).foregroundStyle(color)
-                    Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted).rotationEffect(.degrees(open ? 180 : 0))
-                }
-                RankBar(progress: rank.progress, color: color)
-                Text(rank.best == nil ? "Log a \(rank.muscle.rawValue.lowercased()) lift to rank it" : toGo(rank.rank, rank.progress))
-                    .font(.subheadline).foregroundStyle(Palette.muted)
-                if open, let best = rank.best {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Best: \(best.exercise), \(TrainingSet.display(kg: best.kg, unit: unit)) \(unit.rawValue) × \(best.reps)")
-                        if let next = rank.next { Text("Next: \(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps)") }
-                    }
-                    .font(.footnote).foregroundStyle(Palette.text).transition(.opacity)
-                }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(rank.muscle.rawValue).font(.headline).foregroundStyle(Palette.text)
+                Spacer()
+                Text(rank.best == nil ? "Unranked" : rank.name).font(.subheadline.weight(.bold)).foregroundStyle(color)
+                Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
+                    .scaleEffect(y: open ? -1 : 1)
             }
-            .padding(.vertical, 6)
+            RankBar(progress: rank.progress, color: color)
+            Text(rank.best == nil ? "Log a \(rank.muscle.rawValue.lowercased()) lift to rank it" : toGo(rank.rank, rank.progress))
+                .font(.subheadline).foregroundStyle(Palette.muted)
+            if open, let best = rank.best {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Best: \(best.exercise), \(TrainingSet.display(kg: best.kg, unit: unit)) \(unit.rawValue) × \(best.reps)")
+                    if let next = rank.next { Text("Next: \(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps)") }
+                }
+                .font(.footnote).foregroundStyle(Palette.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation(.smooth(duration: 0.3)) { open.toggle() } }
+        .accessibilityAddTraits(.isButton)
         .sensoryFeedback(.selection, trigger: open)
     }
 }

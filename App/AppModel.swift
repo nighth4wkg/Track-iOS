@@ -69,7 +69,13 @@ final class AppModel {
         next.syncRoutine()
         next.editedAt = nowMillis()
         if next.restUntil != training.restUntil {
-            if let until = next.restUntil, until > nowMillis() { RestAlert.schedule(at: until) } else { RestAlert.cancel() }
+            if let until = next.restUntil, until > nowMillis() {
+                RestAlert.schedule(at: until)
+                RestLive.show(until: until, seconds: max(1, (until - nowMillis()) / 1000), workout: next.active?.name ?? "Track")
+            } else {
+                RestAlert.cancel()
+                RestLive.end()
+            }
         }
         training = next
         guard canSave, let file else { return }

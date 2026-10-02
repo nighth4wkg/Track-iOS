@@ -1,9 +1,9 @@
 import SwiftUI
 import TrackCore
 
-/// A tab's page, laid out as on the website: a muted line over a large title (drawn in the page, so the date sits
-/// above it), then the content's glass cards. Above it, the navigation bar keeps iOS 26's Liquid Glass: the brand and
-/// streak in one bubble, Settings in another. The inset grouped list gives iOS's own swipe actions and reordering.
+/// A tab's page, laid out as on the website: a muted line over a large title, then glass cards in one scrolling
+/// column, 16pt from the edges. Above it, the navigation bar keeps iOS 26's Liquid Glass: the brand and streak in one
+/// bubble, Settings in another.
 struct Page<Content: View>: View {
     @Environment(AppModel.self) private var model
     let title: String
@@ -15,23 +15,25 @@ struct Page<Content: View>: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                VStack(alignment: .leading, spacing: 4) {
-                    if let caption { Text(caption).font(.body).foregroundStyle(Palette.muted) }
-                    HStack {
-                        Text(title).font(.system(size: 34, weight: .bold)).tracking(-0.5).foregroundStyle(Palette.text)
-                        Spacer()
-                        accessory
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let caption { Text(caption).font(.body).foregroundStyle(Palette.muted) }
+                        HStack {
+                            Text(title).font(.system(size: 34, weight: .bold)).tracking(-0.5).foregroundStyle(Palette.text)
+                            Spacer()
+                            accessory
+                        }
                     }
+                    .padding(.bottom, 8)
+                    content
                 }
-                .listRowBackground(Color.clear).listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 0, trailing: 0))
-                content
+                .padding(.horizontal, 16)
+                .padding(.bottom, 32)
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .listSectionSpacing(16)
-            .contentMargins(.top, 4, for: .scrollContent)
+            .scrollDismissesKeyboard(.interactively)
             .background(Backdrop())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -61,12 +63,79 @@ struct Page<Content: View>: View {
     }
 }
 
+/// Rows on one glass card, split by the website's hairline: 16pt in from both sides, full width between them
+/// (app/styles/list-group.css).
+struct GlassList<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Group(subviews: content) { rows in
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    if index > 0 { Rectangle().fill(Palette.hairline).frame(height: 1).padding(.horizontal, 16) }
+                    row.padding(.horizontal, 16).padding(.vertical, 10)
+                }
+            }
+        }
+        .glass()
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+}
+
+/// A section heading as on the website: "Your splits 2" with optional round buttons at the end.
+struct SectionHeading<Trailing: View>: View {
+    let title: String
+    var count: Int?
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+            if let count { Text("\(count)").font(.subheadline).foregroundStyle(Palette.muted) }
+            Spacer()
+            trailing
+        }
+        .padding(.top, 8)
+    }
+}
+
+extension SectionHeading where Trailing == EmptyView {
+    init(title: String, count: Int? = nil) { self.init(title: title, count: count) { EmptyView() } }
+}
+
+/// The website's glass select: the value and a chevron in a glass pill, opening the system menu (Liquid Glass).
+struct GlassMenu<Value: Hashable>: View {
+    let selection: Value
+    let options: [(Value, String)]
+    let onSelect: (Value) -> Void
+
+    var body: some View {
+        Menu {
+            ForEach(options.indices, id: \.self) { index in
+                let (value, label) = options[index]
+                Button { onSelect(value) } label: {
+                    if value == selection { Label(label, systemImage: "checkmark") } else { Text(label) }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(options.first { $0.0 == selection }?.1 ?? "").lineLimit(1)
+                Image(systemName: "chevron.down").font(.caption.weight(.bold))
+            }
+            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
+            .padding(.horizontal, 12).frame(minHeight: 40)
+            .glass(radius: 12, fill: Palette.control, lifted: false)
+        }
+        .sensoryFeedback(.selection, trigger: selection)
+    }
+}
+
 /// A small muted heading over a group, as History's "This week" or "Sep 14 – 20".
 struct SmallHeader: View {
     let title: String
 
     var body: some View {
-        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted).textCase(nil).padding(.leading, -4)
+        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted).padding(.leading, 4).padding(.top, 8)
     }
 }
 
@@ -116,96 +185,3 @@ struct Header: View {
         .padding(.leading, -4)
     }
 }
-
-/// One row: a 44pt glass tile, a name over one line of detail, then the row's end.
-struct ListRow<Trailing: View>: View {
-    var icon: String?
-    var mark = false
-    let title: String
-    let detail: String
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Group {
-                if mark { TrackMark(size: 20) } else if let icon { Image(systemName: icon).font(.body.weight(.semibold)) }
-            }
-            .foregroundStyle(Palette.text)
-            .frame(width: 44, height: 44).glass(radius: 12, fill: Palette.control, lifted: false)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline).foregroundStyle(Palette.text).lineLimit(1)
-                Text(detail).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            trailing
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-/// A small glass pill: a status like "Next", or a count like "0/3".
-struct Chip: View {
-    let text: String
-    var accent = false
-
-    var body: some View {
-        Text(text).font(.caption.weight(.bold)).monospacedDigit()
-            .foregroundStyle(accent ? Palette.accent : Palette.muted)
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .glass(radius: 12, fill: Palette.control, lifted: false)
-    }
-}
-
-/// A calm empty state on a glass card.
-struct EmptyCard: View {
-    let icon: String
-    let title: String
-    let detail: String
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon).font(.title2).foregroundStyle(Palette.muted)
-                .frame(width: 56, height: 56).glass(radius: 16, fill: Palette.control, lifted: false)
-            Text(title).font(.headline).foregroundStyle(Palette.text)
-            Text(detail).font(.subheadline).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity)
-        .glass()
-    }
-}
-
-/// This week's workouts against the goal, as the ring on Home.
-struct WeekRing: View {
-    let done: Int
-    let goal: Int
-
-    var body: some View {
-        let fraction = min(1, Double(done) / Double(max(goal, 1)))
-        VStack(spacing: 6) {
-            ZStack {
-                Circle().stroke(Palette.input, lineWidth: 8)
-                Circle().trim(from: 0, to: fraction).stroke(Palette.primary, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.smooth(duration: 0.6), value: fraction)
-                HStack(alignment: .firstTextBaseline, spacing: 1) {
-                    Text("\(done)").font(.title.weight(.bold)).monospacedDigit()
-                    Text("/\(goal)").font(.subheadline).foregroundStyle(Palette.muted)
-                }
-                .foregroundStyle(Palette.text)
-            }
-            .frame(width: 84, height: 84)
-            Text("This week").font(.caption).foregroundStyle(Palette.muted)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(done) of \(goal) workouts this week")
-    }
-}
-
-/// A total weight in the chosen unit, whole numbers with grouping: "10,805".
-func weight(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
-    (kg * (unit == .lb ? 2.2046226218 : 1)).formatted(.number.precision(.fractionLength(0)))
-}
-
-/// "1 exercise", "3 sets".
-func count(_ value: Int, _ noun: String) -> String { "\(value) \(noun)\(value == 1 ? "" : "s")" }

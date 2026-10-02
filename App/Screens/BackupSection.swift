@@ -28,12 +28,14 @@ struct BackupSection: View {
         ShareLink(item: BackupFile(training: model.training),
                   preview: SharePreview("Track backup", image: Image(systemName: "doc"))) {
             ListRow(icon: "square.and.arrow.up", title: "Export backup", detail: "Save a copy of everything as a file") { EmptyView() }
+                .contentShape(Rectangle())
         }
-        .glassRow()
+        .buttonStyle(PressStyle())
         Button { importing = true } label: {
             ListRow(icon: "square.and.arrow.down", title: "Restore backup", detail: "Replace this iPhone’s data from a file") { EmptyView() }
+                .contentShape(Rectangle())
         }
-        .glassRow()
+        .buttonStyle(PressStyle())
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
             guard case .success(let url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()

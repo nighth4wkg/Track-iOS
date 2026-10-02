@@ -15,45 +15,42 @@ struct ProgressPage: View {
         let level = Experience.progress(of: training.sessions)
         let records = training.sessions.latestRecords
         Page(title: "Progress", settingsOpen: $settingsOpen) {
-            Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Volume this week").font(.subheadline).foregroundStyle(Palette.muted)
-                            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text(weight(week.volume, unit)).font(.largeTitle.weight(.bold)).monospacedDigit()
-                                Text(unit.rawValue).font(.subheadline).foregroundStyle(Palette.muted)
-                            }
-                            .foregroundStyle(Palette.text)
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Volume this week").font(.subheadline).foregroundStyle(Palette.muted)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(weight(week.volume, unit)).font(.largeTitle.weight(.bold)).monospacedDigit()
+                            Text(unit.rawValue).font(.subheadline).foregroundStyle(Palette.muted)
                         }
-                        Spacer()
-                        if let change = week.change { Chip(text: "\(change >= 0 ? "▲" : "▼") \(abs(change))% vs last week", accent: change >= 0) }
+                        .foregroundStyle(Palette.text)
                     }
-                    WeekBars(volumes: volumes)
-                    HStack { Text("8 weeks ago"); Spacer(); Text("This week") }.font(.caption).foregroundStyle(Palette.muted)
+                    Spacer()
+                    if let change = week.change { Chip(text: "\(change >= 0 ? "▲" : "▼") \(abs(change))% vs last week", accent: change >= 0) }
                 }
-                .padding(20).glass().bareRow()
+                WeekBars(volumes: volumes)
+                HStack { Text("8 weeks ago"); Spacer(); Text("This week") }.font(.caption).foregroundStyle(Palette.muted)
             }
-            Section {
-                HStack(spacing: 10) {
-                    tile(icon: "flame", value: "\(training.sessions.weeklyStreak(at: now))", label: "Week streak")
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 6) { Image(systemName: "rosette"); Text("Lv \(level.level)").monospacedDigit() }
-                            .font(.title3.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
-                        Text("\(level.current)/\(level.required) XP").font(.subheadline).foregroundStyle(Palette.muted).monospacedDigit()
-                            .lineLimit(1).minimumScaleFactor(0.8)
-                        ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
-                    tile(icon: "medal", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements")
+            .padding(20).glass()
+            HStack(spacing: 10) {
+                tile(icon: "flame", value: "\(training.sessions.weeklyStreak(at: now))", label: "Week streak")
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) { Image(systemName: "rosette"); Text("Lv \(level.level)").monospacedDigit() }
+                        .font(.title3.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
+                    Text("\(level.current)/\(level.required) XP").font(.subheadline).foregroundStyle(Palette.muted).monospacedDigit()
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
                 }
-                .bareRow()
+                .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
+                tile(icon: "medal", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements")
             }
-            Section {
-                if records.isEmpty {
-                    Text("Beat a weight or rep count you’ve logged before and it shows up here.")
-                        .font(.subheadline).foregroundStyle(Palette.muted).glassRow()
-                }
+            .fixedSize(horizontal: false, vertical: true)
+            SectionHeading(title: "Personal records")
+            if records.isEmpty {
+                Text("Beat a weight or rep count you’ve logged before and it shows up here.")
+                    .font(.subheadline).foregroundStyle(Palette.muted).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass()
+            } else {
+                GlassList {
                 ForEach(records.prefix(20), id: \.after.exercise) { record in
                     let after = record.after
                     ListRow(icon: "trophy", title: after.exercise,
@@ -61,9 +58,9 @@ struct ProgressPage: View {
                         Text(record.kind == .weight ? "+\(TrainingSet.display(kg: after.kg - record.before.kg, unit: unit)) \(unit.rawValue)" : "+\(after.reps - record.before.reps) reps")
                             .font(.headline).monospacedDigit().foregroundStyle(Palette.accent)
                     }
-                    .glassRow()
                 }
-            } header: { Header(title: "Personal records") }
+                }
+            }
         }
     }
 

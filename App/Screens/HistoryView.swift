@@ -10,6 +10,7 @@ struct HistoryView: View {
     @State private var query = ""
     @State private var month = Calendars.local.dateInterval(of: .month, for: .now)!.start
     @State private var day: String?
+    @State private var deleting: Session?
 
     var body: some View {
         let training = model.training
@@ -24,37 +25,46 @@ struct HistoryView: View {
         let weeks = Dictionary(grouping: shown) { weekStart($0.finishedAt!) }.sorted { $0.key > $1.key }
         let recordSessions = Set(training.sessions.improvements.map(\.after.sessionId))
         Page(title: "History", settingsOpen: $settingsOpen) {
-            Section {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
-                    TextField("Search workouts or exercises", text: $query).submitLabel(.search)
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
+                TextField("Search workouts or exercises", text: $query).submitLabel(.search)
+                if !query.isEmpty {
+                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
+                        .accessibilityLabel("Clear search")
                 }
-                .padding(.horizontal, 14).frame(minHeight: 48)
-                .glass(radius: 14, fill: Palette.input, lifted: false).bareRow()
             }
-            Section { CalendarCard(month: $month, day: $day, sessions: all).bareRow() }
+            .padding(.horizontal, 14).frame(minHeight: 48)
+            .glass(radius: 14, fill: Palette.input, lifted: false)
+            CalendarCard(month: $month, day: $day, sessions: all)
             if shown.isEmpty {
-                Section {
-                    EmptyCard(icon: "calendar", title: all.isEmpty ? "No workouts yet" : "Nothing matches",
-                              detail: all.isEmpty ? "Finished workouts show up here." : "Try another search or day.").bareRow()
-                }
+                EmptyCard(icon: "calendar", title: all.isEmpty ? "No workouts yet" : "Nothing matches",
+                          detail: all.isEmpty ? "Finished workouts show up here." : "Try another search or day.")
             }
             ForEach(weeks, id: \.key) { week, items in
-                Section {
-                    ForEach(items) { session in
-                        NavigationLink { SessionDetail(session: session) } label: {
-                            HistoryRow(session: session, unit: training.settings.unit, record: recordSessions.contains(session.id))
+                VStack(alignment: .leading, spacing: 8) {
+                    SmallHeader(title: weekTitle(week))
+                    GlassList {
+                        ForEach(items) { session in
+                            SwipeToDelete(onDelete: { deleting = session }) {
+                                NavigationLink { SessionDetail(session: session) } label: {
+                                    HistoryRow(session: session, unit: training.settings.unit, record: recordSessions.contains(session.id))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PressStyle())
+                            }
                         }
-                        .glassRow()
                     }
-                    .onDelete { offsets in
-                        let ids = offsets.map { items[$0].id }
-                        model.update { $0.sessions.removeAll { ids.contains($0.id) } }
-                    }
-                } header: { SmallHeader(title: weekTitle(week)) }
+                }
             }
         }
         .sensoryFeedback(.selection, trigger: day)
+        .confirmationDialog("Delete this workout?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                            titleVisibility: .visible) {
+            Button("Delete workout", role: .destructive) {
+                if let id = deleting?.id { withAnimation(.smooth) { model.update { $0.sessions.removeAll { $0.id == id } } } }
+            }
+        } message: { Text("\(deleting?.name ?? "It") and its sets are removed from History.") }
+        .sensoryFeedback(.warning, trigger: deleting?.id) { _, now in now != nil }
     }
 
     /// "This week", "Last week", or the week's range ("Sep 14 – 20", "Aug 31 – Sep 6").
@@ -86,15 +96,19 @@ private struct HistoryRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.name).font(.headline).foregroundStyle(Palette.text).lineLimit(1)
                 Text("\(count(session.completedSets.count, "set")) · \(duration(session.minutes)) · \(weight(session.volume, unit)) \(unit.rawValue)")
-                    .font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1)
+                    .font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.85)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
             if record {
-                Label("PR", systemImage: "trophy").font(.caption.weight(.bold)).foregroundStyle(Palette.ranks[4])
-                    .padding(.horizontal, 8).padding(.vertical, 4).glass(radius: 12, fill: Palette.control, lifted: false)
+                HStack(spacing: 3) {
+                    Image(systemName: "trophy")
+                    Text("PR")
+                }
+                .font(.caption.weight(.bold)).foregroundStyle(Palette.ranks[4]).fixedSize()
+                .padding(.horizontal, 8).padding(.vertical, 4).glass(radius: 12, fill: Palette.control, lifted: false)
             }
+            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
         }
-        .padding(.vertical, 2)
     }
 }
 

@@ -12,18 +12,19 @@ struct WorkoutView: View {
     var body: some View {
         if let active = model.training.active {
             NavigationStack {
-                List {
-                    Section { progress(active).bareRow() }
-                    ForEach(active.exercises) { exercise in
-                        ExerciseSection(exercise: exercise, focus: $focus)
-                    }
-                    Section {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        progress(active)
+                        ForEach(active.exercises) { exercise in
+                            ExerciseCard(exercise: exercise, focus: $focus)
+                        }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
-                            .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(maxWidth: .infinity).bareRow()
+                            .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
+                            .buttonStyle(PressStyle())
                     }
+                    .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
+                    .frame(maxWidth: 720).frame(maxWidth: .infinity)
                 }
-                .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .background(Backdrop())
                 .navigationTitle(active.name)
@@ -87,7 +88,7 @@ struct WorkoutView: View {
         return ProgressView(value: Double(active.completedSets.count), total: Double(max(total, 1)))
             .tint(Palette.primary).scaleEffect(x: 1, y: 1.6, anchor: .center)
             .animation(.smooth, value: active.completedSets.count)
-            .padding(.horizontal, 4)
+            .padding(.bottom, 4)
     }
 
     private func elapsed(since start: Int, now: Date) -> String {
@@ -97,43 +98,46 @@ struct WorkoutView: View {
     }
 }
 
-/// One exercise: its name with the sets logged, the column labels, its sets (swipe left to delete one), then Add set
-/// and the sides switch.
-private struct ExerciseSection: View {
+/// One exercise, on one glass card as on the website: its name with the sets logged, the column labels, its sets
+/// (swipe one left to arm its ✕), then Add set | the sides switch.
+private struct ExerciseCard: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     var focus: FocusState<String?>.Binding
 
     var body: some View {
-        Section {
+        VStack(spacing: 8) {
             HStack {
-                Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
+                Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
                 Spacer()
                 Chip(text: "\(exercise.sets.filter(\.done).count)/\(exercise.sets.count)",
                      accent: !exercise.sets.isEmpty && exercise.sets.allSatisfy(\.done))
             }
-            .glassRow().listRowSeparator(.hidden)
+            .padding(.bottom, 4)
             HStack(spacing: 8) {
                 Text("SET").frame(width: 28)
                 Text(model.training.settings.unit.rawValue.uppercased()).frame(maxWidth: .infinity)
                 Text("REPS").frame(maxWidth: .infinity)
                 Text("RIR").frame(maxWidth: .infinity)
-                Color.clear.frame(width: 48, height: 1)
+                Color.clear.frame(width: 52, height: 1)
             }
-            .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted).glassRow().listRowSeparator(.hidden)
+            .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted)
             ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
-                SetRow(exerciseId: exercise.id, set: set, number: index + 1, focus: focus).glassRow().listRowSeparator(.hidden)
+                SetRow(exerciseId: exercise.id, set: set, number: index + 1, focus: focus)
+                    .transition(.opacity)
             }
-            .onDelete { offsets in model.update { $0.updateActive(exercise: exercise.id) { $0.sets.remove(atOffsets: offsets) } } }
             HStack(spacing: 0) {
-                Button { addSet() } label: { Label("Add set", systemImage: "plus").frame(maxWidth: .infinity) }
+                Button { addSet() } label: { Label("Add set", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44) }
                 Rectangle().fill(Palette.hairline).frame(width: 1, height: 20)
                 Button { model.update { $0.updateActive(exercise: exercise.id) { $0 = $0.togglingSides() } } } label: {
-                    Label(sidesLabel, systemImage: "arrow.left.arrow.right").frame(maxWidth: .infinity)
+                    Label(sidesLabel, systemImage: "arrow.left.arrow.right").frame(maxWidth: .infinity, minHeight: 44)
                 }
             }
-            .buttonStyle(.borderless).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).glassRow().listRowSeparator(.hidden)
+            .buttonStyle(PressStyle()).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
         }
+        .padding(16)
+        .glass()
+        .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
     }
 
     private var sidesLabel: String {

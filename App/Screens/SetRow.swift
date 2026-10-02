@@ -12,6 +12,10 @@ struct SetRow: View {
     @State private var weight = ""
     @State private var reps = ""
     @State private var rir = ""
+    /// How far the swipe has turned the ✓ into a red ✕ (0–1), and whether it's armed to delete.
+    @State private var arm: CGFloat = 0
+    @State private var armed = false
+    @State private var deleted = 0
 
     var body: some View {
         let unit = model.training.settings.unit
@@ -23,17 +27,36 @@ struct SetRow: View {
             field($weight, id: "kg", keyboard: .decimalPad, placeholder: "kg")
             field($reps, id: "reps", keyboard: .numberPad, placeholder: "reps")
             field($rir, id: "rir", keyboard: .numberPad, placeholder: "0")
-            Button { model.toggle(set: set.id, in: exerciseId) } label: {
-                Image(systemName: "checkmark").font(.body.weight(.bold))
-                    .foregroundStyle(set.done ? Palette.primaryText : Palette.muted)
-                    .frame(width: 48, height: 44)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(set.done ? Palette.primary : Palette.control))
-                    .glass(radius: 14, fill: .clear, lifted: false)
+            Button { armed ? delete() : model.toggle(set: set.id, in: exerciseId) } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(set.done ? Palette.primary : Palette.control)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(colors: [Palette.danger, Color(hex: 0xBD1616)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .opacity(arm)
+                    Image(systemName: "checkmark").font(.body.weight(.bold))
+                        .foregroundStyle(set.done ? Palette.primaryText : Palette.muted)
+                        .opacity(1 - arm).scaleEffect(1 - 0.4 * arm)
+                    Image(systemName: "xmark").font(.body.weight(.bold)).foregroundStyle(.white)
+                        .opacity(arm).scaleEffect(0.6 + 0.4 * arm)
+                }
+                .frame(width: 52, height: 48)
+                .glass(radius: 14, fill: .clear, lifted: false)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(set.done ? "Logged. Tap to undo" : "Log set \(number)")
+            .accessibilityLabel(armed ? "Delete set \(number)" : set.done ? "Logged. Tap to undo" : "Log set \(number)")
+            .accessibilityAction(named: "Delete set") { delete() }
             .sensoryFeedback(trigger: set.done) { _, done in done ? .impact(weight: .medium) : .selection }
+            .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
+            .sensoryFeedback(.warning, trigger: deleted)
         }
+        .contentShape(Rectangle())
+        .gesture(HorizontalPan(onChange: { x in
+            arm = max(0, min(1, (armed ? 1 : 0) - x / 72))
+        }, onEnd: { x, velocity in
+            let arming = abs(velocity) > 300 ? velocity < 0 : arm > 0.5
+            withAnimation(.smooth(duration: 0.2)) { arm = arming ? 1 : 0 }
+            armed = arming
+        }))
         .animation(.smooth(duration: 0.25), value: set.done)
         .onAppear { load(unit) }
         .onChange(of: set) { load(unit) }
@@ -46,10 +69,17 @@ struct SetRow: View {
             .multilineTextAlignment(.center)
             .font(.body.weight(.bold)).monospacedDigit()
             .foregroundStyle(Palette.text)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.input))
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .focused(focus, equals: "\(set.id).\(id)")
             .onChange(of: text.wrappedValue) { save() }
+    }
+
+    private func delete() {
+        deleted += 1
+        withAnimation(.smooth(duration: 0.25)) {
+            model.update { $0.updateActive(exercise: exerciseId) { $0.sets.removeAll { $0.id == set.id } } }
+        }
     }
 
     /// Shows the set's numbers, unless they already read the same (so typing "62." isn't rewritten to "62").
