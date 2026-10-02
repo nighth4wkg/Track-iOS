@@ -1,10 +1,11 @@
 import SwiftUI
 import TrackCore
 
-/// A tab's page: the system navigation bar (a large title that shrinks as you scroll, the brand at the leading edge,
-/// Settings at the trailing edge) over an inset grouped list whose groups are glass cards on the Sheen backdrop.
-/// The grouped list gives iOS's own swipe actions and reordering.
+/// A tab's page: the system navigation bar with iOS 26's Liquid Glass (a large title that shrinks as you scroll, the
+/// brand and streak in a glass bubble at the leading edge, Settings at the trailing edge) over an inset grouped list
+/// whose groups are glass cards on the Sheen backdrop. The grouped list gives iOS's own swipe actions and reordering.
 struct Page<Content: View>: View {
+    @Environment(AppModel.self) private var model
     let title: String
     var caption: String?
     @Binding var settingsOpen: Bool
@@ -14,8 +15,9 @@ struct Page<Content: View>: View {
         NavigationStack {
             List {
                 if let caption {
-                    Text(caption).font(.subheadline).foregroundStyle(Palette.muted)
-                        .listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                    Text(caption).font(.body).foregroundStyle(Palette.muted)
+                        .listRowBackground(Color.clear).listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 }
                 content
             }
@@ -25,12 +27,45 @@ struct Page<Content: View>: View {
             .background(Backdrop())
             .navigationTitle(title)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Brand() }
+                ToolbarItem(placement: .topBarLeading) {
+                    HStack(spacing: 10) {
+                        Brand()
+                        let streak = model.training.sessions.weeklyStreak(at: nowMillis())
+                        HStack(spacing: 3) {
+                            Image(systemName: "flame").foregroundStyle(Palette.streak)
+                            Text("\(streak)").foregroundStyle(Palette.text)
+                        }
+                        .font(.subheadline.weight(.bold)).monospacedDigit()
+                        .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
+                    }
+                    .fixedSize()
+                    .padding(.horizontal, 4)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { settingsOpen = true } label: { Image(systemName: "gearshape") }
+                    Button { settingsOpen = true } label: { Image(systemName: "gearshape").foregroundStyle(Palette.text) }
                         .accessibilityLabel("Settings")
                 }
             }
+        }
+    }
+}
+
+/// A round icon button in Liquid Glass (iOS 26), or the Sheen glass before it.
+struct GlassCircleButton: View {
+    let icon: String
+    let label: String
+    var active = false
+    let action: () -> Void
+
+    var body: some View {
+        let image = Image(systemName: icon).font(.body.weight(.semibold))
+            .foregroundStyle(active ? Palette.accent : Palette.text).frame(width: 44, height: 44)
+        if #available(iOS 26, *) {
+            Button(action: action) { image }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
+        } else {
+            Button(action: action) { image.glass(radius: 22, fill: Palette.control, lifted: false) }
+                .buttonStyle(PressStyle()).accessibilityLabel(label)
         }
     }
 }

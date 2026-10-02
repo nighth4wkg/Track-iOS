@@ -12,6 +12,8 @@ enum Palette {
     static let primary = Color(light: 0x3FD583, dark: 0x48E58D)
     static let primaryText = Color(light: 0x0D2A1A, dark: 0x102B1C)
     static let danger = Color(hex: 0xE52626)
+    /// The streak flame (components/header-streak).
+    static let streak = Color(light: 0xC2620E, dark: 0xF5A546)
     static let card = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.58, darkOpacity: 0.05)
     static let control = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.70, darkOpacity: 0.08)
     static let input = Color(light: 0xE7EBF2, dark: 0x000000, lightOpacity: 0.78, darkOpacity: 0.22)
@@ -82,7 +84,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Palette.primaryText)
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(Capsule().fill(Palette.primary)
-                .overlay(Capsule().fill(LinearGradient(colors: [.white.opacity(0.25), .clear], startPoint: .topLeading, endPoint: .center)))
+                .overlay(Capsule().fill(LinearGradient(colors: [.white.opacity(0.18), .clear], startPoint: .topLeading, endPoint: UnitPoint(x: 0.55, y: 0.55))))
                 .shadow(color: Palette.shadow, radius: 6, y: 4))
             .opacity(configuration.isPressed ? 0.8 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)

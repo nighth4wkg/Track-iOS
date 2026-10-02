@@ -8,6 +8,7 @@ struct HomeView: View {
     @Binding var settingsOpen: Bool
     @State private var adding = false
     @State private var editing: Split?
+    @State private var arranging = false
 
     var body: some View {
         let training = model.training
@@ -40,12 +41,18 @@ struct HomeView: View {
                 HStack {
                     Header(title: "Your splits", count: training.splits.isEmpty ? nil : training.splits.count)
                     Spacer()
-                    Button { adding = true } label: { Image(systemName: "plus").font(.body.weight(.semibold)) }
-                        .accessibilityLabel("Add split")
+                    if training.splits.count > 1 {
+                        GlassCircleButton(icon: "arrow.up.arrow.down", label: arranging ? "Done arranging" : "Arrange splits", active: arranging) {
+                            withAnimation(.smooth) { arranging.toggle() }
+                        }
+                    }
+                    GlassCircleButton(icon: "plus", label: "Add split") { adding = true }
                 }
             }
             Section { tiles(training, now: now).bareRow() }
         }
+        .environment(\.editMode, .constant(arranging ? .active : .inactive))
+        .sensoryFeedback(.selection, trigger: arranging)
         .sheet(isPresented: $adding) { NewSplitView { editing = $0 } }
         .sheet(item: $editing) { SplitEditor(splitId: $0.id) }
     }
@@ -70,6 +77,7 @@ struct HomeView: View {
                         Text("Get started").font(.subheadline).foregroundStyle(Palette.muted)
                         Text("Add a split").font(.title2.weight(.bold)).foregroundStyle(Palette.text)
                         Text("Pick a starter or build your own.").font(.subheadline).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer(minLength: 0)

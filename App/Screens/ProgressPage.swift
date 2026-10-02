@@ -35,15 +35,17 @@ struct ProgressPage: View {
                 .padding(20).glass().bareRow()
             }
             Section {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     tile(icon: "flame", value: "\(training.sessions.weeklyStreak(at: now))", label: "Week streak")
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("Lv \(level.level)", systemImage: "rosette").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+                        HStack(spacing: 6) { Image(systemName: "rosette"); Text("Lv \(level.level)").monospacedDigit() }
+                            .font(.title3.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
                         Text("\(level.current)/\(level.required) XP").font(.subheadline).foregroundStyle(Palette.muted).monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.8)
                         ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(16).glass()
-                    tile(icon: "rosette", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements")
+                    .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
+                    tile(icon: "medal", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements")
                 }
                 .bareRow()
             }
@@ -67,10 +69,14 @@ struct ProgressPage: View {
 
     private func tile(icon: String, value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(value, systemImage: icon).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-            Text(label).font(.subheadline).foregroundStyle(Palette.muted)
+            HStack(spacing: 6) {
+                Image(systemName: icon).foregroundStyle(icon == "flame" ? Palette.streak : Palette.text)
+                Text(value).monospacedDigit().foregroundStyle(Palette.text)
+            }
+            .font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(label).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(16).glass()
+        .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
     }
 }
 
