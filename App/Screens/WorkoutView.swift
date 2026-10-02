@@ -19,7 +19,7 @@ struct WorkoutView: View {
                     }
                     Section {
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
-                            .frame(maxWidth: .infinity).glassRow()
+                            .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(maxWidth: .infinity).bareRow()
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -28,7 +28,7 @@ struct WorkoutView: View {
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { toolbar }
+                .toolbar { toolbar(active) }
                 .safeAreaInset(edge: .bottom) { RestCapsule() }
             }
             .sheet(isPresented: $addingExercise) {
@@ -42,18 +42,38 @@ struct WorkoutView: View {
         }
     }
 
-    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+    /// The website's workout bar in Liquid Glass: ‹ back to Home, the name (⌄ for options) over the time and sets
+    /// logged, and Finish in green.
+    @ToolbarContentBuilder private func toolbar(_ active: Session) -> some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button { model.workoutOpen = false } label: { Image(systemName: "chevron.down") }
+            Button { model.workoutOpen = false } label: { Image(systemName: "chevron.left").foregroundStyle(Palette.text) }
                 .accessibilityLabel("Back to Home")
         }
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItem(placement: .principal) {
             Menu {
                 Button("Discard workout", systemImage: "trash", role: .destructive) { confirmDiscard = true }
-            } label: { Image(systemName: "ellipsis") }
+            } label: {
+                VStack(spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text(active.name).font(.headline).lineLimit(1)
+                        Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
+                    }
+                    .foregroundStyle(Palette.text)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text("\(elapsed(since: active.startedAt, now: context.date)) · \(active.completedSets.count) of \(count(active.exercises.reduce(0) { $0 + $1.sets.count }, "set"))")
+                            .font(.caption).monospacedDigit().foregroundStyle(Palette.muted)
+                    }
+                }
+            }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Button("Finish") { model.finish() }.fontWeight(.semibold).tint(Palette.accent)
+            if #available(iOS 26, *) {
+                Button("Finish") { model.finish() }.fontWeight(.bold).foregroundStyle(Palette.primaryText)
+                    .buttonStyle(.glassProminent).tint(Palette.primary)
+            } else {
+                Button("Finish") { model.finish() }.fontWeight(.bold).foregroundStyle(Palette.primaryText)
+                    .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(Palette.primary)
+            }
         }
         ToolbarItemGroup(placement: .keyboard) {
             Spacer()
@@ -61,23 +81,13 @@ struct WorkoutView: View {
         }
     }
 
+    /// The bar of sets logged, under the workout bar.
     private func progress(_ active: Session) -> some View {
         let total = active.exercises.reduce(0) { $0 + $1.sets.count }
-        let done = active.completedSets.count
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(elapsed(since: active.startedAt, now: context.date)).monospacedDigit()
-                }
-                Text("·")
-                Text("\(done) of \(count(total, "set"))")
-                Spacer()
-            }
-            .font(.subheadline).foregroundStyle(Palette.muted)
-            ProgressView(value: Double(done), total: Double(max(total, 1))).tint(Palette.primary)
-                .animation(.smooth, value: done)
-        }
-        .padding(.horizontal, 4)
+        return ProgressView(value: Double(active.completedSets.count), total: Double(max(total, 1)))
+            .tint(Palette.primary).scaleEffect(x: 1, y: 1.6, anchor: .center)
+            .animation(.smooth, value: active.completedSets.count)
+            .padding(.horizontal, 4)
     }
 
     private func elapsed(since start: Int, now: Date) -> String {
@@ -96,6 +106,13 @@ private struct ExerciseSection: View {
 
     var body: some View {
         Section {
+            HStack {
+                Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
+                Spacer()
+                Chip(text: "\(exercise.sets.filter(\.done).count)/\(exercise.sets.count)",
+                     accent: !exercise.sets.isEmpty && exercise.sets.allSatisfy(\.done))
+            }
+            .glassRow().listRowSeparator(.hidden)
             HStack(spacing: 8) {
                 Text("SET").frame(width: 28)
                 Text(model.training.settings.unit.rawValue.uppercased()).frame(maxWidth: .infinity)
@@ -103,26 +120,19 @@ private struct ExerciseSection: View {
                 Text("RIR").frame(maxWidth: .infinity)
                 Color.clear.frame(width: 48, height: 1)
             }
-            .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted).glassRow()
+            .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted).glassRow().listRowSeparator(.hidden)
             ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
-                SetRow(exerciseId: exercise.id, set: set, number: index + 1, focus: focus).glassRow()
+                SetRow(exerciseId: exercise.id, set: set, number: index + 1, focus: focus).glassRow().listRowSeparator(.hidden)
             }
             .onDelete { offsets in model.update { $0.updateActive(exercise: exercise.id) { $0.sets.remove(atOffsets: offsets) } } }
-            HStack {
-                Button { addSet() } label: { Label("Add set", systemImage: "plus") }
-                Spacer()
+            HStack(spacing: 0) {
+                Button { addSet() } label: { Label("Add set", systemImage: "plus").frame(maxWidth: .infinity) }
+                Rectangle().fill(Palette.hairline).frame(width: 1, height: 20)
                 Button { model.update { $0.updateActive(exercise: exercise.id) { $0 = $0.togglingSides() } } } label: {
-                    Label(sidesLabel, systemImage: "arrow.left.arrow.right")
+                    Label(sidesLabel, systemImage: "arrow.left.arrow.right").frame(maxWidth: .infinity)
                 }
             }
-            .buttonStyle(.borderless).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).glassRow()
-        } header: {
-            HStack {
-                Header(title: exercise.name)
-                Spacer()
-                Chip(text: "\(exercise.sets.filter(\.done).count)/\(exercise.sets.count)",
-                     accent: !exercise.sets.isEmpty && exercise.sets.allSatisfy(\.done))
-            }
+            .buttonStyle(.borderless).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).glassRow().listRowSeparator(.hidden)
         }
     }
 

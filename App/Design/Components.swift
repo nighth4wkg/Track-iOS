@@ -1,32 +1,42 @@
 import SwiftUI
 import TrackCore
 
-/// A tab's page: the system navigation bar with iOS 26's Liquid Glass (a large title that shrinks as you scroll, the
-/// brand and streak in a glass bubble at the leading edge, Settings at the trailing edge) over an inset grouped list
-/// whose groups are glass cards on the Sheen backdrop. The grouped list gives iOS's own swipe actions and reordering.
+/// A tab's page, laid out as on the website: a muted line over a large title (drawn in the page, so the date sits
+/// above it), then the content's glass cards. Above it, the navigation bar keeps iOS 26's Liquid Glass: the brand and
+/// streak in one bubble, Settings in another. The inset grouped list gives iOS's own swipe actions and reordering.
 struct Page<Content: View>: View {
     @Environment(AppModel.self) private var model
     let title: String
     var caption: String?
+    /// A control beside the title, as History's filter.
+    var accessory: AnyView?
     @Binding var settingsOpen: Bool
     @ViewBuilder let content: Content
 
     var body: some View {
         NavigationStack {
             List {
-                if let caption {
-                    Text(caption).font(.body).foregroundStyle(Palette.muted)
-                        .listRowBackground(Color.clear).listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                VStack(alignment: .leading, spacing: 4) {
+                    if let caption { Text(caption).font(.body).foregroundStyle(Palette.muted) }
+                    HStack {
+                        Text(title).font(.system(size: 34, weight: .bold)).tracking(-0.5).foregroundStyle(Palette.text)
+                        Spacer()
+                        accessory
+                    }
                 }
+                .listRowBackground(Color.clear).listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 0, trailing: 0))
                 content
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .listSectionSpacing(20)
+            .listSectionSpacing(16)
+            .contentMargins(.top, 4, for: .scrollContent)
             .background(Backdrop())
             .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
                 ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 10) {
                         Brand()
@@ -37,7 +47,7 @@ struct Page<Content: View>: View {
                         }
                         .font(.subheadline.weight(.bold)).monospacedDigit()
                         .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
+                        .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
                     }
                     .fixedSize()
                     .padding(.horizontal, 4)
@@ -51,6 +61,15 @@ struct Page<Content: View>: View {
     }
 }
 
+/// A small muted heading over a group, as History's "This week" or "Sep 14 – 20".
+struct SmallHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted).textCase(nil).padding(.leading, -4)
+    }
+}
+
 /// A round icon button in Liquid Glass (iOS 26), or the Sheen glass before it.
 struct GlassCircleButton: View {
     let icon: String
@@ -60,11 +79,11 @@ struct GlassCircleButton: View {
 
     var body: some View {
         let image = Image(systemName: icon).font(.body.weight(.semibold))
-            .foregroundStyle(active ? Palette.accent : Palette.text).frame(width: 44, height: 44)
+            .foregroundStyle(active ? Palette.accent : Palette.text)
         if #available(iOS 26, *) {
-            Button(action: action) { image }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
+            Button(action: action) { image.frame(width: 28, height: 28) }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
         } else {
-            Button(action: action) { image.glass(radius: 22, fill: Palette.control, lifted: false) }
+            Button(action: action) { image.frame(width: 44, height: 44).glass(radius: 22, fill: Palette.control, lifted: false) }
                 .buttonStyle(PressStyle()).accessibilityLabel(label)
         }
     }

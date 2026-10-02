@@ -84,7 +84,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Palette.primaryText)
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(Capsule().fill(Palette.primary)
-                .overlay(Capsule().fill(LinearGradient(colors: [.white.opacity(0.18), .clear], startPoint: .topLeading, endPoint: UnitPoint(x: 0.55, y: 0.55))))
+                .overlay(Capsule().fill(LinearGradient(colors: [.white.opacity(0.10), .clear], startPoint: .topLeading, endPoint: UnitPoint(x: 0.55, y: 0.55))))
                 .shadow(color: Palette.shadow, radius: 6, y: 4))
             .opacity(configuration.isPressed ? 0.8 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
