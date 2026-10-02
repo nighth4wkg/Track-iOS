@@ -20,6 +20,8 @@ struct FinishSummary: Identifiable {
     let leveledUp: Bool
     /// Exercises whose heaviest weight went up.
     let records: [String]
+    /// Muscles that reached a new rank, as "Chest → Strong".
+    let rankUps: [String]
 }
 
 /// The app's state: the training data (saved to this device after every change), the storage choice, and what's
@@ -92,6 +94,8 @@ final class AppModel {
     func finish() {
         let before = Experience.progress(of: training.sessions)
         let records = training.sessions.personalRecords
+        let bodyweight = training.settings.bodyweight
+        let ranksBefore = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
         update { try $0.finish() }
         guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
         let after = Experience.progress(of: training.sessions)
@@ -99,10 +103,13 @@ final class AppModel {
             let best = exercise.sets.compactMap(\.kg).max() ?? 0
             return records[exercise.name].map { best > $0 } ?? false
         }.map(\.name)
+        let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
+        let rankUps = zip(ranksBefore, ranksAfter).filter { $1.best != nil && $1.rank > $0.rank }
+            .map { "\($1.muscle.rawValue) → \($1.name)" }
         workoutOpen = false
         summary = FinishSummary(name: session.name, sets: session.completedSets.count, volume: session.volume,
                                 minutes: session.minutes, xp: after.total - before.total, level: after.level,
-                                leveledUp: after.level > before.level, records: newRecords)
+                                leveledUp: after.level > before.level, records: newRecords, rankUps: rankUps)
     }
 
     func discard() {

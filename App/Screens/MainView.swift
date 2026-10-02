@@ -14,9 +14,9 @@ struct MainView: View {
                 .tabItem { Label("Home", systemImage: "house") }
             HistoryView(settingsOpen: $settingsOpen)
                 .tabItem { Label("History", systemImage: "calendar") }
-            ComingSoonPage(title: "Progress", detail: "Your volume chart and records arrive in the next build.", settingsOpen: $settingsOpen)
+            ProgressPage(settingsOpen: $settingsOpen)
                 .tabItem { Label("Progress", systemImage: "chart.bar") }
-            ComingSoonPage(title: "Rank", detail: "Muscle ranks arrive in the next build.", settingsOpen: $settingsOpen)
+            RankPage(settingsOpen: $settingsOpen)
                 .tabItem { Label("Rank", systemImage: "medal") }
         }
         .tint(Palette.accent)
@@ -27,18 +27,6 @@ struct MainView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.message ?? "")
-        }
-    }
-}
-
-private struct ComingSoonPage: View {
-    let title: String
-    let detail: String
-    @Binding var settingsOpen: Bool
-
-    var body: some View {
-        Page(title: title, settingsOpen: $settingsOpen) {
-            EmptyCard(icon: "hammer", title: "Coming soon", detail: detail).bareRow()
         }
     }
 }
