@@ -54,7 +54,7 @@ extension TrainingSet {
     static let poundsPerKilogram = 2.2046226218
 
     /// Digits only, like the website's /^\d+$/ (no signs, decimals or spaces inside).
-    static func wholeNumber(_ text: String) -> Int? {
+    public static func wholeNumber(_ text: String) -> Int? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, trimmed.unicodeScalars.allSatisfy({ (48...57).contains($0.value) }) else { return nil }
         return Int(trimmed)

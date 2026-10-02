@@ -1,0 +1,20 @@
+# TrackCore's tests on Linux (cheap minutes), whenever the core changes.
+name: Core
+on:
+  push:
+    branches: [main]
+    paths: ['Core/**', '.github/workflows/core.yml']
+  workflow_dispatch:
+concurrency:
+  group: core-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Test TrackCore
+        working-directory: Core
+        run: swift test

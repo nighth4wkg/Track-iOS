@@ -1,25 +1,16 @@
-# Every push: test TrackCore on Linux (cheap minutes), then build the unsigned iPhone app on macOS and attach
-# Track.ipa to the run, ready for Sideloadly.
-name: Build
+# The unsigned iPhone app, built on macOS (minutes count 10x, so only when the app or the core's sources change),
+# with Track.ipa attached to the run, ready for Sideloadly.
+name: App
 on:
   push:
     branches: [main]
+    paths: ['App/**', 'Core/Sources/**', 'Core/Package.swift', 'project.yml', '.github/workflows/app.yml']
   workflow_dispatch:
 concurrency:
-  group: build-${{ github.ref }}
+  group: app-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  core:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Swift version
-        run: swift --version
-      - name: Test TrackCore
-        working-directory: Core
-        run: swift test
   app:
-    needs: core
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4

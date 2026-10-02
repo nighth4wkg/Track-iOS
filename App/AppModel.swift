@@ -8,7 +8,22 @@ enum StorageMode: String {
     case sync, local
 }
 
-/// The app's state: the training data (saved to this device after every change) and the storage choice.
+/// What a finished workout earned, for the summary and its celebration.
+struct FinishSummary: Identifiable {
+    let id = UUID()
+    let name: String
+    let sets: Int
+    let volume: Double
+    let minutes: Int
+    let xp: Int
+    let level: Int
+    let leveledUp: Bool
+    /// Exercises whose heaviest weight went up.
+    let records: [String]
+}
+
+/// The app's state: the training data (saved to this device after every change), the storage choice, and what's
+/// on screen.
 @Observable
 final class AppModel {
     private(set) var training: Training
@@ -16,6 +31,10 @@ final class AppModel {
     private(set) var mode: StorageMode?
     /// Why the saved copy couldn't be read, if it couldn't. The app then starts empty without overwriting it.
     private(set) var loadError: String?
+    /// A problem to show (an alert), such as finishing without a logged set.
+    var message: String?
+    var workoutOpen = false
+    var summary: FinishSummary?
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true
@@ -38,11 +57,64 @@ final class AppModel {
         UserDefaults.standard.set(choice.rawValue, forKey: Self.modeKey)
     }
 
-    /// Changes the training data and saves it on this device.
-    func update(_ change: (inout Training) -> Void) {
-        change(&training)
-        training.editedAt = nowMillis()
+    /// Changes the training data, keeps the split in step with the workout, and saves it on this device. A change
+    /// that throws is shown and not applied.
+    func update(_ change: (inout Training) throws -> Void) {
+        var next = training
+        do { try change(&next) } catch { message = error.localizedDescription; return }
+        next.syncRoutine()
+        next.editedAt = nowMillis()
+        training = next
         guard canSave, let file else { return }
-        do { try file.save(training) } catch { loadError = "Couldn’t save on this iPhone. Free up some space and try again." }
+        do { try file.save(next) } catch { message = "Couldn’t save on this iPhone. Free up some space and try again." }
+    }
+
+    // MARK: Workouts
+
+    func start(_ split: Split) {
+        update { try $0.start(split) }
+        if training.active != nil { workoutOpen = true }
+    }
+
+    /// Logs a set, or un-logs it. Logging starts the rest timer.
+    func toggle(set setId: String, in exerciseId: String) {
+        update { training in
+            var started = false
+            try training.updateActiveThrowing(exercise: exerciseId) { exercise in
+                guard let index = exercise.sets.firstIndex(where: { $0.id == setId }) else { return }
+                exercise.sets[index] = try exercise.sets[index].toggledDone()
+                started = exercise.sets[index].done
+            }
+            if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
+        }
+    }
+
+    func finish() {
+        let before = Experience.progress(of: training.sessions)
+        let records = training.sessions.personalRecords
+        update { try $0.finish() }
+        guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
+        let after = Experience.progress(of: training.sessions)
+        let newRecords = session.exercises.filter { exercise in
+            let best = exercise.sets.compactMap(\.kg).max() ?? 0
+            return records[exercise.name].map { best > $0 } ?? false
+        }.map(\.name)
+        workoutOpen = false
+        summary = FinishSummary(name: session.name, sets: session.completedSets.count, volume: session.volume,
+                                minutes: session.minutes, xp: after.total - before.total, level: after.level,
+                                leveledUp: after.level > before.level, records: newRecords)
+    }
+
+    func discard() {
+        update { $0.discard() }
+        workoutOpen = false
+    }
+}
+
+extension Training {
+    /// Like updateActive, for a change that can fail (marking a set done without numbers).
+    mutating func updateActiveThrowing(exercise id: String, _ change: (inout Exercise) throws -> Void) throws {
+        guard let index = active?.exercises.firstIndex(where: { $0.id == id }) else { return }
+        try change(&active!.exercises[index])
     }
 }
