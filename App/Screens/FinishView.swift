@@ -11,7 +11,7 @@ struct FinishView: View {
     @State private var landed = false
 
     var body: some View {
-        let celebrate = summary.leveledUp || !summary.records.isEmpty || !summary.rankUps.isEmpty
+        let celebrate = summary.leveledUp || !summary.records.isEmpty || !summary.rankUps.isEmpty || !summary.achievements.isEmpty
         VStack(spacing: 24) {
             Spacer(minLength: 12)
             ZStack {
@@ -33,6 +33,14 @@ struct FinishView: View {
                 stat("+\(summary.xp)", "XP", accent: true)
             }
             .opacity(shown ? 1 : 0)
+            if !summary.achievements.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(summary.achievements.count == 1 ? "Achievement" : "Achievements", systemImage: "rosette").font(.headline).foregroundStyle(Palette.accent)
+                    ForEach(summary.achievements, id: \.self) { Text($0).font(.subheadline).foregroundStyle(Palette.text) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
+                .opacity(shown ? 1 : 0)
+            }
             if !summary.rankUps.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Rank up", systemImage: "medal.fill").font(.headline).foregroundStyle(Palette.accent)

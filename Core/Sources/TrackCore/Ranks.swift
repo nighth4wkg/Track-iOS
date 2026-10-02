@@ -133,11 +133,11 @@ extension Array where Element == Session {
             guard let top = best[muscle] else { return MuscleRank(muscle: muscle, rank: 0, progress: 0, best: nil, next: nil) }
             let rank = Swift.min(Ranks.names.count - 1, Int(top.score.rounded(.down)))
             let elite = rank == Ranks.names.count - 1
-            // Rounded up to the next 0.5 kg, so lifting it really does reach the rank.
-            let needed = top.at[rank] * bodyweight / top.scale / Ranks.oneRepMax(1, top.reps)
+            // The weight that reaches the next rank, rounded up to the next 0.5 kg so lifting it really does. None at
+            // Elite: there is no rank above it (at[] holds the four thresholds above Starter).
+            let next: (kg: Double, reps: Int)? = elite ? nil : (((top.at[rank] * bodyweight / top.scale / Ranks.oneRepMax(1, top.reps)) * 2).rounded(.up) / 2, top.reps)
             return MuscleRank(muscle: muscle, rank: rank, progress: elite ? 1 : top.score - Double(rank),
-                              best: (top.exercise, top.lift, top.kg, top.reps),
-                              next: elite ? nil : ((needed * 2).rounded(.up) / 2, top.reps))
+                              best: (top.exercise, top.lift, top.kg, top.reps), next: next)
         }
     }
 }

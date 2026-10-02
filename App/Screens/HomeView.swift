@@ -108,9 +108,15 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading).padding(16).glass()
             VStack(alignment: .leading, spacing: 8) {
-                Text("Level \(level.level)").font(.subheadline).foregroundStyle(Palette.muted)
-                Text("\(level.current) / \(level.required) XP").font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
-                ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
+                if let next = training.sessions.nearestQuest() {
+                    Text("Next achievement").font(.subheadline).foregroundStyle(Palette.muted)
+                    Text(next.quest.title).font(.headline).foregroundStyle(Palette.text).lineLimit(2)
+                    ProgressView(value: Double(next.value), total: Double(next.quest.threshold)).tint(Palette.primary)
+                } else {
+                    Text("Level \(level.level)").font(.subheadline).foregroundStyle(Palette.muted)
+                    Text("\(level.current) / \(level.required) XP").font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
+                    ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading).padding(16).glass()
         }

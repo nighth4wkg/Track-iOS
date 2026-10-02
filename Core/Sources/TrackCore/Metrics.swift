@@ -89,21 +89,28 @@ public enum Experience {
     /// logged set earns XP, up to a daily set cap; achievement awards add their XP. Stored awards win over recomputing.
     public static func progress(of sessions: [Session], calendar: Calendar = Calendars.local) -> Progress {
         var progress = Progress()
+        for (session, training) in rewards(of: sessions, calendar: calendar) {
+            let earned = training + (session.questAwards ?? []).reduce(0) { $0 + $1.xp }
+            progress.total += earned
+            progress.current += earned
+            while progress.current >= progress.required { progress.current -= progress.required; progress.level += 1 }
+        }
+        return progress
+    }
+
+    /// Each finished workout, oldest first, with its training XP (its stored award, else computed).
+    static func rewards(of sessions: [Session], calendar: Calendar = Calendars.local) -> [(Session, Int)] {
         var dailySets: [String: Int] = [:]
         let ordered = sessions.finished.sorted { a, b in a.finishedAt! == b.finishedAt! ? a.id < b.id : a.finishedAt! < b.finishedAt! }
-        for session in ordered {
+        return ordered.map { session in
             let key = dayKey(session.finishedAt!, calendar: calendar)
             let prior = Swift.min(dailySetCap, dailySets[key] ?? 0)
             let sets = session.completedSets.count
             let counted = sets == 0 || prior >= dailySetCap ? 0 : Swift.min(dailySetCap - prior, sets)
             let computed = counted == 0 ? 0 : (prior == 0 ? dailyStart : 0) + counted * perSet
-            let earned = (session.xpEarned ?? computed) + (session.questAwards ?? []).reduce(0) { $0 + $1.xp }
-            progress.total += earned
-            progress.current += earned
-            while progress.current >= progress.required { progress.current -= progress.required; progress.level += 1 }
             dailySets[key] = Swift.min(dailySetCap, prior + sets)
+            return (session, session.xpEarned ?? computed)
         }
-        return progress
     }
 }
 

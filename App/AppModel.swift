@@ -22,6 +22,8 @@ struct FinishSummary: Identifiable {
     let records: [String]
     /// Muscles that reached a new rank, as "Chest → Strong".
     let rankUps: [String]
+    /// Achievements this workout earned.
+    let achievements: [String]
 }
 
 /// The app's state: the training data (saved to this device after every change), the storage choice, and what's
@@ -66,9 +68,18 @@ final class AppModel {
         do { try change(&next) } catch { message = error.localizedDescription; return }
         next.syncRoutine()
         next.editedAt = nowMillis()
+        if next.restUntil != training.restUntil {
+            if let until = next.restUntil, until > nowMillis() { RestAlert.schedule(at: until) } else { RestAlert.cancel() }
+        }
         training = next
         guard canSave, let file else { return }
         do { try file.save(next) } catch { message = "Couldn’t save on this iPhone. Free up some space and try again." }
+    }
+
+    /// Replaces everything with a backup (the website's backup file, or one exported here).
+    func restore(_ backup: Training) {
+        update { $0 = backup }
+        workoutOpen = false
     }
 
     // MARK: Workouts
@@ -96,7 +107,7 @@ final class AppModel {
         let records = training.sessions.personalRecords
         let bodyweight = training.settings.bodyweight
         let ranksBefore = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
-        update { try $0.finish() }
+        update { try $0.finish(); $0.awardLatestQuests() }
         guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
         let after = Experience.progress(of: training.sessions)
         let newRecords = session.exercises.filter { exercise in
@@ -109,7 +120,8 @@ final class AppModel {
         workoutOpen = false
         summary = FinishSummary(name: session.name, sets: session.completedSets.count, volume: session.volume,
                                 minutes: session.minutes, xp: after.total - before.total, level: after.level,
-                                leveledUp: after.level > before.level, records: newRecords, rankUps: rankUps)
+                                leveledUp: after.level > before.level, records: newRecords, rankUps: rankUps,
+                                achievements: (session.questAwards ?? []).compactMap { award in Quest.all.first { $0.id == award.questId }?.title })
     }
 
     func discard() {

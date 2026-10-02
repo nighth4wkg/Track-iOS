@@ -33,6 +33,7 @@ struct SettingsView: View {
                         .glassRow()
                     ListRow(icon: "arrow.triangle.2.circlepath.icloud", title: "Turn on sync", detail: "Arrives in an upcoming build") { EmptyView() }
                         .opacity(0.6).glassRow()
+                    BackupSection()
                 } header: { Header(title: "Your data") }
                 Section {
                     ListRow(mark: true, title: "Track for iPhone", detail: "Version \(Self.version)") { EmptyView() }.glassRow()

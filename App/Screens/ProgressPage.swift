@@ -43,6 +43,7 @@ struct ProgressPage: View {
                         ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(16).glass()
+                    tile(icon: "rosette", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements")
                 }
                 .bareRow()
             }
