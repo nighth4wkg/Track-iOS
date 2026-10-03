@@ -36,7 +36,7 @@ jobs:
       - name: Screenshots
         env:
           SCREENS: ${{ inputs.screens }}
-        run: tools/screens.sh
+        run: bash tools/screens.sh
       - uses: actions/upload-artifact@v4
         with:
           name: screens-${{ github.run_number }}
