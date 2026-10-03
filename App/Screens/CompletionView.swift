@@ -100,8 +100,7 @@ struct CompletionView: View {
                 Text(note.0).font(.caption2.weight(.semibold)).foregroundStyle(note.1 ?? Palette.muted).lineLimit(1)
                     .padding(.horizontal, note.1 == nil ? 0 : 6).padding(.vertical, 2)
                     .background(RoundedRectangle(cornerRadius: 8).fill((note.1 ?? .clear).opacity(0.12)))
-            }
-            .frame(minWidth: 112)
+            }.frame(minWidth: 112)
             divider
             metric("Sets", "\(recap.sets)")
             divider
@@ -110,8 +109,7 @@ struct CompletionView: View {
             metric("Time", trainingDuration(recap.minutes))
         }
         // As tall as the numbers: the hairlines between them would otherwise stretch the strip.
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 12)
+        .fixedSize(horizontal: false, vertical: true).padding(.vertical, 12)
         .glass(radius: 14, fill: Palette.control, lifted: false)
     }
 
