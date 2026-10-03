@@ -51,7 +51,8 @@ struct Page<Content: View>: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
-                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize().padding(.horizontal, 4) }
+                // The brand sits on the bar itself, as on the website: no glass bubble behind it.
+                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
                     let now = nowMillis()
