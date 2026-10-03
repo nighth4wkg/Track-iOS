@@ -3,8 +3,8 @@ import UIKit
 
 /// A pan that only begins when the finger moves more sideways than up or down (the website's 6px direction rule),
 /// so a row's swipe and the page's scroll never fight: vertical drags stay the scroll's. One that `sharesTouches` (the
-/// tab swipe) runs alongside the scroll, and never starts within 24pt of the screen's sides or on a native list,
-/// whose rows swipe for themselves.
+/// tab swipe) runs alongside the scroll, and never starts within 24pt of the screen's sides, on a native list (whose
+/// rows swipe for themselves, see SwipeZones) or on a control such as the segmented tabs.
 struct HorizontalPan: UIGestureRecognizerRepresentable {
     var sharesTouches = false
     var onChange: (CGFloat) -> Void
@@ -37,12 +37,11 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
             if sharesTouches, let window = pan.view?.window {
                 let x = pan.location(in: window).x - pan.translation(in: window).x
                 if x < 24 || x > window.bounds.width - 24 { return false }
-                // Only what's under the finger inside the page counts; the containers around it (the tab view's own)
-                // are no reason to stop.
+                let start = CGPoint(x: x, y: pan.location(in: window).y - pan.translation(in: window).y)
+                if SwipeZones.frames.values.contains(where: { $0.contains(start) }) { return false }
                 var node = window.hitTest(pan.location(in: window), with: nil)
-                while let view = node, view !== pan.view {
-                    // A list's rows and a control (the segmented tabs, a slider) keep their own sideways drags.
-                    if view is UICollectionView || view is UIControl { return false }
+                while let view = node {
+                    if view is UIControl { return false }
                     node = view.superview
                 }
             }
@@ -53,6 +52,12 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
             sharesTouches
         }
     }
+}
+
+/// Where sideways drags belong to a native list's rows (their own swipe to delete), on screen. Lists add themselves
+/// as they lay out and leave when they go; it isn't observed, so scrolling costs nothing.
+enum SwipeZones {
+    nonisolated(unsafe) static var frames: [String: CGRect] = [:]
 }
 
 /// The website's swipe to delete (components/gesture-item): the row slides left under the finger inside its rounded

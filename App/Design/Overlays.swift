@@ -149,6 +149,7 @@ struct ToastOverlay: View {
                             .font(.subheadline.weight(.bold)).foregroundStyle(Palette.accent)
                     }
                 }
+                .accessibilityElement(children: .contain)
                 .padding(.horizontal, 18).frame(minHeight: 52)
                 .background(Capsule().fill(.ultraThinMaterial))
                 .glass(radius: 26, fill: .clear)

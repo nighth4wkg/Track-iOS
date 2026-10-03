@@ -11,6 +11,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
     var insets = EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16)
     @ViewBuilder let row: (Item) -> Row
     @State private var heights: [Item.ID: CGFloat] = [:]
+    @State private var zone = UUID().uuidString
 
     var body: some View {
         List {
@@ -40,6 +41,8 @@ struct NativeList<Item: Identifiable, Row: View>: View {
         .frame(height: items.reduce(0) { $0 + (heights[$1.id] ?? 52) + insets.top + insets.bottom })
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .glass()
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { SwipeZones.frames[zone] = $0 }
+        .onDisappear { SwipeZones.frames[zone] = nil }
     }
 
     /// No hairline above the first row or below the last.

@@ -70,7 +70,7 @@ final class TrackUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Barbell curl"].waitForExistence(timeout: 3))
 
         app.navigationBars.buttons.firstMatch.tapWhenReady()
-        let row = app.staticTexts["Arms day"]
+        let row = app.staticTexts["Arms day"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 3))
         row.swipeLeft()
         app.buttons["Delete"].firstMatch.tapWhenReady()
