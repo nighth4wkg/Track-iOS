@@ -5,7 +5,7 @@ import TrackCore
 /// workout over everything while it's open, the recap when one finishes, and a finished workout's detail.
 struct MainView: View {
     @Environment(AppModel.self) private var model
-    @State private var settingsOpen = false
+    @State private var settingsOpen = ScreenshotMode.screen == "settings"
 
     var body: some View {
         @Bindable var model = model

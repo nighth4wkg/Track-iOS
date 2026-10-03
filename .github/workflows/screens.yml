@@ -1,0 +1,44 @@
+# Every screen in the iOS Simulator, dark and light, as PNGs attached to the run: a way to check the app's look
+# without an iPhone. Run by hand (macOS minutes count 10x); `screens` picks some screens, e.g. "home workout".
+name: Screens
+on:
+  workflow_dispatch:
+    inputs:
+      screens:
+        description: 'Screens to capture (blank: all)'
+        required: false
+        default: ''
+jobs:
+  screens:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)" && xcodebuild -version
+      - name: Generate the Xcode project
+        run: brew install xcodegen && xcodegen generate
+      - name: Build for the simulator
+        run: |
+          xcodebuild -project Track.xcodeproj -scheme Track -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 \
+            || { grep -E "error:" -A4 build.log | head -n 100; tail -n 30 build.log; exit 1; }
+      - name: Boot an iPhone
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [(runtime, d) for runtime, list_ in devices.items() if "iOS" in runtime for d in list_ if d["name"].startswith("iPhone")]
+          phones.sort(key=lambda p: (p[0], "Pro" in p[1]["name"] and "Max" not in p[1]["name"]))
+          print(phones[-1][1]["udid"])')
+          xcrun simctl list devices | grep "$udid"
+          xcrun simctl boot "$udid" && xcrun simctl bootstatus "$udid" -b > /dev/null
+          echo "UDID=$udid" >> "$GITHUB_ENV"
+      - name: Screenshots
+        env:
+          SCREENS: ${{ inputs.screens }}
+        run: tools/screens.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screens-${{ github.run_number }}
+          path: screens
+          retention-days: 7
