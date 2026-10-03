@@ -88,3 +88,10 @@ private struct GoalBar: View {
             }
     }
 }
+
+extension Split {
+    /// "3 exercises · 9 sets"
+    var summary: String {
+        "\(count(exercises.count, "exercise")) · \(count(exercises.reduce(0) { $0 + $1.sets.count }, "set"))"
+    }
+}

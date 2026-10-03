@@ -37,22 +37,7 @@ struct HomeView: View {
             if training.splits.isEmpty {
                 FirstSplitCard { creating = true }
             } else {
-                GlassList {
-                    ForEach(Array(training.splits.enumerated()), id: \.element.id) { index, split in
-                        SwipeToDelete(onDelete: { model.deleteSplit(split) }) {
-                            Button { if !arranging { open = split.id } } label: {
-                                ListRow(mark: true, title: split.name, detail: split.exercises.isEmpty ? "Tap to add exercises" : split.summary) {
-                                    if arranging { arrange(index, of: training.splits.count) }
-                                    else if training.active?.splitId == split.id { Chip(text: "In progress") }
-                                    else if split.id == nextId { Chip(text: "Next", accent: true) }
-                                    else { Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted) }
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PressStyle())
-                        }
-                    }
-                }
+                SplitList(arranging: arranging, nextId: nextId) { open = $0 }
                 .navigationDestination(item: $open) { SplitPage(splitId: $0) }
             }
             HomeTiles(training: training, now: now)
@@ -68,12 +53,45 @@ struct HomeView: View {
             }
         }
     }
+}
 
-    /// ↑ ↓ for one split while arranging.
-    private func arrange(_ index: Int, of total: Int) -> some View {
-        HStack(spacing: 8) {
-            GlassCircleButton(icon: "arrow.up", label: "Move up") { move(index, -1) }.disabled(index == 0).opacity(index == 0 ? 0.35 : 1)
-            GlassCircleButton(icon: "arrow.down", label: "Move down") { move(index, 1) }.disabled(index == total - 1).opacity(index == total - 1 ? 0.35 : 1)
+/// Your splits on one glass card: tap one for its page, swipe it left to delete it, ↑ ↓ while arranging. The end of
+/// each row says In progress, Next, or ›.
+private struct SplitList: View {
+    @Environment(AppModel.self) private var model
+    let arranging: Bool
+    let nextId: String?
+    let open: (String) -> Void
+
+    var body: some View {
+        let splits = model.training.splits
+        GlassList {
+            ForEach(Array(splits.enumerated()), id: \.element.id) { index, split in
+                SwipeToDelete(onDelete: { model.deleteSplit(split) }) {
+                    Button { if !arranging { open(split.id) } } label: {
+                        ListRow(mark: true, title: split.name, detail: split.exercises.isEmpty ? "Tap to add exercises" : split.summary) {
+                            end(split, index: index, total: splits.count)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressStyle())
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func end(_ split: Split, index: Int, total: Int) -> some View {
+        if arranging {
+            HStack(spacing: 8) {
+                GlassCircleButton(icon: "arrow.up", label: "Move up") { move(index, -1) }.disabled(index == 0).opacity(index == 0 ? 0.35 : 1)
+                GlassCircleButton(icon: "arrow.down", label: "Move down") { move(index, 1) }.disabled(index == total - 1).opacity(index == total - 1 ? 0.35 : 1)
+            }
+        } else if model.training.active?.splitId == split.id {
+            Chip(text: "In progress")
+        } else if split.id == nextId {
+            Chip(text: "Next", accent: true)
+        } else {
+            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
         }
     }
 
