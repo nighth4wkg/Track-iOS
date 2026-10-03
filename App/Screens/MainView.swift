@@ -24,7 +24,7 @@ struct MainView: View {
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView().trackOverlays().presentationBackground(.clear) }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
-        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays().presentationDetents([.medium, .large]) }
+        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays().presentationDetents([.fraction(0.75), .large]) }
         .trackOverlays()
     }
 }
