@@ -86,7 +86,6 @@ struct CompletionView: View {
             .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: landed) { _, now in now && celebrate }
             .onAppear {
                 withAnimation(.smooth(duration: 0.35)) { shown = true }
-                Sounds.play(finished.leveledUp ? .levelUp : .workoutSaved)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { landed = true }
             }
         }

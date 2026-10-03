@@ -19,75 +19,96 @@ struct HistoryDetail: View {
             return logged
         }.filter { !$0.sets.isEmpty }
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 12) {
-                        stat("Exercises", "\(exercises.count)")
-                        stat("Sets", "\(current.completedSets.count)")
-                        stat("Volume", "\(weight(current.volume, unit)) \(unit.rawValue)")
-                    }
-                    note(current)
-                    ForEach(exercises) { exercise in
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(exercise.name).font(.headline).foregroundStyle(Palette.text)
-                            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
-                                GridRow {
-                                    Text("Set"); Text("Weight (\(unit.rawValue))"); Text("Reps"); Text("RIR")
-                                }
-                                .font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
+            VStack(spacing: 0) {
+                header(current, exercises: exercises.count, unit: unit)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        note(current)
+                        ForEach(exercises) { exercise in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(exercise.name).font(.body.weight(.semibold)).foregroundStyle(Palette.text)
+                                setRow("Set", "Weight (\(unit.rawValue))", "Reps", "RIR")
                                 ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
-                                    GridRow {
-                                        HStack(spacing: 4) {
-                                            Text("\(index + 1)")
-                                            if let side = set.side { Chip(text: side == .left ? "L" : "R") }
-                                        }
-                                        Text(TrainingSet.display(kg: set.kg, unit: unit))
-                                        Text("\(set.reps ?? 0)")
-                                        Text("\(set.rir ?? 0)")
-                                    }
-                                    .font(.body.weight(.semibold)).monospacedDigit().foregroundStyle(Palette.text)
+                                    setRow("\(index + 1)" + (set.side.map { $0 == .left ? " L" : " R" } ?? ""),
+                                           TrainingSet.display(kg: set.kg, unit: unit), "\(set.reps ?? 0)", "\(set.rir ?? 0)", numbers: true)
                                 }
                             }
+                            .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass()
                         }
-                        .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass()
                     }
+                    .padding(16)
                 }
-                .padding(16)
+                .background(Palette.background.opacity(0.32))
             }
             .background(Backdrop())
             .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     Button { model.deleteWorkout(current) } label: { Label("Delete", systemImage: "trash") }
-                        .font(.headline).foregroundStyle(Palette.danger).frame(minWidth: 96, minHeight: 50).buttonStyle(PressStyle())
-                    Button { model.repeatWorkout(current) } label: { Label("Repeat workout", systemImage: "play") }
-                        .buttonStyle(PrimaryButtonStyle()).disabled(model.training.active != nil)
-                }
-                .padding(.horizontal, 16).padding(.bottom, 8)
-            }
-            .navigationTitle(current.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 0) {
-                        Text(current.name).font(.headline).foregroundStyle(Palette.text)
-                        Text(Date(timeIntervalSince1970: Double(current.finishedAt ?? current.startedAt) / 1000)
-                            .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().year()))
-                            .font(.caption).foregroundStyle(Palette.muted)
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.danger).frame(minHeight: 44).buttonStyle(PressStyle())
+                    Spacer()
+                    Button { model.repeatWorkout(current) } label: {
+                        Label("Repeat workout", systemImage: "play").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.primaryText)
+                            .padding(.horizontal, 16).frame(minHeight: 44).background(Capsule().fill(Palette.primary))
                     }
+                    .buttonStyle(PressStyle()).disabled(model.training.active != nil).opacity(model.training.active != nil ? 0.45 : 1)
                 }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .background(.bar)
+                .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
+            }
+            .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
-    private func stat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(Palette.muted)
-            Text(value).font(.headline).monospacedDigit().foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
+    /// The website's header: the name over the date, then Exercises · Sets · Volume as plain figures (volume in the
+    /// accent), over a hairline.
+    private func header(_ current: Session, exercises: Int, unit: TrackCore.Settings.Unit) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(current.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text)
+            Text(Date(timeIntervalSince1970: Double(current.finishedAt ?? current.startedAt) / 1000)
+                .formatted(.gregorian.weekday(.abbreviated).month(.abbreviated).day().year()))
+                .font(.subheadline).foregroundStyle(Palette.muted)
+            HStack(alignment: .top, spacing: 16) {
+                stat("Exercises", "\(exercises)")
+                stat("Sets", "\(current.completedSets.count)")
+                stat("Volume", weight(current.volume, unit), small: unit.rawValue, accent: true).layoutPriority(1)
+            }
+            .padding(.top, 20)
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(12).glass(radius: 16)
+        .padding(.horizontal, 16).padding(.bottom, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 1) }
+    }
+
+    private func stat(_ label: String, _ value: String, small: String? = nil, accent: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.caption).foregroundStyle(Palette.muted)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value).font(.title3.weight(.semibold)).monospacedDigit().foregroundStyle(accent ? Palette.accent : Palette.text)
+                if let small { Text(small).font(.caption).foregroundStyle(Palette.muted) }
+            }
+            .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One line of the sets table, as the website's: Set on the left, the numbers right-aligned, RIR muted.
+    private func setRow(_ set: String, _ kg: String, _ reps: String, _ rir: String, numbers: Bool = false) -> some View {
+        HStack(spacing: 8) {
+            Text(set).foregroundStyle(Palette.muted).frame(width: 44, alignment: .leading)
+            Text(kg).frame(maxWidth: .infinity, alignment: .trailing).layoutPriority(1)
+            Text(reps).frame(maxWidth: .infinity, alignment: .trailing)
+            Text(rir).foregroundStyle(Palette.muted).fontWeight(.regular).frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .font(numbers ? .body.weight(.semibold) : .caption)
+        .monospacedDigit()
+        .foregroundStyle(numbers ? Palette.text : Palette.muted)
+        .frame(minHeight: numbers ? 32 : 20)
     }
 
     /// "Add a note" (or the note), opening a field with 500 characters, Cancel and Save note.

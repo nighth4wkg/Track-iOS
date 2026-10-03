@@ -30,7 +30,7 @@ struct WorkoutView: View {
                             .animation(.smooth, value: active.completedSets.count)
                             .padding(.bottom, 4)
                         if model.training.sessions.isEmpty {
-                            Text((model.training.settings.logSets == .manual ? "Tap ✓ when a set is done." : "Change a set’s numbers to log it, or tap ✓ to repeat last time.")
+                            Text((model.training.settings.logSets == .manual ? "Tap ✓ when a set is done." : "Fill in a set’s numbers down to RIR to log it, or tap ✓ to repeat last time.")
                                  + " Swipe a set left to delete it.")
                                 .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
                         }

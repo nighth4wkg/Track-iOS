@@ -174,18 +174,15 @@ final class AppModel {
 
     /// Logs a set, or un-logs it. Logging starts the rest timer.
     func toggle(set setId: String, in exerciseId: String) {
-        var toggled: Bool?
         update { training in
             var started = false
             try training.updateActiveThrowing(exercise: exerciseId) { exercise in
                 guard let index = exercise.sets.firstIndex(where: { $0.id == setId }) else { return }
                 exercise.sets[index] = try exercise.sets[index].toggledDone()
                 started = exercise.sets[index].done
-                toggled = started
             }
             if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
         }
-        if let toggled { Sounds.play(toggled ? .setDone : .setUndone) }
     }
 }
 

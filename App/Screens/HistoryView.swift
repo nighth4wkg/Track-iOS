@@ -83,6 +83,7 @@ struct HistoryView: View {
             dateRow("From", $from, in: Date.distantPast...(to ?? .now))
             dateRow("To", $to, in: (from ?? .distantPast)...Date.now)
         }
+        .environment(\.calendar, Calendars.local)
     }
 
     private func dateRow(_ label: String, _ value: Binding<Date?>, in range: ClosedRange<Date>) -> some View {
@@ -120,7 +121,7 @@ struct HistoryView: View {
         let first = Date(timeIntervalSince1970: Double(start) / 1000)
         let last = Calendars.local.date(byAdding: .day, value: 6, to: first)!
         let sameMonth = Calendars.local.component(.month, from: first) == Calendars.local.component(.month, from: last)
-        return "\(first.formatted(.dateTime.month(.abbreviated).day())) – \(last.formatted(sameMonth ? .dateTime.day() : .dateTime.month(.abbreviated).day()))"
+        return "\(first.formatted(.gregorian.month(.abbreviated).day())) – \(last.formatted(sameMonth ? .dateTime.day() : .dateTime.month(.abbreviated).day()))"
     }
 }
 
@@ -134,8 +135,8 @@ private struct HistoryRow: View {
         let date = Date(timeIntervalSince1970: Double(session.finishedAt!) / 1000)
         HStack(spacing: 12) {
             VStack(spacing: 0) {
-                Text(date.formatted(.dateTime.day())).font(.headline).monospacedDigit()
-                Text(date.formatted(.dateTime.weekday(.abbreviated))).font(.caption2).foregroundStyle(Palette.muted)
+                Text(date.formatted(.gregorian.day())).font(.headline).monospacedDigit()
+                Text(date.formatted(.gregorian.weekday(.abbreviated))).font(.caption2).foregroundStyle(Palette.muted)
             }
             .foregroundStyle(Palette.text).frame(width: 44, height: 44).glass(radius: 12, fill: Palette.control, lifted: false)
             VStack(alignment: .leading, spacing: 2) {

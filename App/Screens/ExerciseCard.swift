@@ -93,11 +93,8 @@ struct ExerciseCard: View {
         switch exercise.startingSide { case nil: "Both sides"; case .left?: "Left / Right"; case .right?: "Right / Left" }
     }
 
-    /// A new empty set, on the other side if the exercise is in sides.
+    /// A new set with the last one's numbers to start from, on the other side if the exercise is in sides.
     private func addSet() {
-        model.update { $0.updateActive(exercise: exercise.id) { exercise in
-            let side = exercise.nextSide
-            exercise.sets.append(TrainingSet(side: side))
-        } }
+        model.update { $0.updateActive(exercise: exercise.id) { exercise in exercise.sets.append(exercise.nextSet) } }
     }
 }

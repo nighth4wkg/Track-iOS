@@ -21,7 +21,7 @@ struct HistoryCalendar: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(month.formatted(.dateTime.month(.wide).year(calendar.isDate(month, equalTo: .now, toGranularity: .year) ? .omitted : .defaultDigits)))
+                    Text(month.formatted(.gregorian.month(.wide).year(calendar.isDate(month, equalTo: .now, toGranularity: .year) ? .omitted : .defaultDigits)))
                         .font(.headline).foregroundStyle(Palette.text)
                     Text(inMonth.isEmpty ? "No workouts" : "\(count(inMonth.count, "workout")) · \(trainingDuration(inMonth.reduce(0) { $0 + $1.minutes }))")
                         .font(.subheadline).foregroundStyle(Palette.muted)
@@ -54,7 +54,7 @@ struct HistoryCalendar: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!lit)
-                    .accessibilityLabel(date.formatted(.dateTime.month(.wide).day()) + (lit ? ", trained" : ""))
+                    .accessibilityLabel(date.formatted(.gregorian.month(.wide).day()) + (lit ? ", trained" : ""))
                 }
             }
             .id(month)

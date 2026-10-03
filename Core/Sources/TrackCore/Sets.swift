@@ -38,7 +38,8 @@ extension TrainingSet {
     /// The set after editing its fields as typed. Editing keeps a done set done while it stays valid; it logs a new
     /// one only in auto mode, where changing the numbers is the signal.
     public func edited(weight: String, reps repsText: String, rir rirText: String, unit: Settings.Unit, autoLog: Bool = false) -> TrainingSet {
-        let logging = done || autoLog
+        // Auto mode logs a set once its RIR is filled in too (the last field), so it doesn't log mid-entry.
+        let logging = done || (autoLog && !rirText.trimmingCharacters(in: .whitespaces).isEmpty)
         let kg = weight == Self.display(kg: self.kg, unit: unit) ? self.kg : Self.kilograms(from: weight, unit: unit)
         let reps = Self.wholeNumber(repsText)
         let rir = Self.wholeNumber(rirText) ?? (logging && rirText.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : nil)
@@ -111,6 +112,11 @@ extension Exercise {
 
     /// The side a newly added set takes: the opposite of the last set's, if the exercise is in sides.
     public var nextSide: Side? { sets.last?.side?.other ?? (usesSides ? .left : nil) }
+
+    /// A set added to the exercise: the last set's numbers to start from (not logged), on the next side.
+    public var nextSet: TrainingSet {
+        TrainingSet(kg: sets.last?.kg, reps: sets.last?.reps, rir: sets.last?.rir, side: nextSide)
+    }
 
     /// A new exercise named as one-sided starts in sides.
     public static func firstSide(for name: String) -> Side? {

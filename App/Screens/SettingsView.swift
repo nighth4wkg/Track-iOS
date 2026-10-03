@@ -75,8 +75,6 @@ private struct TrainingSettings: View {
     @State private var draft = ""
     @State private var error: String?
     @FocusState private var typing: Bool
-    @AppStorage("track.sounds") private var sounds = true
-    @State private var choosingSounds = false
 
     private func saveCustom() {
         guard let seconds = Int(draft), (15...600).contains(seconds) else { error = "Enter 15–600 seconds."; return }
@@ -96,7 +94,7 @@ private struct TrainingSettings: View {
                     model.update { $0.settings.weeklyGoal = value }
                 }
             }
-            SettingRow(label: "Log sets", detail: settings.logSets == .manual ? "Only the ✓ logs a set" : "Changing a number logs the set") {
+            SettingRow(label: "Log sets", detail: settings.logSets == .manual ? "Only the ✓ logs a set" : "Filling in RIR logs the set") {
                 GlassMenu(selection: settings.logSets ?? .auto, options: [(.auto, "Auto"), (.manual, "Manual")]) { value in
                     model.update { $0.settings.logSets = value }
                 }
@@ -126,12 +124,7 @@ private struct TrainingSettings: View {
                 GlassMenu(selection: settings.theme == .liquid ? .system : settings.theme,
                           options: [(.system, "System"), (.light, "Light"), (.dark, "Dark")]) { value in model.update { $0.settings.theme = value } }
             }
-            SettingRow(label: "Sounds", detail: "iPhone’s own clicks and chimes") {
-                Button("Choose") { choosingSounds = true }.font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).disabled(!sounds)
-                Toggle("Sounds", isOn: $sounds).labelsHidden().tint(Palette.primary)
-            }
         }
-        .sheet(isPresented: $choosingSounds) { SoundSettings() }
         .onAppear { draft = String(settings.restSeconds) }
         .animation(.smooth(duration: 0.3), value: custom)
     }

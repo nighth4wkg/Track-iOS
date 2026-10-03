@@ -93,3 +93,9 @@ func weight(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
 
 /// "1 exercise", "3 sets".
 func count(_ value: Int, _ noun: String) -> String { "\(value) \(noun)\(value == 1 ? "" : "s")" }
+
+extension FormatStyle where Self == Date.FormatStyle {
+    /// Dates as on the website: always the Gregorian calendar, so an iPhone set to the Buddhist one doesn't show
+    /// "2569 BE". The words and order still follow the iPhone's language.
+    static var gregorian: Date.FormatStyle { Date.FormatStyle(calendar: Calendars.local, timeZone: .current) }
+}

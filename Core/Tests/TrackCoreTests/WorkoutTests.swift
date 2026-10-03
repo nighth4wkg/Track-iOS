@@ -28,7 +28,7 @@ final class WorkoutTests: XCTestCase {
         var training = Training()
         try training.start(split(), now: 1000)
         XCTAssertThrowsError(try training.finish(now: 2000)) { XCTAssertEqual($0 as? TrainingError, .nothingLogged) }
-        training.updateActive(exercise: "bench") { $0.sets[1] = try! $0.sets[1].edited(weight: "50", reps: "10", rir: "", unit: .kg, autoLog: true) }
+        training.updateActive(exercise: "bench") { $0.sets[1] = try! $0.sets[1].edited(weight: "50", reps: "10", rir: "2", unit: .kg, autoLog: true) }
         try training.finish(now: 61_000)
         XCTAssertNil(training.active)
         XCTAssertEqual(training.sessions.count, 1)
@@ -49,7 +49,14 @@ final class WorkoutTests: XCTestCase {
     func testEditingFollowsTheWebsitesInputRules() {
         let set = TrainingSet()
         XCTAssertFalse(set.edited(weight: "60", reps: "8", rir: "", unit: .kg).done, "manual mode: typing doesn't log")
-        XCTAssertTrue(set.edited(weight: "60", reps: "8", rir: "", unit: .kg, autoLog: true).done)
+        XCTAssertTrue(set.edited(weight: "60", reps: "8", rir: "2", unit: .kg, autoLog: true).done)
+        XCTAssertFalse(set.edited(weight: "60", reps: "8", rir: "", unit: .kg, autoLog: true).done, "auto mode waits for RIR")
+        let logged = TrainingSet(kg: 60, reps: 8, rir: 2, done: true).edited(weight: "60", reps: "8", rir: "", unit: .kg, autoLog: true)
+        XCTAssertEqual([logged.rir, logged.done ? 1 : 0], [0, 1], "a logged set cleared of RIR stays logged at 0")
+        let lunge = Exercise(name: "Lunge", sets: [TrainingSet(kg: 40, reps: 10, rir: 1, done: true, side: .left)])
+        XCTAssertEqual([lunge.nextSet.kg, Double(lunge.nextSet.reps ?? 0), Double(lunge.nextSet.rir ?? 0)], [40, 10, 1], "a new set starts from the last")
+        XCTAssertEqual(lunge.nextSet.side, .right)
+        XCTAssertFalse(lunge.nextSet.done)
         XCTAssertNil(set.edited(weight: "6O", reps: "8", rir: "2", unit: .kg).kg, "not a number")
         XCTAssertNil(set.edited(weight: "60", reps: "-8", rir: "2", unit: .kg).reps)
         XCTAssertEqual(set.edited(weight: "60", reps: " 8 ", rir: "2", unit: .kg).reps, 8)

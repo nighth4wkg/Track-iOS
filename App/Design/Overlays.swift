@@ -81,7 +81,6 @@ private struct ConfirmCard: View {
 
     private func resolve() {
         model.confirm = nil
-        if confirm.destructive { Sounds.play(.delete) }
         confirm.action()
     }
 }

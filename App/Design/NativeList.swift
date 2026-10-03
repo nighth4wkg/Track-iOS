@@ -26,7 +26,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
                     .listRowSeparator(.hidden, edges: outerEdges(item))
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if let onDelete {
-                            Button { onDelete(item) } label: { Label(deleteLabel, systemImage: "trash") }.tint(Palette.danger)
+                            Button { onDelete(item) } label: { Label(deleteLabel, systemImage: "trash").labelStyle(.iconOnly) }.tint(Palette.danger)
                         }
                     }
             }
