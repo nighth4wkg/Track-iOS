@@ -57,15 +57,16 @@ final class TrackUITests: XCTestCase {
         app.buttons["Create split"].firstMatch.tapWhenReady()
         let name = app.textFields["e.g. Upper body"]
         XCTAssertTrue(name.waitForExistence(timeout: 3))
-        name.typeText("Arms day")
         dismissKeyboardTip()
+        name.tap()
+        name.typeText("Arms day")
         app.buttons["dialog-action"].tapWhenReady()
         XCTAssertTrue(app.staticTexts["Tap to add exercises"].waitForExistence(timeout: 5), "the new split's page opens")
 
         app.buttons["Add exercise"].firstMatch.tapWhenReady()
         app.textFields["Search exercises…"].tapWhenReady()
-        app.textFields["Search exercises…"].typeText("Barbell curl")
         dismissKeyboardTip()
+        app.textFields["Search exercises…"].typeText("Barbell curl")
         app.buttons["Add Barbell curl"].firstMatch.tapWhenReady()
         XCTAssertTrue(app.staticTexts["Barbell curl"].waitForExistence(timeout: 3))
 
