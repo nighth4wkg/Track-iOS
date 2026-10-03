@@ -70,9 +70,10 @@ final class TrackUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Barbell curl"].waitForExistence(timeout: 3))
 
         app.navigationBars.buttons.firstMatch.tapWhenReady()
-        let row = app.staticTexts["Arms day"].firstMatch
+        let row = app.cells.containing(.staticText, identifier: "Arms day").firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 3))
         row.swipeLeft()
+        XCTAssertTrue(app.tabBars.buttons["Home"].isSelected, "a row's swipe isn't a tab swipe")
         app.buttons["Delete"].firstMatch.tapWhenReady()
         app.buttons["dialog-action"].tapWhenReady()
         XCTAssertTrue(row.waitForNonExistence(timeout: 3), "the split is gone")

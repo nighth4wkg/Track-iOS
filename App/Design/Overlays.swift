@@ -160,7 +160,7 @@ struct ToastOverlay: View {
                 .gesture(DragGesture(minimumDistance: 10).onEnded { if $0.translation.height > 20 { withAnimation(.smooth) { model.toast = nil } } })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .task(id: toast.id) {
-                    try? await Task.sleep(for: .seconds(4))
+                    try? await Task.sleep(for: .seconds(toast.undo == nil ? 4 : 6)) // a little longer to reach Undo
                     if model.toast?.id == toast.id { withAnimation(.smooth) { model.toast = nil } }
                 }
             }
