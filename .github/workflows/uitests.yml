@@ -1,0 +1,56 @@
+# Track iOS driven by UI tests in the Simulator, with a screen recording and each test's last screenshot attached to
+# the run. Run by hand, or on pushes to the app (free: the repository is public).
+name: UI tests
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['App/**', 'UITests/**', 'Core/Sources/**', 'project.yml', '.github/workflows/uitests.yml']
+concurrency:
+  group: uitests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  uitests:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)" && xcodebuild -version
+      - name: Generate the Xcode project
+        run: brew install xcodegen && xcodegen generate
+      - name: Pick and boot an iPhone
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [(runtime, d) for runtime, list_ in devices.items() if "iOS" in runtime for d in list_ if d["name"].startswith("iPhone")]
+          phones.sort(key=lambda p: (p[0], "Pro" in p[1]["name"] and "Max" not in p[1]["name"]))
+          print(phones[-1][1]["udid"])')
+          xcrun simctl boot "$udid" && xcrun simctl bootstatus "$udid" -b > /dev/null
+          echo "UDID=$udid" >> "$GITHUB_ENV"
+      - name: Build for testing
+        run: |
+          xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build-for-testing > build.log 2>&1 || { grep -E "error:" -A4 build.log | head -n 100; tail -n 30 build.log; exit 1; }
+      - name: Run the UI tests, recording the screen
+        run: |
+          mkdir -p out
+          xcrun simctl io "$UDID" recordVideo --codec h264 out/uitests.mp4 & rec=$!
+          sleep 2
+          export TEST_RUNNER_TRACK_SEED="$(python3 tools/demo-data.py)"
+          set +e
+          xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build \
+            -resultBundlePath out/results.xcresult CODE_SIGNING_ALLOWED=NO test-without-building > test.log 2>&1
+          status=$?
+          kill -INT $rec; wait $rec
+          grep -E "Test Case|error:|XCTAssert|failed|passed" test.log | tail -n 60
+          xcrun xcresulttool export attachments --path out/results.xcresult --output-path out/shots > /dev/null 2>&1 || true
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uitests-${{ github.run_number }}
+          path: |
+            out/uitests.mp4
+            out/shots
+          retention-days: 7

@@ -69,9 +69,9 @@ private struct ConfirmCard: View {
             HStack(spacing: 12) {
                 Button("Cancel") { model.confirm = nil }.buttonStyle(SecondaryButtonStyle())
                 if confirm.destructive {
-                    Button(confirm.label, action: resolve).buttonStyle(SecondaryButtonStyle(danger: true))
+                    Button(confirm.label, action: resolve).buttonStyle(SecondaryButtonStyle(danger: true)).accessibilityIdentifier("dialog-action")
                 } else {
-                    Button(confirm.label, action: resolve).buttonStyle(PrimaryButtonStyle())
+                    Button(confirm.label, action: resolve).buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("dialog-action")
                 }
             }
             .lineLimit(1).minimumScaleFactor(0.8)

@@ -12,6 +12,10 @@ enum ScreenshotMode {
     }()
 
     static func apply(_ model: AppModel) {
+        // The UI tests (UITests/) hand over their own training to start from.
+        if let json = ProcessInfo.processInfo.environment["TRACK_SEED"], let seed = try? TrainingFile.decode(Data(json.utf8)) {
+            model.restore(seed)
+        }
         guard let screen else { return }
         let latest = model.training.sessions.first
         switch screen {

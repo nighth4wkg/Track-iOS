@@ -23,6 +23,8 @@ targets:
     dependencies:
       - package: TrackCore
       - target: TrackWidgets
+    scheme:
+      testTargets: [TrackUITests]
     info:
       path: App/Info.plist
       properties:
@@ -73,3 +75,17 @@ targets:
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGN_IDENTITY: ""
+  # Taps through the app in the Simulator (.github/workflows/uitests.yml).
+  TrackUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    dependencies:
+      - target: Track
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nighth4wkg.track.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Track
+        CODE_SIGNING_ALLOWED: NO

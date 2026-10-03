@@ -39,9 +39,9 @@ struct SetRow: View {
                     .font(.body.weight(.bold)).monospacedDigit()
                     .foregroundStyle(record != nil ? Palette.record : set.done ? Palette.accent : Palette.muted)
                     .frame(width: 28)
-                field($weight, id: "kg", keyboard: .decimalPad, placeholder: "—", glow: record != nil)
-                field($reps, id: "reps", keyboard: .numberPad, placeholder: "—", glow: record != nil)
-                field($rir, id: "rir", keyboard: .numberPad, placeholder: "0", glow: record != nil)
+                field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, placeholder: "—", glow: record != nil)
+                field($reps, id: "reps", label: "reps", keyboard: .numberPad, placeholder: "—", glow: record != nil)
+                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "0", glow: record != nil)
                 check(done: set.done, carried: carried, record: record != nil)
             }
             if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
@@ -93,8 +93,10 @@ struct SetRow: View {
         .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
     }
 
-    private func field(_ text: Binding<String>, id: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool) -> some View {
+    /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps".
+    private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool) -> some View {
         TextField(placeholder, text: text)
+            .accessibilityLabel("\(exercise.name) set \(number) \(label)")
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
             .font(.body.weight(.bold)).monospacedDigit()
