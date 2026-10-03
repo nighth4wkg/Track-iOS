@@ -37,8 +37,10 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
             if sharesTouches, let window = pan.view?.window {
                 let x = pan.location(in: window).x - pan.translation(in: window).x
                 if x < 24 || x > window.bounds.width - 24 { return false }
+                // Only what's under the finger inside the page counts; the containers around it (the tab view's own)
+                // are no reason to stop.
                 var node = window.hitTest(pan.location(in: window), with: nil)
-                while let view = node {
+                while let view = node, view !== pan.view {
                     // A list's rows and a control (the segmented tabs, a slider) keep their own sideways drags.
                     if view is UICollectionView || view is UIControl { return false }
                     node = view.superview

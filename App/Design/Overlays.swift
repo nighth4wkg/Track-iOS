@@ -109,6 +109,7 @@ private struct NameCard: View {
                 .onChange(of: name) { _, value in if value.count > 100 { name = String(value.prefix(100)) } }
             Button(action: save) { Label(naming.action, systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
                 .buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty).padding(.top, 6)
+                .accessibilityIdentifier("dialog-action")
         }
         .onAppear { name = naming.name; DispatchQueue.main.async { focused = true } }
     }

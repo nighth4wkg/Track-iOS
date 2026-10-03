@@ -30,6 +30,7 @@ final class TrackUITests: XCTestCase {
         XCTAssertFalse(setButton("Bench Press set 1", done: true).exists, "logged before RIR")
         app.textFields["Bench Press set 1 RIR"].replaceText("1")
         XCTAssertTrue(setButton("Bench Press set 1", done: true).waitForExistence(timeout: 3), "typing RIR logs the set")
+        allowNotificationsIfAsked()
 
         app.buttons["Add set"].firstMatch.tapWhenReady()
         let added = app.textFields["Bench Press set 4 weight in kg"]
@@ -40,7 +41,7 @@ final class TrackUITests: XCTestCase {
 
         app.textFields["Bench Press set 4 RIR"].swipeLeft()
         app.buttons["Delete Bench Press set 4"].tapWhenReady()
-        XCTAssertTrue(app.staticTexts["Set removed"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["Set removed"].waitForExistence(timeout: 3))
         app.buttons["Undo"].tapWhenReady()
         XCTAssertTrue(app.textFields["Bench Press set 4 weight in kg"].waitForExistence(timeout: 3), "Undo brings the set back")
 
@@ -57,12 +58,14 @@ final class TrackUITests: XCTestCase {
         let name = app.textFields["e.g. Upper body"]
         XCTAssertTrue(name.waitForExistence(timeout: 3))
         name.typeText("Arms day")
-        app.buttons["Create split"].firstMatch.tapWhenReady()
+        dismissKeyboardTip()
+        app.buttons["dialog-action"].tapWhenReady()
         XCTAssertTrue(app.staticTexts["Tap to add exercises"].waitForExistence(timeout: 5), "the new split's page opens")
 
         app.buttons["Add exercise"].firstMatch.tapWhenReady()
         app.textFields["Search exercises…"].tapWhenReady()
         app.textFields["Search exercises…"].typeText("Barbell curl")
+        dismissKeyboardTip()
         app.buttons["Add Barbell curl"].firstMatch.tapWhenReady()
         XCTAssertTrue(app.staticTexts["Barbell curl"].waitForExistence(timeout: 3))
 
@@ -101,6 +104,18 @@ final class TrackUITests: XCTestCase {
         app.buttons["lb"].firstMatch.tapWhenReady()
         app.buttons["Close"].firstMatch.tapWhenReady()
         XCTAssertTrue(app.staticTexts["lb"].firstMatch.waitForExistence(timeout: 3), "Home shows pounds")
+    }
+
+    /// The first rest asks to send notifications (the system's alert, outside the app).
+    private func allowNotificationsIfAsked() {
+        let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]
+        if allow.waitForExistence(timeout: 3) { allow.tap() }
+    }
+
+    /// The Simulator's one-time "slide to type" tip over the keyboard.
+    private func dismissKeyboardTip() {
+        let tip = app.buttons["Continue"]
+        if tip.waitForExistence(timeout: 1) { tip.tap() }
     }
 
     private func setButton(_ set: String, done: Bool) -> XCUIElement {

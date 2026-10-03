@@ -21,7 +21,6 @@ struct BackupFile: Transferable {
 struct BackupSection: View {
     @Environment(AppModel.self) private var model
     @State private var importing = false
-    @State private var pending: Training?
     @State private var restored = 0
 
     var body: some View {
@@ -44,17 +43,13 @@ struct BackupSection: View {
                 model.message = "This file is not a valid Track backup."
                 return
             }
-            pending = backup
-        }
-        .confirmationDialog("Replace this iPhone’s data?", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } }),
-                            titleVisibility: .visible) {
-            Button("Restore backup", role: .destructive) {
-                if let pending { model.restore(pending); restored += 1 }
-                pending = nil
-            }
-        } message: {
-            if let pending {
-                Text("The backup has \(count(pending.sessions.count, "workout")) and \(count(pending.splits.count, "split")). What’s on this iPhone now is replaced.")
+            // Track's own dialog, with the website's wording.
+            model.confirm = Confirm(title: "Restore this backup?",
+                                    message: "Replace current data with \(count(backup.splits.count, "split")) and \(count(backup.sessions.count, "session")). Export your current data first if you want to keep it.",
+                                    label: "Restore backup", destructive: true) {
+                model.restore(backup)
+                restored += 1
+                model.show("Backup restored")
             }
         }
         .sensoryFeedback(.success, trigger: restored)
