@@ -20,6 +20,8 @@ struct TrackApp: App {
             }
             .environment(model)
             .tint(Palette.accent)
+            // From the very first frame, so a Dark choice never flashes the system's light look (glass buttons first).
+            .preferredColorScheme(model.training.settings.theme == .light ? .light : model.training.settings.theme == .dark ? .dark : nil)
             .onAppear { DialogWindow.install(model); Appearance.apply(model.training.settings.theme) }
             .onChange(of: model.training.settings.theme) { _, theme in Appearance.apply(theme) }
         }
