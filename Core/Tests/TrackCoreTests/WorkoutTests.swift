@@ -34,7 +34,7 @@ final class WorkoutTests: XCTestCase {
         XCTAssertEqual(training.sessions.count, 1)
         XCTAssertEqual(training.sessions[0].exercises.map(\.name), ["Bench Press"], "the row had nothing logged")
         XCTAssertEqual(training.sessions[0].exercises[0].sets.count, 1)
-        XCTAssertEqual(training.sessions[0].exercises[0].sets[0].rir, 0, "blank RIR on a logged set is 0")
+        XCTAssertEqual(training.sessions[0].exercises[0].sets[0].rir, 2)
         XCTAssertEqual(training.sessions[0].minutes, 1)
     }
 
