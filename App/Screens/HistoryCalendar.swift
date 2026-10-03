@@ -31,11 +31,13 @@ struct HistoryCalendar: View {
                     .disabled(month <= earliest).opacity(month <= earliest ? 0.4 : 1)
                 GlassCircleButton(icon: "chevron.right", label: "Next month") { step(1) }.disabled(isCurrent).opacity(isCurrent ? 0.4 : 1)
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
+            HStack(spacing: 6) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
-                    Text(letter).font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
+                    Text(letter).font(.caption.weight(.bold)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity)
                 }
-                ForEach(0..<lead, id: \.self) { _ in Color.clear.frame(height: 36) }
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
+                ForEach(-lead..<0, id: \.self) { _ in Color.clear.frame(height: 36) }
                 ForEach(1...days, id: \.self) { number in
                     let date = calendar.date(byAdding: .day, value: number - 1, to: month)!
                     let key = dayKey(millis(date))

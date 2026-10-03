@@ -4,7 +4,7 @@ name: Track
 options:
   bundleIdPrefix: com.nighth4wkg
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
   createIntermediateGroups: true
 packages:
   TrackCore:
@@ -12,8 +12,8 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.8.0"
-    CURRENT_PROJECT_VERSION: "9"
+    MARKETING_VERSION: "0.9.0"
+    CURRENT_PROJECT_VERSION: "10"
 targets:
   Track:
     type: application

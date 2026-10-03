@@ -2,8 +2,11 @@ import SwiftUI
 import UIKit
 
 /// A pan that only begins when the finger moves more sideways than up or down (the website's 6px direction rule),
-/// so a row's swipe and the page's scroll never fight: vertical drags stay the scroll's.
+/// so a row's swipe and the page's scroll never fight: vertical drags stay the scroll's. One that `sharesTouches` (the
+/// tab swipe) runs alongside the scroll, and never starts within 24pt of the screen's sides or on a native list,
+/// whose rows swipe for themselves.
 struct HorizontalPan: UIGestureRecognizerRepresentable {
+    var sharesTouches = false
     var onChange: (CGFloat) -> Void
     var onEnd: (_ translation: CGFloat, _ velocity: CGFloat) -> Void
 
@@ -13,7 +16,7 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
         return pan
     }
 
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator(sharesTouches: sharesTouches) }
 
     func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
         let x = pan.translation(in: pan.view).x
@@ -25,10 +28,26 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        let sharesTouches: Bool
+        init(sharesTouches: Bool) { self.sharesTouches = sharesTouches }
+
         func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
             guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
             let velocity = pan.velocity(in: pan.view)
+            if sharesTouches, let window = pan.view?.window {
+                let x = pan.location(in: window).x - pan.translation(in: window).x
+                if x < 24 || x > window.bounds.width - 24 { return false }
+                var node = window.hitTest(pan.location(in: window), with: nil)
+                while let view = node {
+                    if view is UICollectionView { return false }
+                    node = view.superview
+                }
+            }
             return abs(velocity.x) > abs(velocity.y)
+        }
+
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            sharesTouches
         }
     }
 }

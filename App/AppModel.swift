@@ -8,7 +8,7 @@ enum StorageMode: String {
     case sync, local
 }
 
-enum AppTab: Hashable { case home, history, progress, rank }
+enum AppTab: Hashable, CaseIterable { case home, history, progress, rank }
 
 /// A question before something that can't be taken back, shown in Track's own dialog (as the website's).
 struct Confirm: Identifiable {

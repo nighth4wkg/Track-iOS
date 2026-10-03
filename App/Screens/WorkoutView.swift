@@ -1,13 +1,19 @@
 import SwiftUI
 import TrackCore
 
-/// The active workout, as on the website: ‹ keeps it for later, the name opens its options, Finish; the progress bar; a one-line guide until the first workout is finished; a card per exercise; Add
-/// exercise; and the rest timer floating at the bottom. The keyboard's Next walks weight → reps → RIR → next set.
+/// The active workout, as on the website: ‹ (or a swipe in from the left edge) keeps it for later, the name opens its
+/// options, Finish; the progress bar; a one-line guide until the first workout is finished; a card per exercise (hold
+/// a name and drag to move it); Add exercise; and the rest timer floating at the bottom. The keyboard's Next walks
+/// weight → reps → RIR → next set.
 struct WorkoutView: View {
     @Environment(AppModel.self) private var model
     @State private var addingExercise = false
     @State private var options = false
     @State private var dragging: String?
+    @State private var box = ReorderBox()
+    /// How far the page is pulled right by the edge swipe.
+    @State private var pull: CGFloat = 0
+    @State private var width: CGFloat = 400
     @FocusState private var focus: String?
 
     var body: some View {
@@ -15,9 +21,10 @@ struct WorkoutView: View {
             let fields = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
             let total = active.exercises.reduce(0) { $0 + $1.sets.count }
             let bests = RecordBests(model.training.sessions)
-            NavigationStack {
+            NavigationStack { ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 12) {
+                        Color.clear.frame(height: 0).id("top")
                         ProgressView(value: Double(active.completedSets.count), total: Double(max(total, 1)))
                             .tint(Palette.primary).scaleEffect(x: 1, y: 1.6, anchor: .center)
                             .animation(.smooth, value: active.completedSets.count)
@@ -28,11 +35,12 @@ struct WorkoutView: View {
                                 .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
                         }
                         ForEach(active.exercises) { exercise in
-                            ExerciseCard(exercise: exercise, ids: active.exercises.map(\.id), bests: bests, focus: $focus, dragging: $dragging)
+                            ExerciseCard(exercise: exercise, box: box, bests: bests, focus: $focus, dragging: $dragging)
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
                             .buttonStyle(PressStyle())
+                            .id("bottom")
                     }
                     .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
                     .frame(maxWidth: 720).frame(maxWidth: .infinity)
@@ -40,17 +48,56 @@ struct WorkoutView: View {
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .coordinateSpace(.named("cards"))
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { box.height = $0 }
+                .onDrop(of: [.text], delegate: drop(active, proxy))
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 .safeAreaInset(edge: .bottom) { RestCapsule() }
-            }
+            } }
+            .background(Backdrop())
+            .offset(x: pull)
+            .shadow(color: .black.opacity(pull > 0 ? 0.25 : 0), radius: 20)
+            .overlay(alignment: .leading) { edgeSwipe }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .onAppear { dragging = nil; pull = 0 }
             .sheet(isPresented: $addingExercise) {
                 ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
             }
             .sheet(isPresented: $options) { WorkoutOptions().trackOverlays() }
         }
+    }
+
+    private func drop(_ active: Session, _ proxy: ScrollViewProxy) -> ReorderDrop {
+        ReorderDrop(ids: active.exercises.map(\.id), box: box, dragging: $dragging, scroll: { edge in
+            withAnimation(.smooth(duration: 0.6)) { proxy.scrollTo(edge, anchor: edge == "top" ? .top : .bottom) }
+        }, move: { from, to in
+            model.update { training in
+                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
+                training.active?.exercises = moved
+            }
+        })
+    }
+
+    /// The website's swipe back: from the left edge, the page follows the finger; past a third (or a flick) it slides
+    /// away and the workout is kept for later, otherwise it settles back.
+    private var edgeSwipe: some View {
+        Color.clear.frame(width: 16).contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 8, coordinateSpace: .global)
+                .onChanged { pull = max(0, $0.translation.width) }
+                .onEnded { drag in
+                    guard drag.translation.width > width / 3 || drag.predictedEndTranslation.width > width / 2 else {
+                        withAnimation(.smooth(duration: 0.25)) { pull = 0 }
+                        return
+                    }
+                    withAnimation(.smooth(duration: 0.25)) { pull = width } completion: {
+                        var instant = Transaction()
+                        instant.disablesAnimations = true
+                        withTransaction(instant) { model.workoutOpen = false }
+                    }
+                })
     }
 
     @ToolbarContentBuilder private func toolbar(_ active: Session, done: Int, total: Int, fields: [String]) -> some ToolbarContent {

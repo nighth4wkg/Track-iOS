@@ -2,8 +2,8 @@ import SwiftUI
 import TrackCore
 
 /// A tab's page, laid out as on the website: a muted line over a large title, then glass cards in one scrolling
-/// column, 16pt from the edges. Above it, the navigation bar keeps iOS 26's Liquid Glass: the brand and streak in one
-/// bubble, Settings in another.
+/// column, 16pt from the edges. Swipe sideways to the next or previous tab, as on the website. Above it, the
+/// navigation bar keeps iOS 26's Liquid Glass: the brand, the streak and Settings each in their own bubble.
 struct Page<Content: View>: View {
     @Environment(AppModel.self) private var model
     let title: String
@@ -34,25 +34,28 @@ struct Page<Content: View>: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
+            .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
+                // The website's rule: 64pt, or a flick.
+                guard abs(x) > 64 || abs(velocity) > 600, let index = AppTab.allCases.firstIndex(of: model.tab) else { return }
+                let next = index + (x < 0 ? 1 : -1)
+                if AppTab.allCases.indices.contains(next) { model.tab = AppTab.allCases[next] }
+            }))
             .background(Backdrop())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
+                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize().padding(.horizontal, 4) }
+                ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 10) {
-                        Brand()
-                        let streak = model.training.sessions.weeklyStreak(at: nowMillis())
-                        HStack(spacing: 3) {
-                            Image(systemName: "flame").foregroundStyle(Palette.streak)
-                            Text("\(streak)").foregroundStyle(Palette.text)
-                        }
-                        .font(.subheadline.weight(.bold)).monospacedDigit()
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
+                    let streak = model.training.sessions.weeklyStreak(at: nowMillis())
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame").foregroundStyle(Palette.streak)
+                        Text("\(streak)").foregroundStyle(Palette.text)
                     }
-                    .fixedSize()
-                    .padding(.horizontal, 4)
+                    .font(.subheadline.weight(.bold)).monospacedDigit().fixedSize()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { settingsOpen = true } label: { Image(systemName: "gearshape").foregroundStyle(Palette.text) }
@@ -155,33 +158,5 @@ struct GlassCircleButton: View {
             Button(action: action) { image.frame(width: 44, height: 44).glass(radius: 22, fill: Palette.control, lifted: false) }
                 .buttonStyle(PressStyle()).accessibilityLabel(label)
         }
-    }
-}
-
-extension View {
-    /// A list row on its group's glass card.
-    func glassRow() -> some View {
-        listRowBackground(Rectangle().fill(Palette.card))
-            .listRowSeparatorTint(Palette.hairline)
-    }
-
-    /// A row that draws its own card (heroes, tiles): no list background or insets.
-    func bareRow() -> some View {
-        listRowBackground(Color.clear).listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
-    }
-}
-
-/// A section header in the website's style: a title with an optional count, not the small caps of iOS.
-struct Header: View {
-    let title: String
-    var count: Int?
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(title).font(.title3.weight(.semibold)).foregroundStyle(Palette.text)
-            if let count { Text("\(count)").font(.subheadline).foregroundStyle(Palette.muted) }
-        }
-        .textCase(nil)
-        .padding(.leading, -4)
     }
 }

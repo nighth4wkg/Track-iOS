@@ -3,7 +3,7 @@ import TrackCore
 
 /// History, as on the website: the filter button (a From–To range), the search (Clear appears while any filter is
 /// on), the month's calendar, then workouts newest first in weeks, twenty at a time. Each row has its date tile,
-/// sets · time · volume and a PR chip when it broke a record; tap it for the workout, swipe it left to delete it.
+/// sets · time · volume and a PR chip when it broke a record; tap it for the workout, swipe it left for Delete.
 struct HistoryView: View {
     @Environment(AppModel.self) private var model
     @Binding var settingsOpen: Bool
@@ -40,16 +40,12 @@ struct HistoryView: View {
             ForEach(weeks, id: \.key) { week, items in
                 VStack(alignment: .leading, spacing: 8) {
                     SmallHeader(title: weekTitle(week))
-                    GlassList {
-                        ForEach(items) { session in
-                            SwipeToDelete(onDelete: { model.deleteWorkout(session) }) {
-                                Button { model.history = session } label: {
-                                    HistoryRow(session: session, unit: training.settings.unit, record: recordSessions.contains(session.id))
-                                        .contentShape(Rectangle())
-                                }
-                                .buttonStyle(PressStyle())
-                            }
+                    NativeList(items: items, onDelete: { model.deleteWorkout($0) }) { session in
+                        Button { model.history = session } label: {
+                            HistoryRow(session: session, unit: training.settings.unit, record: recordSessions.contains(session.id))
+                                .contentShape(Rectangle())
                         }
+                        .buttonStyle(PressStyle())
                     }
                 }
             }

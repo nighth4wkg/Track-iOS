@@ -4,11 +4,11 @@ import TrackCore
 /// One exercise, as the website's card: a header that opens and closes it (swipe the header left to remove the
 /// exercise), then its sets and Add set | the sides switch. It stays open until closed by hand or until every set is
 /// done; one opened or closed by hand stays that way until its sets change between all done and not. Hold the
-/// header and drag to move the exercise.
+/// name and drag to move the exercise (see ReorderDrop); every card stays folded while one is held.
 struct ExerciseCard: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
-    let ids: [String]
+    let box: ReorderBox
     let bests: RecordBests
     var focus: FocusState<String?>.Binding
     @Binding var dragging: String?
@@ -17,7 +17,7 @@ struct ExerciseCard: View {
     var body: some View {
         let done = exercise.sets.filter(\.done).count
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
-        let open = manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished
+        let open = dragging == nil && (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
         VStack(spacing: 8) {
             SwipeToDelete(onDelete: { model.removeExercise(exercise) }) {
                 HStack(spacing: 8) {
@@ -68,12 +68,7 @@ struct ExerciseCard: View {
         .padding(16)
         .glass()
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .reorderTarget(exercise.id, in: ids, dragging: $dragging) { from, to in
-            model.update { training in
-                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
-                training.active?.exercises = moved
-            }
-        }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("cards")) } action: { box.frames[exercise.id] = $0 }
         .animation(.smooth(duration: 0.3), value: open)
         .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)

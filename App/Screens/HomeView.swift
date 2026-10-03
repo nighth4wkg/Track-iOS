@@ -2,8 +2,8 @@ import SwiftUI
 import TrackCore
 
 /// Home, as on the website: today's date over "Ready to train" (or "Keep going"), the workout in progress or the Up
-/// next card, your splits (tap one for its page, swipe it left to delete it, hold and drag to move it), then this week's volume
-/// and the next achievement.
+/// next card, your splits (tap one for its page, swipe it left for Delete, hold and drag to move it), then this
+/// week's volume and the next achievement.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Binding var settingsOpen: Bool
@@ -19,8 +19,7 @@ struct HomeView: View {
                 Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(Palette.danger)
             }
             if let active = training.active {
-                SwipeToDelete(label: "Discard", onDelete: { model.discard() }) { ResumeCard(active: active) }
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                NativeList(items: [active], deleteLabel: "Discard", onDelete: { _ in model.discard() }, insets: EdgeInsets()) { ResumeCard(active: $0) }
                     .transition(.opacity)
             } else if training.nextSplit != nil {
                 UpNextCard(training: training, now: now)
@@ -49,25 +48,18 @@ struct HomeView: View {
     }
 }
 
-/// Your splits on one glass card: tap one for its page, swipe it left to delete it, hold and drag it to move it. The
-/// end of each row says In progress, Next, or ›.
+/// Your splits on one card in iOS's own list: tap one for its page, swipe it left for Delete, hold and drag it to
+/// move it. The end of each row says In progress, Next, or ›.
 private struct SplitList: View {
     @Environment(AppModel.self) private var model
     let nextId: String?
     let open: (String) -> Void
-    @State private var dragging: String?
 
     var body: some View {
-        let ids = model.training.splits.map(\.id)
-        GlassList {
-            ForEach(model.training.splits) { split in
-                SwipeToDelete(onDelete: { model.deleteSplit(split) }) {
-                    Button { open(split.id) } label: { row(split).contentShape(Rectangle()) }
-                        .buttonStyle(PressStyle())
-                        .reorderHandle(split.id, dragging: $dragging) { row(split).padding(.horizontal, 16).padding(.vertical, 10).frame(width: 340).glass(fill: Palette.dialog) }
-                }
-                .reorderTarget(split.id, in: ids, dragging: $dragging) { from, to in model.update { $0.splits = $0.splits.moved(from, to: to) } }
-            }
+        NativeList(items: model.training.splits, onDelete: { model.deleteSplit($0) },
+                   onMove: { from, to in model.update { $0.splits = $0.splits.moved(from, to: to) } }) { split in
+            Button { open(split.id) } label: { row(split).contentShape(Rectangle()) }
+                .buttonStyle(PressStyle())
         }
     }
 
@@ -112,7 +104,7 @@ private struct ResumeCard: View {
                 Label("Resume workout", systemImage: "play.fill").font(.headline).foregroundStyle(Palette.primaryText)
                     .frame(maxWidth: .infinity, minHeight: 50).background(Capsule().fill(Palette.primary))
             }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass()
+            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(PressStyle())
         .sensoryFeedback(.impact(weight: .medium), trigger: model.workoutOpen) { _, open in open }

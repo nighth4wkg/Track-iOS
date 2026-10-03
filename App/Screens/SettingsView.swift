@@ -1,36 +1,22 @@
 import SwiftUI
 import TrackCore
 
-/// Settings, as the website's sheet: "Settings" with ✕, the Training · Data · Account · About tabs, and rows of a
-/// label with its glass select. Every choice ticks.
+/// Settings, as the website's sheet: "Settings" with ✕, the Training · Data · Account · About tabs (tap, drag the
+/// selection, or swipe the page), and rows of a label with its glass select. Every choice ticks.
 struct SettingsView: View {
     enum Tab: String, CaseIterable { case training = "Training", data = "Data", account = "Account", about = "About" }
     @Environment(\.dismiss) private var dismiss
     @State private var tab = Tab.training
-    @Namespace private var highlight
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 0) {
-                        ForEach(Tab.allCases, id: \.self) { item in
-                            Button { withAnimation(.smooth(duration: 0.3)) { tab = item } } label: {
-                                Text(item.rawValue).font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(tab == item ? Palette.accent : Palette.muted)
-                                    .frame(maxWidth: .infinity, minHeight: 40)
-                                    .background {
-                                        if tab == item {
-                                            Capsule().fill(Palette.control).glass(radius: 20, fill: .clear, lifted: false)
-                                                .matchedGeometryEffect(id: "tab", in: highlight)
-                                        }
-                                    }
-                            }
-                            .buttonStyle(.plain)
-                        }
+                    // iOS's own segmented control: Liquid Glass, and its selection can be dragged along.
+                    Picker("Section", selection: $tab.animation(.smooth(duration: 0.3))) {
+                        ForEach(Tab.allCases, id: \.self) { Text($0.rawValue) }
                     }
-                    .padding(4)
-                    .glass(radius: 24, fill: Palette.input, lifted: false)
+                    .pickerStyle(.segmented)
                     .sensoryFeedback(.selection, trigger: tab)
                     switch tab {
                     case .training: TrainingSettings()
@@ -42,6 +28,12 @@ struct SettingsView: View {
                 .padding(.horizontal, 16).padding(.bottom, 24)
             }
             .scrollDismissesKeyboard(.interactively)
+            .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
+                // Swipe to the next or previous tab, as on the website.
+                guard abs(x) > 64 || abs(velocity) > 600, let index = Tab.allCases.firstIndex(of: tab) else { return }
+                let next = index + (x < 0 ? 1 : -1)
+                if Tab.allCases.indices.contains(next) { withAnimation(.smooth(duration: 0.3)) { tab = Tab.allCases[next] } }
+            }))
             .background(Backdrop())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

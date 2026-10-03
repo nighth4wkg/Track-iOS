@@ -22,7 +22,7 @@ struct MainView: View {
         .tint(Palette.accent)
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
-        .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView().trackOverlays() }
+        .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView().trackOverlays().presentationBackground(.clear) }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
         .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
         .trackOverlays()

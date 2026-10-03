@@ -1,14 +1,13 @@
 import SwiftUI
 import TrackCore
 
-/// A split, as the website's split page: its name (✏︎ to rename) over its size, Start workout, "Your exercises" (✕ to
-/// remove one, hold and drag to move one), Add exercise, Resume while a workout is on, and Delete split.
+/// A split, as the website's split page: its name (✏︎ to rename) over its size, Start workout, "Your exercises" (swipe
+/// one left to remove it, hold and drag to move it), Add exercise, Resume while a workout is on, and Delete split.
 struct SplitPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let splitId: String
     @State private var picking = false
-    @State private var dragging: String?
 
     var body: some View {
         if let split = model.training.splits.first(where: { $0.id == splitId }) {
@@ -30,19 +29,15 @@ struct SplitPage: View {
                     } else {
                         Button { model.start(split) } label: { Label("Start workout", systemImage: "play") }
                             .buttonStyle(PrimaryButtonStyle()).disabled(model.training.active != nil)
-                        let ids = split.exercises.map(\.id)
                         SmallHeader(title: "Your exercises")
-                        GlassList {
-                            ForEach(split.exercises) { exercise in
-                                exerciseRow(exercise, in: split)
-                                    .contentShape(Rectangle())
-                                    .reorderHandle(exercise.id, dragging: $dragging) {
-                                        exerciseRow(exercise, in: split).padding(.horizontal, 16).frame(width: 340).glass(fill: Palette.dialog)
-                                    }
-                                    .reorderTarget(exercise.id, in: ids, dragging: $dragging) { from, to in
-                                        model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } }
-                                    }
+                        NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: { remove($0, from: split) },
+                                   onMove: { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } }) { exercise in
+                            HStack {
+                                Text(exercise.name).foregroundStyle(Palette.text)
+                                Spacer()
+                                Text(count(exercise.sets.count, "set")).font(.subheadline).foregroundStyle(Palette.muted)
                             }
+                            .frame(minHeight: 28)
                         }
                     }
                     Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
@@ -69,16 +64,6 @@ struct SplitPage: View {
             // Deleted: back to Home.
             Color.clear.onAppear { dismiss() }
         }
-    }
-
-    private func exerciseRow(_ exercise: Exercise, in split: Split) -> some View {
-        HStack {
-            Text(exercise.name).foregroundStyle(Palette.text)
-            Spacer()
-            Text(count(exercise.sets.count, "set")).font(.subheadline).foregroundStyle(Palette.muted)
-            GlassCircleButton(icon: "xmark", label: "Remove \(exercise.name)") { remove(exercise, from: split) }
-        }
-        .frame(minHeight: 48)
     }
 
     private func remove(_ exercise: Exercise, from split: Split) {

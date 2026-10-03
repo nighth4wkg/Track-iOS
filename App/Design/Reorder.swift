@@ -1,35 +1,50 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Hold an item and drag it to move it: the others make room as it passes over them. The item's id rides along as
-/// text; only ids in the same list move anything.
+/// Moving a workout's exercises: hold a card's name and drag it. While it's held every card folds to its name, so
+/// the list is short and each place is the same height; the one under the finger makes room; holding near the top
+/// (the bar included) or the bottom scrolls there. Letting go anywhere on the page ends it.
+final class ReorderBox {
+    /// Each card's frame in the page ("cards" space), as laid out now. Not observed: it changes on every scroll.
+    var frames: [String: CGRect] = [:]
+    var height: CGFloat = 0
+    var edge: String?
+}
+
 extension View {
     /// What you pick up: this view, shown as `preview` while it's dragged.
     func reorderHandle<Preview: View>(_ id: String, dragging: Binding<String?>, @ViewBuilder preview: () -> Preview) -> some View {
         onDrag({ dragging.wrappedValue = id; return NSItemProvider(object: id as NSString) }, preview: preview)
     }
-
-    /// Where it can go: passing over this item moves the dragged one to its place.
-    func reorderTarget(_ id: String, in ids: [String], dragging: Binding<String?>, move: @escaping (Int, Int) -> Void) -> some View {
-        onDrop(of: [.text], delegate: ReorderDrop(id: id, ids: ids, dragging: dragging, move: move))
-    }
 }
 
-private struct ReorderDrop: DropDelegate {
-    let id: String
+struct ReorderDrop: DropDelegate {
     let ids: [String]
+    let box: ReorderBox
     @Binding var dragging: String?
+    /// Scrolls to "top" or "bottom".
+    let scroll: (String) -> Void
     let move: (Int, Int) -> Void
 
-    func dropEntered(info: DropInfo) {
-        guard let dragging, dragging != id, let from = ids.firstIndex(of: dragging), let to = ids.firstIndex(of: id) else { return }
-        withAnimation(.smooth(duration: 0.25)) { move(from, to) }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        let y = info.location.y
+        let edge = y < 130 ? "top" : y > box.height - 110 ? "bottom" : nil
+        if edge != box.edge {
+            box.edge = edge
+            if let edge { scroll(edge) }
+        }
+        if let dragging, let from = ids.firstIndex(of: dragging),
+           let to = ids.firstIndex(where: { box.frames[$0].map { $0.minY <= y && y < $0.maxY } ?? false }), to != from {
+            withAnimation(.smooth(duration: 0.25)) { move(from, to) }
+        }
+        return DropProposal(operation: .move)
     }
 
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func dropExited(info: DropInfo) { box.edge = nil }
 
     func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
+        box.edge = nil
+        withAnimation(.smooth(duration: 0.3)) { dragging = nil }
         return true
     }
 }
