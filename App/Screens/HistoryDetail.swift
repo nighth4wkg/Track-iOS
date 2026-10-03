@@ -43,8 +43,11 @@ struct HistoryDetail: View {
             .background(Backdrop())
             .safeAreaInset(edge: .bottom) {
                 HStack(spacing: 16) {
-                    Button { model.deleteWorkout(current) } label: { Label("Delete", systemImage: "trash") }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.danger).frame(minHeight: 44).buttonStyle(PressStyle())
+                    Button { model.deleteWorkout(current) } label: {
+                        Label("Delete", systemImage: "trash").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            .padding(.horizontal, 16).frame(minHeight: 44).background(Capsule().fill(Palette.danger))
+                    }
+                    .buttonStyle(PressStyle())
                     Spacer()
                     Button { model.repeatWorkout(current) } label: {
                         Label("Repeat workout", systemImage: "play").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.primaryText)

@@ -38,7 +38,7 @@ struct ProgressPage: View {
                     Chip(text: change == 0 ? "Same as \(period.last)" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs \(period.last)", accent: change > 0)
                 }
                 VolumeBars(volumes: model.derived("bars \(period) \(dayKey(now))") { $0.volumes(period.bars, per: period, at: now) }, label: period.name)
-                HStack { Text(period.first); Spacer(); Text(period.now.capitalized) }.font(.caption).foregroundStyle(Palette.muted)
+                HStack { Text(period.first); Spacer(); Text(period.now.prefix(1).uppercased() + period.now.dropFirst()) }.font(.caption).foregroundStyle(Palette.muted)
             }
             .padding(20).glass()
             HStack(spacing: 10) {
@@ -47,7 +47,7 @@ struct ProgressPage: View {
                 tile(icon: "medal", value: "\(model.derived("award count") { $0.questAwards.count })/\(Quest.all.count)", label: "Achievements") { quests = true }
             }
             .fixedSize(horizontal: false, vertical: true)
-            SectionHeading(title: "Personal records")
+            SmallHeader(title: "Personal records")
             if records.isEmpty {
                 EmptyCard(icon: "chart.line.uptrend.xyaxis",
                           title: training.sessions.isEmpty ? "Your next workout starts the story" : "No records yet",
@@ -190,5 +190,5 @@ extension Period {
     var now: String { self == .day ? "today" : "this \(name.lowercased())" }
     var last: String { self == .day ? "yesterday" : "last \(name.lowercased())" }
     var bars: Int { self == .day ? 7 : self == .week ? 8 : 6 }
-    var first: String { "\(bars - 1) \(name.lowercased())s ago" }
+    var first: String { "\(bars) \(name.lowercased())s ago" }
 }

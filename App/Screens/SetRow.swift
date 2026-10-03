@@ -98,7 +98,7 @@ struct SetRow: View {
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
             .font(.body.weight(.bold)).monospacedDigit()
-            .foregroundStyle(Palette.text)
+            .foregroundStyle(set.done ? Palette.accent : Palette.text)
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(glow ? 0.8 : 0), lineWidth: 1.5))

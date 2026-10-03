@@ -50,12 +50,14 @@ struct SettingsView: View {
 
 /// A setting: its name (and a line of help) with its control at the end.
 struct SettingRow<Control: View>: View {
+    var icon: String?
     let label: String
     var detail: String?
     @ViewBuilder let control: Control
 
     var body: some View {
         HStack(spacing: 12) {
+            if let icon { Image(systemName: icon).font(.body).foregroundStyle(Palette.muted).frame(width: 22) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.body).foregroundStyle(Palette.text)
                 if let detail { Text(detail).font(.caption).foregroundStyle(Palette.muted) }
@@ -86,20 +88,20 @@ private struct TrainingSettings: View {
         let settings = model.training.settings
         let showCustom = custom || !Self.rests.contains(settings.restSeconds)
         GlassList {
-            SettingRow(label: "Weight unit") {
+            SettingRow(icon: "scalemass", label: "Weight unit") {
                 GlassMenu(selection: settings.unit, options: [(.kg, "kg"), (.lb, "lb")]) { value in model.update { $0.settings.unit = value } }
             }
-            SettingRow(label: "Weekly goal") {
+            SettingRow(icon: "target", label: "Weekly goal") {
                 GlassMenu(selection: settings.weeklyGoal, options: (1...7).map { ($0, count($0, "day")) }) { value in
                     model.update { $0.settings.weeklyGoal = value }
                 }
             }
-            SettingRow(label: "Log sets", detail: settings.logSets == .manual ? "Only the ✓ logs a set" : "Filling in RIR logs the set") {
+            SettingRow(icon: "checklist", label: "Log sets", detail: settings.logSets == .manual ? "Only the ✓ logs a set" : "Filling in RIR logs the set") {
                 GlassMenu(selection: settings.logSets ?? .auto, options: [(.auto, "Auto"), (.manual, "Manual")]) { value in
                     model.update { $0.settings.logSets = value }
                 }
             }
-            SettingRow(label: "Rest timer") {
+            SettingRow(icon: "timer", label: "Rest timer") {
                 GlassMenu(selection: showCustom ? -1 : settings.restSeconds,
                           options: Self.rests.map { ($0, String(format: "%d:%02d", $0 / 60, $0 % 60)) } + [(-1, "Custom")]) { value in
                     if value == -1 { custom = true; draft = String(settings.restSeconds) } else { custom = false; model.update { $0.settings.restSeconds = value } }
@@ -120,7 +122,7 @@ private struct TrainingSettings: View {
                     if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
                 }
             }
-            SettingRow(label: "Appearance") {
+            SettingRow(icon: "circle.lefthalf.filled", label: "Appearance") {
                 GlassMenu(selection: settings.theme == .liquid ? .system : settings.theme,
                           options: [(.system, "System"), (.light, "Light"), (.dark, "Dark")]) { value in model.update { $0.settings.theme = value } }
             }

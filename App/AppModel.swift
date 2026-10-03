@@ -27,7 +27,8 @@ struct Naming: Identifiable {
     let title: String
     var message = "Give your routine a name that makes sense to you."
     var name = ""
-    var placeholder = "Split name"
+    var label = "Split name"
+    var placeholder = "e.g. Upper body"
     var number = false
     let action: String
     let onSave: (String) -> Void
@@ -140,7 +141,7 @@ final class AppModel {
             memo = [:]
             memoSessions = training.sessions
         }
-        if let value = memo[key] as? T { return value }
+        if let stored = memo[key], let value = stored as? T { return value }
         let value = make(training.sessions)
         memo[key] = value
         return value

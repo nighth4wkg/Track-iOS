@@ -73,7 +73,7 @@ extension AppModel {
     }
 
     func deleteSplit(_ split: Split) {
-        confirm = Confirm(title: "Delete \(split.name)?", message: "Your finished workouts stay in History.", label: "Delete split",
+        confirm = Confirm(title: "Delete \(split.name)?", message: "This removes the split. Your workout history stays saved.", label: "Delete split",
                           destructive: true) { [weak self] in self?.update { $0.splits.removeAll { $0.id == split.id } } }
     }
 

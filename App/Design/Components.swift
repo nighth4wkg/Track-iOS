@@ -124,7 +124,7 @@ extension SectionHeading where Trailing == EmptyView {
     init(title: String, count: Int? = nil) { self.init(title: title, count: count) { EmptyView() } }
 }
 
-/// The website's glass select: the value and a chevron in a glass pill, opening the system menu (Liquid Glass).
+/// The website's select: the value and a chevron, opening the system menu (Liquid Glass).
 struct GlassMenu<Value: Hashable>: View {
     let selection: Value
     let options: [(Value, String)]
@@ -143,9 +143,8 @@ struct GlassMenu<Value: Hashable>: View {
                 Text(options.first { $0.0 == selection }?.1 ?? "").lineLimit(1)
                 Image(systemName: "chevron.down").font(.caption.weight(.bold))
             }
-            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
-            .padding(.horizontal, 12).frame(minHeight: 40)
-            .glass(radius: 12, fill: Palette.control, lifted: false)
+            .font(.body).foregroundStyle(Palette.text)
+            .frame(minHeight: 40).contentShape(Rectangle())
         }
         .sensoryFeedback(.selection, trigger: selection)
     }

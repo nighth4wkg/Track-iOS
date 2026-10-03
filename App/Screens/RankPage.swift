@@ -101,8 +101,8 @@ struct RankPage: View {
 
     /// Changing the bodyweight later, in Track's dialog.
     private func editBodyweight(_ bodyweight: Double, _ unit: TrackCore.Settings.Unit) {
-        model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
-                              name: TrainingSet.display(kg: bodyweight, unit: unit), placeholder: unit.rawValue, number: true, action: "Save") { text in
+        model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.", label: "Bodyweight (\(unit.rawValue))",
+                              name: TrainingSet.display(kg: bodyweight, unit: unit), placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true, action: "Save") { text in
             guard let kg = TrainingSet.kilograms(from: text, unit: unit), kg >= 20, kg <= 400 else {
                 model.message = "Enter a bodyweight between \(unit == .kg ? "20 and 400 kg" : "44 and 880 lb")."
                 return
@@ -120,7 +120,7 @@ struct RankPage: View {
 
 /// "5% left to Strong", or the top.
 func toGo(_ rank: Int, _ progress: Double) -> String {
-    rank >= Ranks.names.count - 1 ? "Top rank" : "\(Int(((1 - progress) * 100).rounded()))% left to \(Ranks.names[rank + 1])"
+    rank >= Ranks.names.count - 1 ? "Top rank" : "\(max(1, Int(((1 - progress) * 100).rounded(.up))))% left to \(Ranks.names[rank + 1])"
 }
 
 /// A muscle: its rank, a bar toward the next, and (tapped open) the lift it's ranked on and what reaches the next.

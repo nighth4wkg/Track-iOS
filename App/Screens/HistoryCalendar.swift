@@ -31,26 +31,27 @@ struct HistoryCalendar: View {
                     .disabled(month <= earliest).opacity(month <= earliest ? 0.4 : 1)
                 GlassCircleButton(icon: "chevron.right", label: "Next month") { step(1) }.disabled(isCurrent).opacity(isCurrent ? 0.4 : 1)
             }
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
                     Text(letter).font(.caption.weight(.bold)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity)
                 }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-                ForEach(-lead..<0, id: \.self) { _ in Color.clear.frame(height: 36) }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+                ForEach(-lead..<0, id: \.self) { _ in Color.clear.frame(height: 40) }
                 ForEach(1...days, id: \.self) { number in
                     let date = calendar.date(byAdding: .day, value: number - 1, to: month)!
                     let key = dayKey(millis(date))
                     let lit = trained.contains(key)
                     let isToday = key == today
                     Button { if lit { withAnimation(.smooth) { day = day == key ? nil : key } } } label: {
-                        Text("\(number)").font(.subheadline.weight(lit ? .bold : .regular)).monospacedDigit()
-                            .foregroundStyle(isToday && lit ? Palette.primaryText : lit ? Palette.text : key > today ? Palette.muted.opacity(0.35) : Palette.muted.opacity(0.7))
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(isToday && lit ? Palette.primary : lit ? Palette.control : Palette.input.opacity(0.5)))
-                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(day == key ? Palette.text : isToday && !lit ? Palette.accent : .clear, lineWidth: 2))
+                        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        Text("\(number)").font(.subheadline.weight(.semibold)).monospacedDigit()
+                            .foregroundStyle(lit ? Palette.primaryText : isToday ? Palette.text : Palette.muted)
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .background(shape.fill(lit ? Palette.primary : Palette.control))
+                            .overlay(shape.strokeBorder(isToday ? (lit ? Palette.primaryText : Palette.text) : .clear, lineWidth: 2))
+                            .overlay(shape.inset(by: -4).strokeBorder(day == key ? Palette.text : .clear, lineWidth: 2))
+                            .opacity(key > today ? 0.45 : 1)
                     }
                     .buttonStyle(.plain)
                     .disabled(!lit)

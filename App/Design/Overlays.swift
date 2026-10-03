@@ -95,19 +95,20 @@ private struct NameCard: View {
     var body: some View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         VStack(alignment: .leading, spacing: 10) {
-            Text(naming.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+            HStack(alignment: .top) {
+                Text(naming.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+                Spacer()
+                GlassCircleButton(icon: "xmark", label: "Close") { model.naming = nil }.padding(.top, -6).padding(.trailing, -6)
+            }
             Text(naming.message).font(.subheadline).foregroundStyle(Palette.muted)
+            Text(naming.label).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).padding(.top, 6)
             TextField(naming.placeholder, text: $name).focused($focused).submitLabel(.done).onSubmit(save)
                 .keyboardType(naming.number ? .decimalPad : .default)
                 .font(.body.weight(.semibold)).padding(.horizontal, 14).frame(minHeight: 48)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
                 .onChange(of: name) { _, value in if value.count > 100 { name = String(value.prefix(100)) } }
-                .padding(.top, 6)
-            HStack(spacing: 12) {
-                Button("Cancel") { model.naming = nil }.buttonStyle(SecondaryButtonStyle())
-                Button(naming.action, action: save).buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty)
-            }
-            .padding(.top, 10)
+            Button(action: save) { Label(naming.action, systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
+                .buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty).padding(.top, 6)
         }
         .onAppear { name = naming.name; DispatchQueue.main.async { focused = true } }
     }

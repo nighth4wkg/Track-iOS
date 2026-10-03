@@ -21,7 +21,7 @@ struct SplitPage: View {
                         }
                         Spacer()
                         GlassCircleButton(icon: "pencil", label: "Rename split") {
-                            model.naming = Naming(title: "Rename split", name: split.name, action: "Save") { name in model.update { $0.edit(splitId) { $0.name = name } } }
+                            model.naming = Naming(title: "Rename split", name: split.name, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
                         }
                     }
                     if split.exercises.isEmpty {

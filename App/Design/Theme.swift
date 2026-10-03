@@ -97,16 +97,16 @@ struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-/// Every other button: a glass pill, tinted red for one that deletes.
+/// Every other button: a glass pill, or solid red for one that deletes (the website's danger button).
 struct SecondaryButtonStyle: ButtonStyle {
     var danger = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
-            .foregroundStyle(danger ? Palette.danger : Palette.text)
+            .foregroundStyle(danger ? .white : Palette.text)
             .frame(maxWidth: .infinity, minHeight: 50)
-            .glass(radius: 25, fill: danger ? Palette.danger.opacity(0.14) : Palette.control, lifted: false)
+            .glass(radius: 25, fill: danger ? Palette.danger : Palette.control, lifted: false)
             .opacity(configuration.isPressed ? 0.7 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
