@@ -45,6 +45,9 @@ struct WorkoutView: View {
                     .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
                     .frame(maxWidth: 720).frame(maxWidth: .infinity)
                     .animation(.smooth(duration: 0.3), value: active.exercises.map(\.id))
+                    // A card folding by itself (its last set ticked) or for a drag moves the cards below with it.
+                    .animation(.smooth(duration: 0.3), value: active.exercises.map { $0.sets.allSatisfy(\.done) })
+                    .animation(.smooth(duration: 0.3), value: dragging)
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
                 .scrollDismissesKeyboard(.interactively)
