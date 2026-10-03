@@ -20,6 +20,8 @@ struct SetRow: View {
     @State private var celebrated: String?
     @State private var burst = 0
     @State private var hint = false
+    /// Auto mode logs the set once its RIR is typed here; a RIR only carried over doesn't count.
+    @State private var rirTyped = false
 
     var body: some View {
         let unit = model.training.settings.unit
@@ -159,7 +161,8 @@ struct SetRow: View {
         let unit = settings.unit
         if TrainingSet.display(kg: TrainingSet.kilograms(from: weight, unit: unit), unit: unit) == TrainingSet.display(kg: set.kg, unit: unit),
            TrainingSet.wholeNumber(reps) == set.reps, TrainingSet.wholeNumber(rir) == set.rir { return }
-        let next = set.edited(weight: weight, reps: reps, rir: rir, unit: unit, autoLog: settings.logSets != .manual)
+        if focus.wrappedValue == "\(set.id).rir" { rirTyped = true }
+        let next = set.edited(weight: weight, reps: reps, rir: rir, unit: unit, autoLog: settings.logSets != .manual && rirTyped)
         guard next != set else { return }
         let started = next.done && !set.done
         model.update { training in

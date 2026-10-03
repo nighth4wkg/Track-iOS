@@ -113,9 +113,10 @@ extension Exercise {
     /// The side a newly added set takes: the opposite of the last set's, if the exercise is in sides.
     public var nextSide: Side? { sets.last?.side?.other ?? (usesSides ? .left : nil) }
 
-    /// A set added to the exercise: the last set's numbers to start from (not logged), on the next side.
+    /// A set added to the exercise: the last set's weight and reps to start from (not logged), RIR left for you to
+    /// fill in, on the next side.
     public var nextSet: TrainingSet {
-        TrainingSet(kg: sets.last?.kg, reps: sets.last?.reps, rir: sets.last?.rir, side: nextSide)
+        TrainingSet(kg: sets.last?.kg, reps: sets.last?.reps, side: nextSide)
     }
 
     /// A new exercise named as one-sided starts in sides.
