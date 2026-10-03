@@ -62,12 +62,13 @@ struct ExerciseCard: View {
                     }
                     .buttonStyle(PressStyle()).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity)
             }
         }
         .padding(16)
-        .glass()
+        .glass(lifted: false)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .opacity(dragging == exercise.id ? 0.4 : 1)
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("cards")) } action: { box.frames[exercise.id] = $0 }
         .animation(.smooth(duration: 0.3), value: open)
         .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))

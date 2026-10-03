@@ -96,8 +96,9 @@ private struct NameCard: View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         VStack(alignment: .leading, spacing: 10) {
             Text(naming.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-            Text("Give your routine a name that makes sense to you.").font(.subheadline).foregroundStyle(Palette.muted)
+            Text(naming.message).font(.subheadline).foregroundStyle(Palette.muted)
             TextField(naming.placeholder, text: $name).focused($focused).submitLabel(.done).onSubmit(save)
+                .keyboardType(naming.number ? .decimalPad : .default)
                 .font(.body.weight(.semibold)).padding(.horizontal, 14).frame(minHeight: 48)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
                 .onChange(of: name) { _, value in if value.count > 100 { name = String(value.prefix(100)) } }

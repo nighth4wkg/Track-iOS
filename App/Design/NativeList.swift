@@ -21,7 +21,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
                     .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
                     .listRowInsets(insets)
-                    .listRowBackground(Palette.dialog)
+                    .listRowBackground(Color.clear)
                     .listRowSeparatorTint(Palette.hairline)
                     .listRowSeparator(.hidden, edges: outerEdges(item))
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -39,9 +39,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
         .environment(\.defaultMinListRowHeight, 0)
         .frame(height: items.reduce(0) { $0 + (heights[$1.id] ?? 52) + insets.top + insets.bottom })
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .strokeBorder(LinearGradient(colors: [Palette.rim, Palette.rim.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-        .shadow(color: Palette.shadow, radius: 15, y: 10)
+        .glass()
     }
 
     /// No hairline above the first row or below the last.

@@ -17,6 +17,7 @@ struct SettingsView: View {
                         ForEach(Tab.allCases, id: \.self) { Text($0.rawValue) }
                     }
                     .pickerStyle(.segmented)
+                    .controlSize(.extraLarge)
                     .sensoryFeedback(.selection, trigger: tab)
                     switch tab {
                     case .training: TrainingSettings()

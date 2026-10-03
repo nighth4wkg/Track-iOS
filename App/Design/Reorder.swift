@@ -33,8 +33,10 @@ struct ReorderDrop: DropDelegate {
             box.edge = edge
             if let edge { scroll(edge) }
         }
+        // Past the middle of the card under the finger, so a short card and a tall one don't swap back and forth.
         if let dragging, let from = ids.firstIndex(of: dragging),
-           let to = ids.firstIndex(where: { box.frames[$0].map { $0.minY <= y && y < $0.maxY } ?? false }), to != from {
+           let to = ids.firstIndex(where: { box.frames[$0].map { $0.minY <= y && y < $0.maxY } ?? false }), to != from,
+           let target = box.frames[ids[to]], to > from ? y > target.midY : y < target.midY {
             withAnimation(.smooth(duration: 0.25)) { move(from, to) }
         }
         return DropProposal(operation: .move)

@@ -29,10 +29,14 @@ struct RankPage: View {
                 let overall = min(Ranks.names.count - 1, Int(score))
                 overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit)
                 if let closest = ranked.filter({ $0.next != nil }).max(by: { $0.progress < $1.progress }), let next = closest.next, let best = closest.best {
-                    GlassList {
-                        ListRow(icon: "scope", title: "Closest win: \(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])",
-                                detail: "\(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps) on \(best.exercise) gets you there") { EmptyView() }
+                    // The rank up that's nearest, and the one lift that gets it.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Nearest rank up").font(.subheadline).foregroundStyle(Palette.muted)
+                        Text("\(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])").font(.headline).foregroundStyle(Palette.rankText[closest.rank + 1])
+                        Text("Lift \(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps) on \(best.exercise)")
+                            .font(.subheadline).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
                 }
                 GlassList { ForEach(ranks, id: \.muscle) { MuscleRow(rank: $0, unit: unit) } }
             } else {
@@ -67,7 +71,13 @@ struct RankPage: View {
         .padding(20)
         .glass()
         .overlay(alignment: .topTrailing) {
-            Chip(text: "\(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue)").padding(14)
+            Button { editBodyweight(bodyweight, unit) } label: {
+                Label("\(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue)", systemImage: "pencil")
+                    .font(.caption.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
+                    .padding(.horizontal, 10).frame(minHeight: 32).glass(radius: 16, fill: Palette.control, lifted: false)
+            }
+            .buttonStyle(PressStyle()).padding(14)
+            .accessibilityLabel("Bodyweight \(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue). Change")
         }
     }
 
@@ -87,6 +97,18 @@ struct RankPage: View {
                 .disabled(TrainingSet.kilograms(from: bodyweightText, unit: unit).map { $0 >= 20 && $0 <= 400 } != true)
         }
         .padding(24).frame(maxWidth: .infinity).glass()
+    }
+
+    /// Changing the bodyweight later, in Track's dialog.
+    private func editBodyweight(_ bodyweight: Double, _ unit: TrackCore.Settings.Unit) {
+        model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
+                              name: TrainingSet.display(kg: bodyweight, unit: unit), placeholder: unit.rawValue, number: true, action: "Save") { text in
+            guard let kg = TrainingSet.kilograms(from: text, unit: unit), kg >= 20, kg <= 400 else {
+                model.message = "Enter a bodyweight between \(unit == .kg ? "20 and 400 kg" : "44 and 880 lb")."
+                return
+            }
+            withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
+        }
     }
 
     private func save(_ unit: TrackCore.Settings.Unit) {

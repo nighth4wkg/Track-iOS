@@ -20,7 +20,7 @@ struct WorkoutView: View {
         if let active = model.training.active {
             let fields = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
             let total = active.exercises.reduce(0) { $0 + $1.sets.count }
-            let bests = RecordBests(model.training.sessions)
+            let bests = model.bests
             NavigationStack { ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 12) {

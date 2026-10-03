@@ -12,6 +12,8 @@ struct Page<Content: View>: View {
     var accessory: AnyView?
     @Binding var settingsOpen: Bool
     @ViewBuilder let content: Content
+    @State private var position = ScrollPosition(edge: .top)
+    @State private var shift: CGFloat = 0
 
     var body: some View {
         NavigationStack {
@@ -32,7 +34,11 @@ struct Page<Content: View>: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
+                .offset(x: shift)
+                .opacity(1 - abs(shift) / 120)
             }
+            .scrollPosition($position)
+            .onAppear(perform: arrive)
             .scrollDismissesKeyboard(.interactively)
             .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
                 // The website's rule: 64pt, or a flick.
@@ -54,6 +60,7 @@ struct Page<Content: View>: View {
                         Text("\(streak)").foregroundStyle(Palette.text)
                     }
                     .font(.subheadline.weight(.bold)).monospacedDigit().fixedSize()
+                    .padding(.horizontal, 6)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
                 }
@@ -63,6 +70,16 @@ struct Page<Content: View>: View {
                 }
             }
         }
+    }
+
+    /// Each time the tab is switched to (not back from one of its pages): from the top, sliding in from the side it
+    /// was swiped from.
+    private func arrive() {
+        guard model.arrivedTab != model.tab else { return }
+        model.arrivedTab = model.tab
+        position.scrollTo(edge: .top)
+        shift = 36 * model.tabStep
+        DispatchQueue.main.async { withAnimation(.smooth(duration: 0.3)) { shift = 0 } }
     }
 }
 

@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import Observation
 import TrackCore
 
@@ -20,12 +21,14 @@ struct Confirm: Identifiable {
     let action: () -> Void
 }
 
-/// A name to type, in Track's dialog: creating or renaming a split or a workout.
+/// Something to type in Track's dialog: a split's or workout's name, or the bodyweight.
 struct Naming: Identifiable {
     let id = UUID()
     let title: String
+    var message = "Give your routine a name that makes sense to you."
     var name = ""
     var placeholder = "Split name"
+    var number = false
     let action: String
     let onSave: (String) -> Void
 }
@@ -65,7 +68,13 @@ final class AppModel {
     var confirm: Confirm? { didSet { dialogChanged() } }
     var naming: Naming? { didSet { dialogChanged() } }
     var toast: Toast?
-    var tab = AppTab.home
+    var tab = AppTab.home {
+        didSet { tabStep = (AppTab.allCases.firstIndex(of: tab) ?? 0) > (AppTab.allCases.firstIndex(of: oldValue) ?? 0) ? 1 : -1 }
+    }
+    /// Which way the last tab change went (1: to the right), for the page's slide in.
+    @ObservationIgnored var tabStep: CGFloat = 1
+    /// The tab whose page last came up, so coming back from a split's page doesn't count as switching.
+    @ObservationIgnored var arrivedTab = AppTab.home
     var workoutOpen = false
     var finished: Finished?
     /// The level bar's XP before and after the last finished workout, for its fill on Progress.
@@ -75,6 +84,9 @@ final class AppModel {
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true
+    /// Saving happens off the main thread, in order, so typing and dragging never wait on the disk.
+    @ObservationIgnored private let saver = DispatchQueue(label: "track.save", qos: .userInitiated)
+    @ObservationIgnored private var bestsCache: (key: [String], value: RecordBests)?
     private static let modeKey = "track.storageMode"
 
     init(file: TrainingFile? = try? TrainingFile.standard()) {
@@ -112,7 +124,20 @@ final class AppModel {
         }
         training = next
         guard canSave, let file else { return }
-        do { try file.save(next) } catch { message = "Couldn’t save on this iPhone. Free up some space and try again." }
+        saver.async { [weak self] in
+            do { try file.save(next) } catch {
+                DispatchQueue.main.async { self?.message = "Couldn’t save on this iPhone. Free up some space and try again." }
+            }
+        }
+    }
+
+    /// Each exercise's past bests for the live record check, worked out again only when the finished workouts change.
+    var bests: RecordBests {
+        let key = training.sessions.map(\.id)
+        if let cache = bestsCache, cache.key == key { return cache.value }
+        let value = RecordBests(training.sessions)
+        bestsCache = (key, value)
+        return value
     }
 
     /// Replaces everything with a backup (the website's backup file, or one exported here).
