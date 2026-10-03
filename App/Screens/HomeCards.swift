@@ -12,7 +12,7 @@ struct UpNextCard: View {
         if let next = training.nextSplit {
             VStack(spacing: 16) {
                 HStack(spacing: 20) {
-                    WeekRing(done: training.sessions.trainingDays(inWeekOf: now).count, goal: training.settings.weeklyGoal)
+                    WeekRing(done: model.derived("days \(dayKey(now))") { $0.trainingDays(inWeekOf: now).count }, goal: training.settings.weeklyGoal)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Up next").font(.subheadline).foregroundStyle(Palette.muted)
                         Text(next.split.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1)
@@ -38,11 +38,12 @@ struct UpNextCard: View {
 
 /// This week's volume against last week up to the same moment, and the achievement you're nearest.
 struct HomeTiles: View {
+    @Environment(AppModel.self) private var model
     let training: Training
     let now: Int
 
     var body: some View {
-        let week = training.sessions.volumeChange(per: .week, at: now)
+        let week = model.derived("volume W \(now / 60_000)") { $0.volumeChange(per: .week, at: now) }
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Volume this week").font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
@@ -57,7 +58,7 @@ struct HomeTiles: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .topLeading).padding(16).glass()
-            if let next = training.sessions.nearestQuest() {
+            if let next = model.derived("nearest quest", { $0.nearestQuest() }) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Next achievement").font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
                     Text(next.quest.title).font(.headline).foregroundStyle(Palette.text).lineLimit(2)

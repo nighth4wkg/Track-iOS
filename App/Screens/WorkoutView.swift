@@ -48,15 +48,15 @@ struct WorkoutView: View {
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .coordinateSpace(.named("cards"))
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { box.height = $0 }
-                .onDrop(of: [.text], delegate: drop(active, proxy))
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 .safeAreaInset(edge: .bottom) { RestCapsule() }
+                .onAppear { box.scroll = { edge in proxy.scrollTo(edge, anchor: edge == "top" ? .top : .bottom) } }
             } }
+            .onDrop(of: [.text], delegate: drop(active))
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { box.height = $0 }
             .background(Backdrop())
             .offset(x: pull)
             .shadow(color: .black.opacity(pull > 0 ? 0.25 : 0), radius: 20)
@@ -70,9 +70,9 @@ struct WorkoutView: View {
         }
     }
 
-    private func drop(_ active: Session, _ proxy: ScrollViewProxy) -> ReorderDrop {
+    private func drop(_ active: Session) -> ReorderDrop {
         ReorderDrop(ids: active.exercises.map(\.id), box: box, dragging: $dragging, scroll: { edge in
-            withAnimation(.smooth(duration: 0.6)) { proxy.scrollTo(edge, anchor: edge == "top" ? .top : .bottom) }
+            withAnimation(.smooth(duration: 0.6)) { box.scroll?(edge) }
         }, move: { from, to in
             model.update { training in
                 guard let moved = training.active?.exercises.moved(from, to: to) else { return }

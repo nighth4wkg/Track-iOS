@@ -15,8 +15,8 @@ struct ProgressPage: View {
         let training = model.training
         let now = nowMillis()
         let unit = training.settings.unit
-        let change = training.sessions.volumeChange(per: period, at: now)
-        let records = Array(training.sessions.latestRecords.prefix(5))
+        let change = model.derived("volume \(period) \(now / 60_000)") { $0.volumeChange(per: period, at: now) }
+        let records = model.derived("latest records") { Array($0.latestRecords.prefix(5)) }
         Page(title: "Progress", settingsOpen: $settingsOpen) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top) {
@@ -37,14 +37,14 @@ struct ProgressPage: View {
                 if let change = change.change {
                     Chip(text: change == 0 ? "Same as \(period.last)" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs \(period.last)", accent: change > 0)
                 }
-                VolumeBars(volumes: training.sessions.volumes(period.bars, per: period, at: now), label: period.name)
+                VolumeBars(volumes: model.derived("bars \(period) \(dayKey(now))") { $0.volumes(period.bars, per: period, at: now) }, label: period.name)
                 HStack { Text(period.first); Spacer(); Text(period.now.capitalized) }.font(.caption).foregroundStyle(Palette.muted)
             }
             .padding(20).glass()
             HStack(spacing: 10) {
-                tile(icon: "flame", value: "\(training.sessions.weeklyStreak(at: now))", label: "Week streak") { model.tab = .home }
+                tile(icon: "flame", value: "\(model.derived("streak \(dayKey(now))") { $0.weeklyStreak(at: now) })", label: "Week streak") { model.tab = .home }
                 LevelTile { xpHelp = true }
-                tile(icon: "medal", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements") { quests = true }
+                tile(icon: "medal", value: "\(model.derived("award count") { $0.questAwards.count })/\(Quest.all.count)", label: "Achievements") { quests = true }
             }
             .fixedSize(horizontal: false, vertical: true)
             SectionHeading(title: "Personal records")
@@ -105,7 +105,7 @@ private struct LevelTile: View {
     @State private var played: String?
 
     var body: some View {
-        let progress = Experience.progress(of: model.training.sessions)
+        let progress = model.derived("xp") { Experience.progress(of: $0) }
         let fraction = Double(progress.current) / Double(progress.required)
         Button(action: action) {
             VStack(alignment: .leading, spacing: 6) {

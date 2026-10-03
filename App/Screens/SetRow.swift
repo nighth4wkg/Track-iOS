@@ -100,7 +100,7 @@ struct SetRow: View {
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(glow ? 0.8 : 0), lineWidth: 1.5))
-            .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
+            .shadow(color: Palette.record.opacity(0.45), radius: glow && hint ? 6 : 0)
             .focused(focus, equals: "\(set.id).\(id)")
             .onChange(of: text.wrappedValue) { save() }
     }

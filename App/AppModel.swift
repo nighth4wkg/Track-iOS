@@ -86,7 +86,8 @@ final class AppModel {
     @ObservationIgnored private var canSave = true
     /// Saving happens off the main thread, in order, so typing and dragging never wait on the disk.
     @ObservationIgnored private let saver = DispatchQueue(label: "track.save", qos: .userInitiated)
-    @ObservationIgnored private var bestsCache: (key: [String], value: RecordBests)?
+    @ObservationIgnored private var memo: [String: Any] = [:]
+    @ObservationIgnored private var memoSessions: [Session] = []
     private static let modeKey = "track.storageMode"
 
     init(file: TrainingFile? = try? TrainingFile.standard()) {
@@ -131,14 +132,22 @@ final class AppModel {
         }
     }
 
-    /// Each exercise's past bests for the live record check, worked out again only when the finished workouts change.
-    var bests: RecordBests {
-        let key = training.sessions.map(\.id)
-        if let cache = bestsCache, cache.key == key { return cache.value }
-        let value = RecordBests(training.sessions)
-        bestsCache = (key, value)
+    /// A figure worked out from the workouts (records, achievements, levels, ranks, streaks), kept until they change,
+    /// so typing a set or dragging an exercise doesn't redo them on every screen. The comparison is instant while the
+    /// workouts are untouched (the same storage). Keys carry what else a figure depends on, such as the day.
+    func derived<T>(_ key: String, _ make: ([Session]) -> T) -> T {
+        if memoSessions != training.sessions {
+            memo = [:]
+            memoSessions = training.sessions
+        }
+        if let value = memo[key] as? T { return value }
+        let value = make(training.sessions)
+        memo[key] = value
         return value
     }
+
+    /// Each exercise's past bests for the live record check.
+    var bests: RecordBests { derived("bests") { RecordBests($0) } }
 
     /// Replaces everything with a backup (the website's backup file, or one exported here).
     func restore(_ backup: Training) {

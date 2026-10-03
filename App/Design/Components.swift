@@ -35,7 +35,7 @@ struct Page<Content: View>: View {
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
-                .opacity(1 - Double(abs(shift)) / 120)
+                .opacity(1 - Double(abs(shift)) / 12)
             }
             .scrollPosition($position)
             .onAppear(perform: arrive)
@@ -54,7 +54,8 @@ struct Page<Content: View>: View {
                 ToolbarItem(placement: .topBarLeading) { Brand().fixedSize().padding(.horizontal, 4) }
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
-                    let streak = model.training.sessions.weeklyStreak(at: nowMillis())
+                    let now = nowMillis()
+                    let streak = model.derived("streak \(dayKey(now))") { $0.weeklyStreak(at: now) }
                     HStack(spacing: 3) {
                         Image(systemName: "flame").foregroundStyle(Palette.streak)
                         Text("\(streak)").foregroundStyle(Palette.text)
@@ -78,8 +79,8 @@ struct Page<Content: View>: View {
         guard model.arrivedTab != model.tab else { return }
         model.arrivedTab = model.tab
         position.scrollTo(edge: .top)
-        shift = 36 * model.tabStep
-        DispatchQueue.main.async { withAnimation(.smooth(duration: 0.3)) { shift = 0 } }
+        shift = 12 * model.tabStep
+        DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.2)) { shift = 0 } }
     }
 }
 

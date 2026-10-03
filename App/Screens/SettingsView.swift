@@ -84,6 +84,7 @@ private struct TrainingSettings: View {
 
     var body: some View {
         let settings = model.training.settings
+        let showCustom = custom || !Self.rests.contains(settings.restSeconds)
         GlassList {
             SettingRow(label: "Weight unit") {
                 GlassMenu(selection: settings.unit, options: [(.kg, "kg"), (.lb, "lb")]) { value in model.update { $0.settings.unit = value } }
@@ -99,12 +100,12 @@ private struct TrainingSettings: View {
                 }
             }
             SettingRow(label: "Rest timer") {
-                GlassMenu(selection: custom ? -1 : settings.restSeconds,
+                GlassMenu(selection: showCustom ? -1 : settings.restSeconds,
                           options: Self.rests.map { ($0, String(format: "%d:%02d", $0 / 60, $0 % 60)) } + [(-1, "Custom")]) { value in
                     if value == -1 { custom = true; draft = String(settings.restSeconds) } else { custom = false; model.update { $0.settings.restSeconds = value } }
                 }
             }
-            if custom {
+            if showCustom {
                 VStack(alignment: .leading, spacing: 6) {
                     SettingRow(label: "Duration") {
                         HStack(spacing: 6) {
@@ -124,7 +125,7 @@ private struct TrainingSettings: View {
                           options: [(.system, "System"), (.light, "Light"), (.dark, "Dark")]) { value in model.update { $0.settings.theme = value } }
             }
         }
-        .onAppear { if !Self.rests.contains(settings.restSeconds) { custom = true; draft = String(settings.restSeconds) } }
+        .onAppear { draft = String(settings.restSeconds) }
         .animation(.smooth(duration: 0.3), value: custom)
     }
 }

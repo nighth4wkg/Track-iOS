@@ -22,7 +22,7 @@ struct HistoryView: View {
         let shown = training.sessions.filtered(query: query, from: range.0, to: range.1)
         let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || day != nil || from != nil || to != nil
         let weeks = Dictionary(grouping: shown.prefix(shownCount)) { weekStart($0.finishedAt!) }.sorted { $0.key > $1.key }
-        let recordSessions = Set(training.sessions.improvements.map(\.after.sessionId))
+        let recordSessions = model.derived("record sessions") { Set($0.improvements.map(\.after.sessionId)) }
         Page(title: "History", accessory: all.isEmpty ? nil : AnyView(filterButton), settingsOpen: $settingsOpen) {
             if !all.isEmpty {
                 search(filtering: filtering, label: "\(shown.count) of \(count(all.count, "workout"))")

@@ -23,7 +23,7 @@ struct RankPage: View {
         let unit = training.settings.unit
         Page(title: "Rank", settingsOpen: $settingsOpen) {
             if let bodyweight = training.settings.bodyweight {
-                let ranks = training.sessions.muscleRanks(bodyweight: bodyweight)
+                let ranks = model.derived("ranks \(bodyweight)") { $0.muscleRanks(bodyweight: bodyweight) }
                 let ranked = ranks.filter { $0.best != nil }
                 let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + Double($1.rank) + $1.progress } / Double(ranked.count)
                 let overall = min(Ranks.names.count - 1, Int(score))

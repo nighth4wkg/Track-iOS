@@ -5,11 +5,13 @@ import Foundation
 
 public enum Calendars {
     /// Gregorian in the device's time zone (the website uses the browser's local time).
+    /// Made once and remade only when the time zone changes: the date helpers ask for it in every loop.
     public static var local: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
-        return calendar
+        let zone = TimeZone.current
+        if cached.timeZone != zone { cached.timeZone = zone }
+        return cached
     }
+    private static var cached = Calendar(identifier: .gregorian)
 }
 
 func date(_ millis: Int) -> Date { Date(timeIntervalSince1970: Double(millis) / 1000) }

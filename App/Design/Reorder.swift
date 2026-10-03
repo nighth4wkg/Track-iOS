@@ -5,10 +5,13 @@ import UniformTypeIdentifiers
 /// the list is short and each place is the same height; the one under the finger makes room; holding near the top
 /// (the bar included) or the bottom scrolls there. Letting go anywhere on the page ends it.
 final class ReorderBox {
-    /// Each card's frame in the page ("cards" space), as laid out now. Not observed: it changes on every scroll.
+    /// Each card's frame on screen, as laid out now. Not observed: it changes on every scroll.
     var frames: [String: CGRect] = [:]
+    /// The screen's bottom edge.
     var height: CGFloat = 0
     var edge: String?
+    /// Scrolls the page to "top" or "bottom".
+    var scroll: ((String) -> Void)?
 }
 
 extension View {
