@@ -8,6 +8,7 @@ enum RestAlert {
 
     /// Asks once, the first time a rest starts.
     static func schedule(at until: Int) {
+        guard ScreenshotMode.screen == nil else { return } // the permission prompt would cover the screenshots
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
