@@ -35,7 +35,7 @@ struct Page<Content: View>: View {
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
-                .opacity(1 - abs(shift) / 120)
+                .opacity(1 - Double(abs(shift)) / 120)
             }
             .scrollPosition($position)
             .onAppear(perform: arrive)
