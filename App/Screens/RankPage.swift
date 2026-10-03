@@ -2,9 +2,12 @@ import SwiftUI
 import TrackCore
 
 extension Palette {
-    /// Starter, Novice, Solid, Strong, Elite (app/styles/ranks.css).
-    static let ranks: [Color] = [Color(light: 0x5F6A73, dark: 0x9AA3AB), Color(light: 0x1F6FBF, dark: 0x5AA7EC), accent,
-                                 Color(light: 0x7447C9, dark: 0xB287F5), Color(light: 0x8A6A00, dark: 0xE8C35A)]
+    /// Starter, Novice, Solid, Strong, Elite: vivid in both themes for bars and the medal (the website's dark-theme
+    /// colours, which read clearly on the light glass too); text uses `rankText`, a shade deeper in light mode.
+    static let ranks: [Color] = [Color(hex: 0x9AA3AB), Color(hex: 0x4E9EF0), Color(hex: 0x2FD27A), Color(hex: 0xA77CF7), Color(hex: 0xF2BE3B)]
+    static let rankText: [Color] = [Color(light: 0x6B7680, dark: 0x9AA3AB), Color(light: 0x2A7FD6, dark: 0x5AA7EC),
+                                    Color(light: 0x14A35A, dark: 0x48E58D), Color(light: 0x8A55EE, dark: 0xB287F5),
+                                    Color(light: 0xC99212, dark: 0xF2C14E)]
 }
 
 /// Rank: each muscle ranked from its strongest lift relative to bodyweight, the overall rank (the average place on
@@ -40,20 +43,21 @@ struct RankPage: View {
 
     private func overallCard(_ overall: Int?, progress: Double, bodyweight: Double, unit: TrackCore.Settings.Unit) -> some View {
         let color = overall.map { Palette.ranks[$0] } ?? Palette.muted
+        let text = overall.map { Palette.rankText[$0] } ?? Palette.muted
         return VStack(spacing: 8) {
             Image(systemName: "medal.fill").font(.system(size: 34, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 72, height: 72)
-                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(color.opacity(0.85)))
+                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(LinearGradient(colors: [color, color.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing)))
                 .glass(radius: 20, fill: .clear, lifted: false)
             Text("Overall").font(.subheadline).foregroundStyle(Palette.muted).padding(.top, 4)
-            Text(overall.map { Ranks.names[$0] } ?? "Unranked").font(.largeTitle.weight(.bold)).foregroundStyle(color)
+            Text(overall.map { Ranks.names[$0] } ?? "Unranked").font(.largeTitle.weight(.bold)).foregroundStyle(text)
             Text(overall.map { toGo($0, progress) } ?? "Log a lift to get ranked").font(.subheadline).foregroundStyle(Palette.muted)
             HStack(spacing: 6) {
                 ForEach(Ranks.names.indices, id: \.self) { index in
                     VStack(spacing: 6) {
                         RankBar(progress: overall.map { index < $0 ? 1 : index == $0 ? progress : 0 } ?? 0, color: Palette.ranks[index])
                         Text(Ranks.names[index]).font(.caption2.weight(index == overall ? .bold : .regular))
-                            .foregroundStyle(index == overall ? Palette.ranks[index] : Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
+                            .foregroundStyle(index == overall ? Palette.rankText[index] : Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
                     }
                 }
             }
@@ -105,11 +109,12 @@ private struct MuscleRow: View {
 
     var body: some View {
         let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
+        let text = rank.best == nil ? Palette.muted : Palette.rankText[rank.rank]
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(rank.muscle.rawValue).font(.headline).foregroundStyle(Palette.text)
                 Spacer()
-                Text(rank.best == nil ? "Unranked" : rank.name).font(.subheadline.weight(.bold)).foregroundStyle(color)
+                Text(rank.best == nil ? "Unranked" : rank.name).font(.subheadline.weight(.bold)).foregroundStyle(text)
                 Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
                     .scaleEffect(y: open ? -1 : 1)
             }

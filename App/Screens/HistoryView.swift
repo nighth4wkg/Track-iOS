@@ -1,52 +1,49 @@
 import SwiftUI
 import TrackCore
 
-/// History, as on the website: a search, the month's calendar (trained days lit; tap one to show just that day),
-/// then the workouts newest first in weeks, each with its date tile, sets · time · volume, and a PR chip when it
-/// broke a record. Swipe a workout left to delete it.
+/// History, as on the website: the filter button (a From–To range), the search (Clear appears while any filter is
+/// on), the month's calendar, then workouts newest first in weeks, twenty at a time. Each row has its date tile,
+/// sets · time · volume and a PR chip when it broke a record; tap it for the workout, swipe it left to delete it.
 struct HistoryView: View {
     @Environment(AppModel.self) private var model
     @Binding var settingsOpen: Bool
     @State private var query = ""
-    @State private var month = Calendars.local.dateInterval(of: .month, for: .now)!.start
+    @State private var month = HistoryCalendar.monthStart(.now)
     @State private var day: String?
-    @State private var deleting: Session?
+    @State private var datesOpen = false
+    @State private var from: Date?
+    @State private var to: Date?
+    @State private var shownCount = 20
 
     var body: some View {
         let training = model.training
         let all = training.sessions.finished.sorted { $0.finishedAt! > $1.finishedAt! }
-        let words = Catalog.simplify(query).split(separator: " ")
-        let shown = all.filter { session in
-            (day == nil || dayKey(session.finishedAt!) == day)
-                && (words.isEmpty || words.allSatisfy { word in
-                    ([session.name] + session.exercises.map(\.name)).contains { Catalog.simplify($0).contains(word) }
-                })
-        }
-        let weeks = Dictionary(grouping: shown) { weekStart($0.finishedAt!) }.sorted { $0.key > $1.key }
+        let range = (day ?? from.map { dayKey(millis($0)) } ?? "", day ?? to.map { dayKey(millis($0)) } ?? "")
+        let shown = training.sessions.filtered(query: query, from: range.0, to: range.1)
+        let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || day != nil || from != nil || to != nil
+        let weeks = Dictionary(grouping: shown.prefix(shownCount)) { weekStart($0.finishedAt!) }.sorted { $0.key > $1.key }
         let recordSessions = Set(training.sessions.improvements.map(\.after.sessionId))
-        Page(title: "History", settingsOpen: $settingsOpen) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
-                TextField("Search workouts or exercises", text: $query).submitLabel(.search)
-                if !query.isEmpty {
-                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
-                        .accessibilityLabel("Clear search")
-                }
+        Page(title: "History", accessory: all.isEmpty ? nil : AnyView(filterButton), settingsOpen: $settingsOpen) {
+            if !all.isEmpty {
+                search(filtering: filtering, label: "\(shown.count) of \(count(all.count, "workout"))")
+                if datesOpen { dateRange.transition(.opacity.combined(with: .move(edge: .top))) }
+                HistoryCalendar(month: $month, day: $day, sessions: all)
             }
-            .padding(.horizontal, 14).frame(minHeight: 48)
-            .glass(radius: 14, fill: Palette.input, lifted: false)
-            CalendarCard(month: $month, day: $day, sessions: all)
-            if shown.isEmpty {
-                EmptyCard(icon: "calendar", title: all.isEmpty ? "No workouts yet" : "Nothing matches",
-                          detail: all.isEmpty ? "Finished workouts show up here." : "Try another search or day.")
+            if all.isEmpty {
+                EmptyCard(icon: "calendar", title: "Your story starts here.", detail: "Finish a workout to save your sets, weights, and reps here.")
+                Button { model.tab = .home } label: { Label("Go to your splits", systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
+                    .buttonStyle(PrimaryButtonStyle())
+            } else if shown.isEmpty {
+                EmptyCard(icon: "calendar", title: "No workouts found.", detail: "Try another exercise or date range.")
+                Button("Clear filters") { clear() }.buttonStyle(SecondaryButtonStyle())
             }
             ForEach(weeks, id: \.key) { week, items in
                 VStack(alignment: .leading, spacing: 8) {
                     SmallHeader(title: weekTitle(week))
                     GlassList {
                         ForEach(items) { session in
-                            SwipeToDelete(onDelete: { deleting = session }) {
-                                NavigationLink { SessionDetail(session: session) } label: {
+                            SwipeToDelete(onDelete: { model.deleteWorkout(session) }) {
+                                Button { model.history = session } label: {
                                     HistoryRow(session: session, unit: training.settings.unit, record: recordSessions.contains(session.id))
                                         .contentShape(Rectangle())
                                 }
@@ -56,15 +53,62 @@ struct HistoryView: View {
                     }
                 }
             }
-        }
-        .sensoryFeedback(.selection, trigger: day)
-        .confirmationDialog("Delete this workout?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-                            titleVisibility: .visible) {
-            Button("Delete workout", role: .destructive) {
-                if let id = deleting?.id { withAnimation(.smooth) { model.update { $0.sessions.removeAll { $0.id == id } } } }
+            if shown.count > shownCount {
+                Button("Show more workouts (\(shown.count - shownCount) remaining)") { withAnimation(.smooth) { shownCount += 20 } }
+                    .buttonStyle(SecondaryButtonStyle())
             }
-        } message: { Text("\(deleting?.name ?? "It") and its sets are removed from History.") }
-        .sensoryFeedback(.warning, trigger: deleting?.id) { _, now in now != nil }
+        }
+        .animation(.smooth(duration: 0.3), value: datesOpen)
+        .sensoryFeedback(.selection, trigger: day)
+        .onChange(of: query) { shownCount = 20 }
+    }
+
+    private var filterButton: some View {
+        GlassCircleButton(icon: "line.3.horizontal.decrease", label: datesOpen ? "Hide date range" : "Filter by date",
+                          active: from != nil || to != nil) { datesOpen.toggle() }
+    }
+
+    private func search(filtering: Bool, label: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
+            TextField("Search workouts or exercises", text: $query).submitLabel(.search)
+            if filtering {
+                Button("Clear") { clear() }.font(.subheadline.weight(.semibold)).foregroundStyle(Palette.accent)
+                    .accessibilityLabel("Clear filters, \(label)")
+            }
+        }
+        .padding(.horizontal, 14).frame(minHeight: 48)
+        .glass(radius: 14, fill: Palette.input, lifted: false)
+    }
+
+    /// From and To, each a date or "Any".
+    private var dateRange: some View {
+        GlassList {
+            dateRow("From", $from, in: Date.distantPast...(to ?? .now))
+            dateRow("To", $to, in: (from ?? .distantPast)...Date.now)
+        }
+    }
+
+    private func dateRow(_ label: String, _ value: Binding<Date?>, in range: ClosedRange<Date>) -> some View {
+        HStack {
+            Text(label).foregroundStyle(Palette.text)
+            Spacer()
+            if let date = value.wrappedValue {
+                DatePicker(label, selection: Binding(get: { date }, set: { value.wrappedValue = $0; shownCount = 20 }), in: range, displayedComponents: .date)
+                    .labelsHidden()
+                Button { value.wrappedValue = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
+                    .accessibilityLabel("Any \(label.lowercased()) date")
+            } else {
+                Button("Any") { value.wrappedValue = min(max(range.lowerBound, Calendars.local.date(byAdding: .month, value: -1, to: .now)!), range.upperBound) }
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
+                    .padding(.horizontal, 12).frame(minHeight: 36).glass(radius: 12, fill: Palette.control, lifted: false)
+            }
+        }
+        .frame(minHeight: 44)
+    }
+
+    private func clear() {
+        withAnimation(.smooth) { query = ""; day = nil; from = nil; to = nil; shownCount = 20 }
     }
 
     /// "This week", "Last week", or the week's range ("Sep 14 – 20", "Aug 31 – Sep 6").
@@ -95,93 +139,16 @@ private struct HistoryRow: View {
             .foregroundStyle(Palette.text).frame(width: 44, height: 44).glass(radius: 12, fill: Palette.control, lifted: false)
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.name).font(.headline).foregroundStyle(Palette.text).lineLimit(1)
-                Text("\(count(session.completedSets.count, "set")) · \(duration(session.minutes)) · \(weight(session.volume, unit)) \(unit.rawValue)")
+                Text("\(count(session.completedSets.count, "set")) · \(trainingDuration(session.minutes)) · \(weight(session.volume, unit)) \(unit.rawValue)")
                     .font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.85)
             }
             Spacer(minLength: 4)
             if record {
-                HStack(spacing: 3) {
-                    Image(systemName: "trophy")
-                    Text("PR")
-                }
-                .font(.caption.weight(.bold)).foregroundStyle(Palette.ranks[4]).fixedSize()
-                .padding(.horizontal, 8).padding(.vertical, 4).glass(radius: 12, fill: Palette.control, lifted: false)
+                HStack(spacing: 3) { Image(systemName: "trophy"); Text("PR") }
+                    .font(.caption.weight(.bold)).foregroundStyle(Palette.record).fixedSize()
+                    .padding(.horizontal, 8).padding(.vertical, 4).glass(radius: 12, fill: Palette.control, lifted: false)
             }
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
         }
-    }
-}
-
-/// "1h 2m", "45m".
-func duration(_ minutes: Int) -> String { minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m" }
-
-/// The month as on the website: its name over workouts · time, ‹ › to change month, and a Monday-first grid where
-/// trained days are lit (today's filled in the accent). Tapping a trained day shows only it; tapping again, all.
-private struct CalendarCard: View {
-    @Binding var month: Date
-    @Binding var day: String?
-    let sessions: [Session]
-
-    var body: some View {
-        let calendar = Calendars.local
-        let inMonth = sessions.filter { calendar.isDate(Date(timeIntervalSince1970: Double($0.finishedAt!) / 1000), equalTo: month, toGranularity: .month) }
-        let trained = Set(sessions.map { dayKey($0.finishedAt!) })
-        let days = calendar.range(of: .day, in: .month, for: month)!.count
-        let lead = (calendar.component(.weekday, from: month) + 5) % 7
-        let today = dayKey(nowMillis())
-        let isCurrent = calendar.isDate(month, equalTo: .now, toGranularity: .month)
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(month.formatted(.dateTime.month(.wide).year(calendar.isDate(month, equalTo: .now, toGranularity: .year) ? .omitted : .defaultDigits)))
-                        .font(.headline).foregroundStyle(Palette.text)
-                    Text("\(count(inMonth.count, "workout")) · \(duration(inMonth.reduce(0) { $0 + $1.minutes }))")
-                        .font(.subheadline).foregroundStyle(Palette.muted)
-                }
-                Spacer()
-                GlassCircleButton(icon: "chevron.left", label: "Previous month") { step(-1) }
-                GlassCircleButton(icon: "chevron.right", label: "Next month") { step(1) }.disabled(isCurrent).opacity(isCurrent ? 0.4 : 1)
-            }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-                ForEach(["M", "T", "W", "T", "F", "S", "S"].indices, id: \.self) { index in
-                    Text(["M", "T", "W", "T", "F", "S", "S"][index]).font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                }
-                ForEach(0..<lead, id: \.self) { _ in Color.clear.frame(height: 36) }
-                ForEach(1...days, id: \.self) { number in
-                    let date = calendar.date(byAdding: .day, value: number - 1, to: month)!
-                    let key = dayKey(millis(date))
-                    let lit = trained.contains(key)
-                    Button { if lit { withAnimation(.smooth) { day = day == key ? nil : key } } } label: {
-                        Text("\(number)").font(.subheadline.weight(lit ? .bold : .regular)).monospacedDigit()
-                            .foregroundStyle(key == today && lit ? Palette.primaryText : lit ? Palette.text : Palette.muted.opacity(0.6))
-                            .frame(maxWidth: .infinity, minHeight: 36)
-                            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(key == today && lit ? Palette.primary : lit ? Palette.control : Palette.input.opacity(0.5)))
-                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(day == key ? Palette.accent : .clear, lineWidth: 2))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!lit)
-                    .accessibilityLabel(date.formatted(date: .complete, time: .omitted) + (lit ? ", trained" : ""))
-                }
-            }
-        }
-        .padding(16)
-        .glass()
-    }
-
-    private func step(_ months: Int) {
-        withAnimation(.smooth) {
-            month = Calendars.local.date(byAdding: .month, value: months, to: month)!
-            day = nil
-        }
-    }
-}
-
-extension Session {
-    /// "Mon, Sep 29 · 15 sets"
-    var summary: String {
-        let date = Date(timeIntervalSince1970: Double(finishedAt ?? startedAt) / 1000)
-        return "\(date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) · \(count(completedSets.count, "set"))"
     }
 }

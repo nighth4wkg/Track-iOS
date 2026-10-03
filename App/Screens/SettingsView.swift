@@ -10,33 +10,28 @@ struct SettingsView: View {
     @Namespace private var highlight
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Settings").font(.title2.weight(.bold)).foregroundStyle(Palette.text)
-                Spacer()
-                GlassCircleButton(icon: "xmark", label: "Close") { dismiss() }
-            }
-            HStack(spacing: 0) {
-                ForEach(Tab.allCases, id: \.self) { item in
-                    Button { withAnimation(.smooth(duration: 0.3)) { tab = item } } label: {
-                        Text(item.rawValue).font(.subheadline.weight(.semibold))
-                            .foregroundStyle(tab == item ? Palette.accent : Palette.muted)
-                            .frame(maxWidth: .infinity, minHeight: 40)
-                            .background {
-                                if tab == item {
-                                    Capsule().fill(Palette.control).glass(radius: 20, fill: .clear, lifted: false)
-                                        .matchedGeometryEffect(id: "tab", in: highlight)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(4)
-            .glass(radius: 24, fill: Palette.input, lifted: false)
-            .sensoryFeedback(.selection, trigger: tab)
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 0) {
+                        ForEach(Tab.allCases, id: \.self) { item in
+                            Button { withAnimation(.smooth(duration: 0.3)) { tab = item } } label: {
+                                Text(item.rawValue).font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(tab == item ? Palette.accent : Palette.muted)
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                                    .background {
+                                        if tab == item {
+                                            Capsule().fill(Palette.control).glass(radius: 20, fill: .clear, lifted: false)
+                                                .matchedGeometryEffect(id: "tab", in: highlight)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(4)
+                    .glass(radius: 24, fill: Palette.input, lifted: false)
+                    .sensoryFeedback(.selection, trigger: tab)
                     switch tab {
                     case .training: TrainingSettings()
                     case .data: DataSettings()
@@ -44,11 +39,18 @@ struct SettingsView: View {
                     case .about: AboutSettings()
                     }
                 }
-                .padding(.bottom, 24)
+                .padding(.horizontal, 16).padding(.bottom, 24)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Backdrop())
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
+                }
             }
         }
-        .padding(.horizontal, 16).padding(.top, 20)
-        .background(Backdrop())
         .presentationDragIndicator(.visible)
     }
 }
@@ -75,6 +77,17 @@ struct SettingRow<Control: View>: View {
 private struct TrainingSettings: View {
     @Environment(AppModel.self) private var model
     private static let rests = [30, 60, 90, 120, 180, 300]
+    /// A rest that isn't one of the presets is typed in seconds (15–600), as on the website.
+    @State private var custom = false
+    @State private var draft = ""
+    @State private var error: String?
+    @FocusState private var typing: Bool
+
+    private func saveCustom() {
+        guard let seconds = Int(draft), (15...600).contains(seconds) else { error = "Enter 15–600 seconds."; return }
+        error = nil
+        model.update { $0.settings.restSeconds = seconds }
+    }
 
     var body: some View {
         let settings = model.training.settings
@@ -93,16 +106,33 @@ private struct TrainingSettings: View {
                 }
             }
             SettingRow(label: "Rest timer") {
-                GlassMenu(selection: settings.restSeconds,
-                          options: (Self.rests + (Self.rests.contains(settings.restSeconds) ? [] : [settings.restSeconds])).sorted().map {
-                              ($0, String(format: "%d:%02d", $0 / 60, $0 % 60))
-                          }) { value in model.update { $0.settings.restSeconds = value } }
+                GlassMenu(selection: custom ? -1 : settings.restSeconds,
+                          options: Self.rests.map { ($0, String(format: "%d:%02d", $0 / 60, $0 % 60)) } + [(-1, "Custom")]) { value in
+                    if value == -1 { custom = true; draft = String(settings.restSeconds) } else { custom = false; model.update { $0.settings.restSeconds = value } }
+                }
+            }
+            if custom {
+                VStack(alignment: .leading, spacing: 6) {
+                    SettingRow(label: "Duration") {
+                        HStack(spacing: 6) {
+                            TextField("90", text: $draft).keyboardType(.numberPad).multilineTextAlignment(.center)
+                                .font(.body.weight(.semibold)).monospacedDigit().frame(width: 72, height: 40)
+                                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.input))
+                                .focused($typing).onSubmit(saveCustom)
+                                .onChange(of: typing) { _, now in if !now { saveCustom() } }
+                            Text("sec").foregroundStyle(Palette.muted)
+                        }
+                    }
+                    if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
+                }
             }
             SettingRow(label: "Appearance") {
                 GlassMenu(selection: settings.theme == .liquid ? .system : settings.theme,
                           options: [(.system, "System"), (.light, "Light"), (.dark, "Dark")]) { value in model.update { $0.settings.theme = value } }
             }
         }
+        .onAppear { if !Self.rests.contains(settings.restSeconds) { custom = true; draft = String(settings.restSeconds) } }
+        .animation(.smooth(duration: 0.3), value: custom)
     }
 }
 

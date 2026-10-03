@@ -9,18 +9,22 @@ enum Catalog {
         return names
     }()
 
-    /// Matches for a search, best first: exercises you've done before, then names starting with the words typed, then
-    /// names containing them. Case and punctuation don't matter.
-    static func search(_ query: String, used: Set<String>) -> [String] {
+    /// Matches for a search, best first: what you use most, then names starting with the words typed, then names
+    /// containing them. Case and punctuation don't matter. With no search, your exercises first, then the library.
+    static func search(_ query: String, usage: [String: Int]) -> [String] {
         let words = simplify(query).split(separator: " ")
-        let all = Array(used.subtracting(names)).sorted() + names
-        guard !words.isEmpty else { return all.filter { used.contains($0) } + names.filter { !used.contains($0) } }
-        let matches = all.filter { name in let simple = simplify(name); return words.allSatisfy { simple.contains($0) } }
-        return matches.sorted { a, b in rank(a, words, used) < rank(b, words, used) }
-    }
-
-    private static func rank(_ name: String, _ words: [Substring], _ used: Set<String>) -> Int {
-        (used.contains(name) ? 0 : 2) + (simplify(name).hasPrefix(words[0]) ? 0 : 1)
+        let own = usage.keys.filter { name in !names.contains { $0.caseInsensitiveCompare(name) == .orderedSame } }
+        let all = own.sorted() + names
+        let matches = words.isEmpty ? all : all.filter { name in let simple = simplify(name); return words.allSatisfy { simple.contains($0) } }
+        return matches.enumerated().sorted { a, b in
+            let (ua, ub) = (usage[a.element] ?? 0, usage[b.element] ?? 0)
+            if ua != ub { return ua > ub }
+            if let first = words.first {
+                let (pa, pb) = (simplify(a.element).hasPrefix(first), simplify(b.element).hasPrefix(first))
+                if pa != pb { return pa }
+            }
+            return a.offset < b.offset
+        }.map(\.element)
     }
 
     static func simplify(_ text: String) -> String {
@@ -29,39 +33,80 @@ enum Catalog {
     }
 }
 
-/// Picks an exercise to add: search the library, or add exactly what you typed.
+/// Adding an exercise, as the website's picker: "Add an exercise", a search, the library or the matches (with how
+/// many), a + on each, more on request, and your own name when it isn't in the library.
 struct ExercisePicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    @State private var shown = 50
     let onPick: (String) -> Void
 
     var body: some View {
-        let used = Set(model.training.sessions.flatMap { $0.exercises.map(\.name) } + model.training.splits.flatMap { $0.exercises.map(\.name) })
-        let results = Catalog.search(query, used: used)
-        let typed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        NavigationStack {
-            List {
-                if !typed.isEmpty, !results.contains(where: { $0.caseInsensitiveCompare(typed) == .orderedSame }) {
-                    Button { pick(typed) } label: { Label("Add “\(typed)”", systemImage: "plus") }.glassRow()
-                }
-                ForEach(results.prefix(80), id: \.self) { name in
-                    Button { pick(name) } label: {
-                        HStack {
-                            Text(name).foregroundStyle(Palette.text)
-                            Spacer()
-                            if used.contains(name) { Chip(text: "Done before") }
+        var usage: [String: Int] = [:]
+        for session in model.training.sessions { for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
+        let results = Catalog.search(query, usage: usage)
+        let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(100))
+        let custom = !typed.isEmpty && !results.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
+        return NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Find a movement or add your own.").font(.subheadline).foregroundStyle(Palette.muted)
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
+                        TextField("Search exercises…", text: $query).submitLabel(.done)
+                            .onSubmit { if let first = results.first { pick(first) } else if custom { pick(typed) } }
+                        if !query.isEmpty {
+                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
+                                .accessibilityLabel("Clear search")
                         }
                     }
-                    .glassRow()
+                    .padding(.horizontal, 14).frame(minHeight: 48)
+                    .glass(radius: 14, fill: Palette.input, lifted: false)
+                    HStack {
+                        Text(query.isEmpty ? "Exercise library" : "Matches")
+                        Spacer()
+                        Text(results.isEmpty ? "No exercises" : "Showing \(min(shown, results.count)) of \(results.count)")
+                    }
+                    .font(.caption.weight(.semibold)).foregroundStyle(Palette.muted)
+                    if custom {
+                        Button { pick(typed) } label: { Label("Add “\(typed.prefix(50))”", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
+                    }
+                    if results.isEmpty {
+                        Text("No matching exercises.").font(.subheadline).foregroundStyle(Palette.muted).padding(.vertical, 8)
+                    } else {
+                        GlassList {
+                            ForEach(results.prefix(shown), id: \.self) { name in
+                                Button { pick(name) } label: {
+                                    HStack {
+                                        Text(name).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
+                                        Spacer()
+                                        if let times = usage[name] { Text(count(times, "time")).font(.caption).foregroundStyle(Palette.muted) }
+                                        Image(systemName: "plus").font(.body.weight(.semibold)).foregroundStyle(Palette.accent)
+                                    }
+                                    .frame(minHeight: 32).contentShape(Rectangle())
+                                }
+                                .buttonStyle(PressStyle())
+                                .accessibilityLabel("Add \(name)")
+                            }
+                        }
+                        if results.count > shown {
+                            Button("Show more") { shown += 50 }.buttonStyle(SecondaryButtonStyle())
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Backdrop())
+            .navigationTitle("Add an exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Backdrop())
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search exercises")
-            .navigationTitle("Add exercise")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .onChange(of: query) { shown = 50 }
         }
     }
 

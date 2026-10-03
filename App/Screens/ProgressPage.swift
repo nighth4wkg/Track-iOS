@@ -1,19 +1,21 @@
 import SwiftUI
 import TrackCore
 
-/// Progress: this week's volume over the last eight weeks, the streak and level, then personal records.
+/// Progress, as on the website: this week's volume over the last eight weeks, then three tiles that each open where
+/// their number comes from (the streak goes Home, the level explains XP, achievements lists all 24), then each
+/// exercise's latest personal record (a row opens its workout).
 struct ProgressPage: View {
     @Environment(AppModel.self) private var model
     @Binding var settingsOpen: Bool
+    @State private var xpHelp = false
+    @State private var quests = false
 
     var body: some View {
         let training = model.training
         let now = nowMillis()
         let unit = training.settings.unit
         let week = training.sessions.weekVolumeChange(at: now)
-        let volumes = training.sessions.weeklyVolumes(8, at: now)
-        let level = Experience.progress(of: training.sessions)
-        let records = training.sessions.latestRecords
+        let records = Array(training.sessions.latestRecords.prefix(5))
         Page(title: "Progress", settingsOpen: $settingsOpen) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top) {
@@ -26,54 +28,129 @@ struct ProgressPage: View {
                         .foregroundStyle(Palette.text)
                     }
                     Spacer()
-                    if let change = week.change { Chip(text: "\(change >= 0 ? "▲" : "▼") \(abs(change))% vs last week", accent: change >= 0) }
+                    if let change = week.change {
+                        Chip(text: change == 0 ? "Same as last week" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs last week", accent: change > 0)
+                    }
                 }
-                WeekBars(volumes: volumes)
+                WeekBars(volumes: training.sessions.weeklyVolumes(8, at: now))
                 HStack { Text("8 weeks ago"); Spacer(); Text("This week") }.font(.caption).foregroundStyle(Palette.muted)
             }
             .padding(20).glass()
             HStack(spacing: 10) {
-                tile(icon: "flame", value: "\(training.sessions.weeklyStreak(at: now))", label: "Week streak")
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) { Image(systemName: "rosette"); Text("Lv \(level.level)").monospacedDigit() }
-                        .font(.title3.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
-                    Text("\(level.current)/\(level.required) XP").font(.subheadline).foregroundStyle(Palette.muted).monospacedDigit()
-                        .lineLimit(1).minimumScaleFactor(0.8)
-                    ProgressView(value: Double(level.current), total: Double(level.required)).tint(Palette.primary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
-                tile(icon: "medal", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements")
+                tile(icon: "flame", value: "\(training.sessions.weeklyStreak(at: now))", label: "Week streak") { model.tab = .home }
+                LevelTile { xpHelp = true }
+                tile(icon: "medal", value: "\(training.sessions.questAwards.count)/\(Quest.all.count)", label: "Achievements") { quests = true }
             }
             .fixedSize(horizontal: false, vertical: true)
             SectionHeading(title: "Personal records")
             if records.isEmpty {
-                Text("Beat a weight or rep count you’ve logged before and it shows up here.")
-                    .font(.subheadline).foregroundStyle(Palette.muted).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass()
+                EmptyCard(icon: "chart.line.uptrend.xyaxis",
+                          title: training.sessions.isEmpty ? "Your next workout starts the story" : "No records yet",
+                          detail: training.sessions.isEmpty ? "Complete a workout to set your first baseline."
+                              : "Beat a weight or rep count from an earlier workout to set one.")
+                if training.sessions.isEmpty {
+                    Button { model.tab = .home } label: { Label("Go to your splits", systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
+                        .buttonStyle(SecondaryButtonStyle())
+                }
             } else {
                 GlassList {
-                ForEach(records.prefix(20), id: \.after.exercise) { record in
-                    let after = record.after
-                    ListRow(icon: "trophy", title: after.exercise,
-                            detail: "\(TrainingSet.display(kg: after.kg, unit: unit)) \(unit.rawValue) × \(after.reps) · \(Date(timeIntervalSince1970: Double(after.date) / 1000).formatted(.dateTime.month(.abbreviated).day()))") {
-                        Text(record.kind == .weight ? "+\(TrainingSet.display(kg: after.kg - record.before.kg, unit: unit)) \(unit.rawValue)" : "+\(after.reps - record.before.reps) reps")
-                            .font(.headline).monospacedDigit().foregroundStyle(Palette.accent)
+                    ForEach(records, id: \.after.exercise) { record in
+                        let after = record.after
+                        Button { model.history = training.sessions.first { $0.id == after.sessionId } } label: {
+                            ListRow(icon: "trophy", title: after.exercise,
+                                    detail: "\(TrainingSet.display(kg: after.kg, unit: unit)) \(unit.rawValue) × \(after.reps) · \(Date(timeIntervalSince1970: Double(after.date) / 1000).formatted(.dateTime.month(.abbreviated).day()))") {
+                                Text(record.kind == .weight ? "+\(TrainingSet.display(kg: after.kg - record.before.kg, unit: unit)) \(unit.rawValue)"
+                                     : "+\(count(after.reps - record.before.reps, "rep"))")
+                                    .font(.headline).monospacedDigit().foregroundStyle(Palette.accent)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressStyle())
                     }
                 }
-                }
             }
         }
+        .sheet(isPresented: $xpHelp) { XpHelp().presentationDetents([.medium, .large]) }
+        .sheet(isPresented: $quests) { QuestList().trackOverlays() }
     }
 
-    private func tile(icon: String, value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: icon).foregroundStyle(icon == "flame" ? Palette.streak : Palette.text)
-                Text(value).monospacedDigit().foregroundStyle(Palette.text)
+    private func tile(icon: String, value: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon).foregroundStyle(icon == "flame" ? Palette.streak : Palette.text)
+                    Text(value).monospacedDigit().foregroundStyle(Palette.text)
+                }
+                .font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(label).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
             }
-            .font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
-            Text(label).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
         }
-        .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
+        .buttonStyle(PressStyle())
+    }
+}
+
+/// The level, its XP so far, and the bar. After a workout the bar fills from where it was to the new total (across
+/// a level, it fills, empties and fills again), with "+N XP" beside it.
+private struct LevelTile: View {
+    @Environment(AppModel.self) private var model
+    let action: () -> Void
+    @State private var shown: Double?
+    @State private var earned: Int?
+    @State private var played: String?
+
+    var body: some View {
+        let progress = Experience.progress(of: model.training.sessions)
+        let fraction = Double(progress.current) / Double(progress.required)
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) { Image(systemName: "rosette"); Text("Lv \(progress.level)").monospacedDigit() }
+                    .font(.title3.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
+                Text(earned.map { "+\($0) XP" } ?? "\(progress.current)/\(progress.required) XP")
+                    .font(.subheadline.weight(earned == nil ? .regular : .bold)).monospacedDigit()
+                    .foregroundStyle(earned == nil ? Palette.muted : Palette.accent).lineLimit(1).minimumScaleFactor(0.8)
+                    .contentTransition(.numericText())
+                RankBar(progress: shown ?? fraction, color: Palette.primary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(14).glass()
+        }
+        .buttonStyle(PressStyle())
+        .accessibilityLabel("Level \(progress.level): \(progress.current) of \(progress.required) XP. How XP works")
+        .task(id: fillKey) {
+            guard let fill = model.xpFill, model.finished == nil, played != fillKey else { return }
+            played = fillKey
+            shown = Self.fraction(fill.from)
+            earned = fill.to - fill.from
+            try? await Task.sleep(for: .milliseconds(350))
+            if Self.level(fill.from) < Self.level(fill.to) {
+                withAnimation(.smooth(duration: 0.25)) { shown = 1 }
+                try? await Task.sleep(for: .milliseconds(260))
+                shown = 0
+            }
+            withAnimation(.smooth(duration: 0.4)) { shown = Self.fraction(fill.to) }
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(.smooth) { earned = nil; shown = nil }
+        }
+        .sensoryFeedback(.success, trigger: earned) { _, now in now != nil }
+    }
+
+    /// Changes when there's a new fill to play, and once the recap over it has closed.
+    private var fillKey: String {
+        guard let fill = model.xpFill else { return "none" }
+        return "\(fill.from)-\(fill.to)-\(model.finished == nil)"
+    }
+
+    /// A total's place within its level (0–1) and the level it's in, by the website's level table.
+    static func fraction(_ total: Int) -> Double {
+        var level = 1, current = max(0, total)
+        while current >= Experience.requirement(for: level) { current -= Experience.requirement(for: level); level += 1 }
+        return Double(current) / Double(Experience.requirement(for: level))
+    }
+
+    static func level(_ total: Int) -> Int {
+        var level = 1, current = max(0, total)
+        while current >= Experience.requirement(for: level) { current -= Experience.requirement(for: level); level += 1 }
+        return level
     }
 }
 
@@ -86,11 +163,10 @@ private struct WeekBars: View {
         let top = max(volumes.max() ?? 0, 1)
         HStack(alignment: .bottom, spacing: 8) {
             ForEach(Array(volumes.enumerated()), id: \.offset) { index, volume in
-                let last = index == volumes.count - 1
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(last ? Palette.primary : Palette.control)
+                    .fill(index == volumes.count - 1 ? Palette.primary : Palette.control)
                     .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.rim.opacity(0.4), lineWidth: 1))
-                    .frame(height: max(12, 140 * (grown ? volume / top : 0)))
+                    .frame(height: 140 * (grown ? max(0.04, volume / top) : 0.04))
                     .frame(maxWidth: .infinity)
             }
         }

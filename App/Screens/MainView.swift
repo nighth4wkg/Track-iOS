@@ -1,32 +1,30 @@
 import SwiftUI
 import TrackCore
 
-/// The app after the first screen: the four tabs of the website on the system tab bar (Liquid Glass on iOS 26), the
-/// workout over everything while it's open, and the summary when one finishes.
+/// The app after the first screen: the website's four tabs on the system tab bar (Liquid Glass on iOS 26), the
+/// workout over everything while it's open, the recap when one finishes, and a finished workout's detail.
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @State private var settingsOpen = false
 
     var body: some View {
         @Bindable var model = model
-        TabView {
+        TabView(selection: $model.tab) {
             HomeView(settingsOpen: $settingsOpen)
-                .tabItem { Label("Home", systemImage: "house") }
+                .tabItem { Label("Home", systemImage: "house") }.tag(AppTab.home)
             HistoryView(settingsOpen: $settingsOpen)
-                .tabItem { Label("History", systemImage: "calendar") }
+                .tabItem { Label("History", systemImage: "calendar") }.tag(AppTab.history)
             ProgressPage(settingsOpen: $settingsOpen)
-                .tabItem { Label("Progress", systemImage: "chart.bar") }
+                .tabItem { Label("Progress", systemImage: "chart.bar") }.tag(AppTab.progress)
             RankPage(settingsOpen: $settingsOpen)
-                .tabItem { Label("Rank", systemImage: "medal") }
+                .tabItem { Label("Rank", systemImage: "medal") }.tag(AppTab.rank)
         }
         .tint(Palette.accent)
-        .sheet(isPresented: $settingsOpen) { SettingsView() }
-        .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView() }
-        .sheet(item: $model.summary) { FinishView(summary: $0) }
-        .alert("Track", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.message = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(model.message ?? "")
-        }
+        .sensoryFeedback(.selection, trigger: model.tab)
+        .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
+        .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView().trackOverlays() }
+        .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
+        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
+        .trackOverlays()
     }
 }

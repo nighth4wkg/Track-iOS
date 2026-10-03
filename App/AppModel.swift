@@ -8,22 +8,34 @@ enum StorageMode: String {
     case sync, local
 }
 
-/// What a finished workout earned, for the summary and its celebration.
-struct FinishSummary: Identifiable {
+enum AppTab: Hashable { case home, history, progress, rank }
+
+/// A question before something that can't be taken back, shown in Track's own dialog (as the website's).
+struct Confirm: Identifiable {
     let id = UUID()
-    let name: String
-    let sets: Int
-    let volume: Double
-    let minutes: Int
+    let title: String
+    let message: String
+    let label: String
+    var destructive = false
+    let action: () -> Void
+}
+
+/// A short note at the bottom ("Set removed"), with Undo when there's something to bring back.
+struct Toast: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    var undo: (() -> Void)?
+    static func == (a: Toast, b: Toast) -> Bool { a.id == b.id }
+}
+
+/// The just-finished workout's recap, and what it earned beyond the recap's own numbers.
+struct Finished: Identifiable {
+    let id: String
     let xp: Int
     let level: Int
     let leveledUp: Bool
-    /// Exercises whose heaviest weight went up.
-    let records: [String]
     /// Muscles that reached a new rank, as "Chest → Strong".
     let rankUps: [String]
-    /// Achievements this workout earned.
-    let achievements: [String]
 }
 
 /// The app's state: the training data (saved to this device after every change), the storage choice, and what's
@@ -35,10 +47,21 @@ final class AppModel {
     private(set) var mode: StorageMode?
     /// Why the saved copy couldn't be read, if it couldn't. The app then starts empty without overwriting it.
     private(set) var loadError: String?
-    /// A problem to show (an alert), such as finishing without a logged set.
-    var message: String?
+    /// A problem to show, such as finishing without a logged set: it appears as a toast on whatever screen is in front.
+    var message: String? {
+        get { nil }
+        set { if let newValue { show(newValue) } }
+    }
+    var confirm: Confirm?
+    var toast: Toast?
+    var tab = AppTab.home
     var workoutOpen = false
-    var summary: FinishSummary?
+    var arrangingExercises = false
+    var finished: Finished?
+    /// The level bar's XP before and after the last finished workout, for its fill on Progress.
+    var xpFill: (from: Int, to: Int)?
+    /// The finished workout open in its detail sheet.
+    var history: Session?
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true
@@ -88,11 +111,19 @@ final class AppModel {
         workoutOpen = false
     }
 
+    func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }
+
     // MARK: Workouts
 
-    func start(_ split: Split) {
-        update { try $0.start(split) }
-        if training.active != nil { workoutOpen = true }
+    func start(_ split: Split, carryOver: Bool = true) {
+        update { try $0.start(split, carryOver: carryOver) }
+        if training.active != nil { arrangingExercises = false; workoutOpen = true }
+    }
+
+    /// Starts a past workout again with its own numbers.
+    func repeatWorkout(_ session: Session) {
+        history = nil
+        start(Split(id: session.splitId, name: session.name, exercises: session.exercises), carryOver: false)
     }
 
     /// Logs a set, or un-logs it. Logging starts the rest timer.
@@ -106,33 +137,6 @@ final class AppModel {
             }
             if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
         }
-    }
-
-    func finish() {
-        let before = Experience.progress(of: training.sessions)
-        let records = training.sessions.personalRecords
-        let bodyweight = training.settings.bodyweight
-        let ranksBefore = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
-        update { try $0.finish(); $0.awardLatestQuests() }
-        guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
-        let after = Experience.progress(of: training.sessions)
-        let newRecords = session.exercises.filter { exercise in
-            let best = exercise.sets.compactMap(\.kg).max() ?? 0
-            return records[exercise.name].map { best > $0 } ?? false
-        }.map(\.name)
-        let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
-        let rankUps = zip(ranksBefore, ranksAfter).filter { $1.best != nil && $1.rank > $0.rank }
-            .map { "\($1.muscle.rawValue) → \($1.name)" }
-        workoutOpen = false
-        summary = FinishSummary(name: session.name, sets: session.completedSets.count, volume: session.volume,
-                                minutes: session.minutes, xp: after.total - before.total, level: after.level,
-                                leveledUp: after.level > before.level, records: newRecords, rankUps: rankUps,
-                                achievements: (session.questAwards ?? []).compactMap { award in Quest.all.first { $0.id == award.questId }?.title })
-    }
-
-    func discard() {
-        update { $0.discard() }
-        workoutOpen = false
     }
 }
 

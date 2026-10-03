@@ -11,7 +11,8 @@ struct TrackApp: App {
             }
             .environment(model)
             .tint(Palette.accent)
-            .preferredColorScheme(model.training.settings.theme == .light ? .light : model.training.settings.theme == .dark ? .dark : nil)
+            .onAppear { Appearance.apply(model.training.settings.theme) }
+            .onChange(of: model.training.settings.theme) { _, theme in Appearance.apply(theme) }
         }
     }
 }

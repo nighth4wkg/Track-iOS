@@ -12,6 +12,8 @@ enum Palette {
     static let primary = Color(light: 0x3FD583, dark: 0x48E58D)
     static let primaryText = Color(light: 0x0D2A1A, dark: 0x102B1C)
     static let danger = Color(hex: 0xE52626)
+    /// Personal bests (app/styles/rewards.css).
+    static let record = Color(light: 0xA06A00, dark: 0xF2C14E)
     /// The streak flame (components/header-streak).
     static let streak = Color(light: 0xC2620E, dark: 0xF5A546)
     static let card = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.58, darkOpacity: 0.05)

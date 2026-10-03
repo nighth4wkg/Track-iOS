@@ -99,7 +99,7 @@ public enum Experience {
     }
 
     /// Each finished workout, oldest first, with its training XP (its stored award, else computed).
-    static func rewards(of sessions: [Session], calendar: Calendar = Calendars.local) -> [(Session, Int)] {
+    public static func rewards(of sessions: [Session], calendar: Calendar = Calendars.local) -> [(Session, Int)] {
         var dailySets: [String: Int] = [:]
         let ordered = sessions.finished.sorted { a, b in a.finishedAt! == b.finishedAt! ? a.id < b.id : a.finishedAt! < b.finishedAt! }
         return ordered.map { session in
