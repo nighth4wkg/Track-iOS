@@ -158,8 +158,8 @@ struct WorkoutOptions: View {
             Text(active?.name ?? "").font(.subheadline).foregroundStyle(Palette.muted).padding(.bottom, 6)
             option(split != nil ? "Rename split" : "Rename workout", "pencil") {
                 dismiss()
-                model.naming = Naming(title: split != nil ? "Rename split" : "Rename workout", label: split != nil ? "Split name" : "Workout name",
-                                      name: active?.name ?? "", action: "Save name") { name in model.update { $0.active?.name = name } }
+                model.naming = Naming(title: split != nil ? "Rename split" : "Rename workout", name: active?.name ?? "",
+                                      label: split != nil ? "Split name" : "Workout name", action: "Save name") { name in model.update { $0.active?.name = name } }
             }
             option(unit == .kg ? "Use pounds (lb)" : "Use kilograms (kg)", "arrow.left.arrow.right") {
                 model.update { $0.settings.unit = unit == .kg ? .lb : .kg }

@@ -101,8 +101,8 @@ struct RankPage: View {
 
     /// Changing the bodyweight later, in Track's dialog.
     private func editBodyweight(_ bodyweight: Double, _ unit: TrackCore.Settings.Unit) {
-        model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.", label: "Bodyweight (\(unit.rawValue))",
-                              name: TrainingSet.display(kg: bodyweight, unit: unit), placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true, action: "Save") { text in
+        model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
+                              name: TrainingSet.display(kg: bodyweight, unit: unit), label: "Bodyweight (\(unit.rawValue))", placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true, action: "Save") { text in
             guard let kg = TrainingSet.kilograms(from: text, unit: unit), kg >= 20, kg <= 400 else {
                 model.message = "Enter a bodyweight between \(unit == .kg ? "20 and 400 kg" : "44 and 880 lb")."
                 return
