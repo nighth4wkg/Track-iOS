@@ -92,6 +92,11 @@ struct ExerciseCard: View {
 
     private func move(_ direction: Int) {
         guard let index = model.training.active?.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
-        withAnimation(.smooth(duration: 0.3)) { model.update { $0.active?.exercises = $0.active!.exercises.moving(index, by: direction) } }
+        withAnimation(.smooth(duration: 0.3)) {
+            model.update { training in
+                guard let moved = training.active?.exercises.moving(index, by: direction) else { return }
+                training.active?.exercises = moved
+            }
+        }
     }
 }

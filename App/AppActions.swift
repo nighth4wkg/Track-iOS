@@ -18,7 +18,8 @@ extension AppModel {
             self?.update { training in
                 guard training.active?.id == sessionId else { return }
                 if last, !(training.active?.exercises.contains { $0.id == exercise.id } ?? true) {
-                    training.active?.exercises.insert(exercise, at: min(at, training.active?.exercises.count ?? 0))
+                    let end = training.active?.exercises.count ?? 0
+                    training.active?.exercises.insert(exercise, at: min(at, end))
                 } else {
                     training.updateActive(exercise: exerciseId) { $0.sets.insert(set, at: min(index, $0.sets.count)) }
                 }
