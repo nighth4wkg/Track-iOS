@@ -18,6 +18,8 @@ enum Palette {
     static let streak = Color(light: 0xC2620E, dark: 0xF5A546)
     static let card = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.58, darkOpacity: 0.05)
     static let control = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.70, darkOpacity: 0.08)
+    /// Dialogs: solid, so what's behind doesn't tint them.
+    static let dialog = Color(light: 0xF8FAFD, dark: 0x1D2025)
     static let input = Color(light: 0xE7EBF2, dark: 0x000000, lightOpacity: 0.78, darkOpacity: 0.22)
     static let rim = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 1, darkOpacity: 0.24)
     static let shadow = Color(light: 0x2A3A52, dark: 0x000000, lightOpacity: 0.08, darkOpacity: 0.35)
@@ -80,6 +82,8 @@ extension View {
 
 /// The screen's one main action: the green pill.
 struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
@@ -88,19 +92,21 @@ struct PrimaryButtonStyle: ButtonStyle {
             .background(Capsule().fill(Palette.primary)
                 .overlay(Capsule().fill(LinearGradient(colors: [.white.opacity(0.10), .clear], startPoint: .topLeading, endPoint: UnitPoint(x: 0.55, y: 0.55))))
                 .shadow(color: Palette.shadow, radius: 6, y: 4))
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .opacity(configuration.isPressed ? 0.8 : enabled ? 1 : 0.45)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
-/// Every other button: a glass pill.
+/// Every other button: a glass pill, tinted red for one that deletes.
 struct SecondaryButtonStyle: ButtonStyle {
+    var danger = false
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
-            .foregroundStyle(Palette.text)
+            .foregroundStyle(danger ? Palette.danger : Palette.text)
             .frame(maxWidth: .infinity, minHeight: 50)
-            .glass(radius: 25, fill: Palette.control, lifted: false)
+            .glass(radius: 25, fill: danger ? Palette.danger.opacity(0.14) : Palette.control, lifted: false)
             .opacity(configuration.isPressed ? 0.7 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }

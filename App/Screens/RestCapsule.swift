@@ -27,8 +27,8 @@ struct RestCapsule: View {
                             Text(left > 0 ? "Rest" : "Ready for your next set").font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
                         }
                         Spacer(minLength: 4)
-                        if left > 0 { pill("+30s") { model.update { $0.restUntil = max(nowMillis(), $0.restUntil ?? 0) + 30_000 } } }
-                        pill(left > 0 ? "Skip" : "Done") { model.update { $0.restUntil = nil } }
+                        if left > 0 { pill("+30s") { model.changeRest(by: 30) } }
+                        pill(left > 0 ? "Skip" : "Done") { model.changeRest(by: 0) }
                     }
                     .padding(.leading, 14).padding(.trailing, 10).padding(.vertical, 10)
                     .background(.ultraThinMaterial, in: Capsule())

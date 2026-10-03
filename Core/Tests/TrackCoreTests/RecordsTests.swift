@@ -25,12 +25,14 @@ final class RecordsTests: XCTestCase {
         XCTAssertEqual(sessions.improvements.count, 1)
     }
 
-    func testWeeklyVolumesEndWithThisWeek() {
+    func testVolumesEndWithThePresentPeriod() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Bangkok")!
         let now = millis(calendar.date(from: DateComponents(year: 2026, month: 10, day: 2, hour: 12))!)
         let lastWeek = millis(calendar.date(from: DateComponents(year: 2026, month: 9, day: 23, hour: 12))!)
-        let volumes = [workout("a", now, [(100, 10)]), workout("b", lastWeek, [(50, 10)])].weeklyVolumes(4, at: now, calendar: calendar)
-        XCTAssertEqual(volumes, [0, 0, 500, 1000])
+        let sessions = [workout("a", now, [(100, 10)]), workout("b", lastWeek, [(50, 10)])]
+        XCTAssertEqual(sessions.volumes(4, per: .week, at: now, calendar: calendar), [0, 0, 500, 1000])
+        XCTAssertEqual(sessions.volumes(2, per: .month, at: now, calendar: calendar), [500, 1000])
+        XCTAssertEqual(sessions.volumes(3, per: .day, at: now, calendar: calendar), [0, 0, 1000])
     }
 }

@@ -28,6 +28,21 @@ public func weekStart(_ time: Int, calendar: Calendar = Calendars.local) -> Int 
     return millis(calendar.date(byAdding: .day, value: -sinceMonday, to: day)!)
 }
 
+/// What Progress groups volume by.
+public enum Period: String, CaseIterable, Sendable {
+    case day = "D", week = "W", month = "M"
+    var component: Calendar.Component { self == .day ? .day : self == .week ? .weekOfYear : .month }
+}
+
+/// Midnight at the start of the time's day, week (Monday) or month.
+public func periodStart(_ time: Int, _ period: Period, calendar: Calendar = Calendars.local) -> Int {
+    switch period {
+    case .day: millis(calendar.startOfDay(for: date(time)))
+    case .week: weekStart(time, calendar: calendar)
+    case .month: millis(calendar.dateInterval(of: .month, for: date(time))!.start)
+    }
+}
+
 extension Session {
     /// Weight × reps over the logged sets.
     public var volume: Double { completedSets.reduce(0) { $0 + ($1.kg ?? 0) * Double($1.reps ?? 0) } }
@@ -42,12 +57,15 @@ extension Array where Element == Session {
         return finished.filter { weekStart($0.finishedAt!, calendar: calendar) == start }
     }
 
-    /// This week's volume so far, and its percentage change against last week up to the same moment (nil when last
-    /// week had none by then), so a Monday never reads as a drop against a whole finished week.
-    public func weekVolumeChange(at time: Int, calendar: Calendar = Calendars.local) -> (volume: Double, change: Int?) {
-        let then = millis(calendar.date(byAdding: .day, value: -7, to: date(time))!)
-        let now = inWeek(of: time, calendar: calendar).reduce(0) { $0 + $1.volume }
-        let last = filter { ($0.finishedAt ?? .max) <= then }.inWeek(of: then, calendar: calendar).reduce(0) { $0 + $1.volume }
+    /// This period's volume so far, and its percentage change against the last one up to the same moment (nil when
+    /// that had none by then), so a Monday never reads as a drop against a whole finished week.
+    public func volumeChange(per period: Period, at time: Int, calendar: Calendar = Calendars.local) -> (volume: Double, change: Int?) {
+        let then = millis(calendar.date(byAdding: period.component, value: -1, to: date(time))!)
+        let volume = { (end: Int) in
+            let start = periodStart(end, period, calendar: calendar)
+            return finished.filter { (start...end).contains($0.finishedAt!) }.reduce(0) { $0 + $1.volume }
+        }
+        let now = volume(time), last = volume(then)
         return (now, last > 0 ? Int(((now - last) / last * 100).rounded()) : nil)
     }
 

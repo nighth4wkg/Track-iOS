@@ -93,7 +93,8 @@ final class WorkoutTests: XCTestCase {
     }
 
     func testMovingItems() {
-        XCTAssertEqual([1, 2, 3].moving(0, by: 1), [2, 1, 3])
-        XCTAssertEqual([1, 2, 3].moving(2, by: 1), [1, 2, 3], "past the end stays put")
+        XCTAssertEqual([1, 2, 3].moved(0, to: 2), [2, 3, 1])
+        XCTAssertEqual([1, 2, 3].moved(2, to: 0), [3, 1, 2])
+        XCTAssertEqual([1, 2, 3].moved(2, to: 3), [1, 2, 3], "past the end stays put")
     }
 }

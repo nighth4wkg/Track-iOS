@@ -5,6 +5,11 @@ import TrackCore
 extension AppModel {
     func startRest() { update { $0.restUntil = nowMillis() + $0.settings.restSeconds * 1000 } }
 
+    /// Adds to the rest, or ends it with 0: the capsule's +30s and Skip, and the Live Activity's.
+    func changeRest(by seconds: Int) {
+        update { $0.restUntil = seconds == 0 ? nil : max(nowMillis(), $0.restUntil ?? 0) + seconds * 1000 }
+    }
+
     /// Removes a set; its exercise goes too when it was the last one. One Undo brings both back.
     func removeSet(_ setId: String, in exerciseId: String) {
         guard let active = training.active, let at = active.exercises.firstIndex(where: { $0.id == exerciseId }),
@@ -54,7 +59,6 @@ extension AppModel {
         let after = Experience.progress(of: training.sessions)
         let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
         workoutOpen = false
-        arrangingExercises = false
         tab = .progress
         xpFill = (before.total, after.total)
         finished = Finished(id: session.id, xp: after.total - before.total, level: after.level, leveledUp: after.level > before.level,
@@ -65,7 +69,6 @@ extension AppModel {
         confirm = Confirm(title: "Discard this workout?", message: "Its sets won’t be saved.", label: "Discard workout", destructive: true) { [weak self] in
             self?.update { $0.discard() }
             self?.workoutOpen = false
-            self?.arrangingExercises = false
         }
     }
 

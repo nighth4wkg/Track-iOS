@@ -64,14 +64,14 @@ extension Array where Element == Session {
         return improvements.filter { seen.insert(exerciseKey($0.after.exercise)).inserted }
     }
 
-    /// Volume per week for the last `weeks` weeks, oldest first, ending with the time's week.
-    public func weeklyVolumes(_ weeks: Int = 8, at time: Int, calendar: Calendar = Calendars.local) -> [Double] {
-        let current = weekStart(time, calendar: calendar)
-        let starts = (0..<weeks).reversed().map { back in
-            weekStart(millis(calendar.date(byAdding: .day, value: -7 * back, to: date(current))!), calendar: calendar)
+    /// Volume per period for the last `count` periods, oldest first, ending with the time's.
+    public func volumes(_ count: Int, per period: Period, at time: Int, calendar: Calendar = Calendars.local) -> [Double] {
+        let current = date(periodStart(time, period, calendar: calendar))
+        let starts = (0..<count).reversed().map { back in
+            periodStart(millis(calendar.date(byAdding: period.component, value: -back, to: current)!), period, calendar: calendar)
         }
         var totals = [Int: Double]()
-        for session in finished { totals[weekStart(session.finishedAt!, calendar: calendar), default: 0] += session.volume }
+        for session in finished { totals[periodStart(session.finishedAt!, period, calendar: calendar), default: 0] += session.volume }
         return starts.map { totals[$0] ?? 0 }
     }
 }

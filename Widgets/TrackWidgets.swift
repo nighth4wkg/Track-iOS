@@ -17,12 +17,12 @@ struct RestLiveActivity: Widget {
             HStack(spacing: 14) {
                 ring(context.state, size: 44, line: 5)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Rest").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Rest · \(context.attributes.workout)").font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                     Text(timerInterval: Self.left(context.state), countsDown: true)
                         .font(.title.weight(.bold)).monospacedDigit()
                 }
                 Spacer()
-                Text(context.attributes.workout).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
+                controls(stale: context.isStale)
             }
             .padding(16)
             .activityBackgroundTint(Color(red: 0x12 / 255, green: 0x14 / 255, blue: 0x18 / 255).opacity(0.85))
@@ -38,7 +38,12 @@ struct RestLiveActivity: Widget {
                     Text("Rest").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Next set in \(context.attributes.workout)").font(.footnote).foregroundStyle(.secondary)
+                    HStack {
+                        Text("Next set in \(context.attributes.workout)").font(.footnote).foregroundStyle(.secondary).lineLimit(1)
+                        Spacer()
+                        controls(stale: context.isStale)
+                    }
+                    .padding(.horizontal, 4)
                 }
             } compactLeading: {
                 ring(context.state, size: 20, line: 3)
@@ -57,6 +62,16 @@ struct RestLiveActivity: Widget {
     private static func left(_ state: RestAttributes.ContentState) -> ClosedRange<Date> {
         let now = Date.now
         return now...max(now, state.until)
+    }
+
+    /// +30s while it runs, then Skip (Done once it's over): they change the rest in Track.
+    private func controls(stale: Bool) -> some View {
+        HStack(spacing: 8) {
+            if !stale { Button(intent: RestIntent(seconds: 30)) { Text("+30s") } }
+            Button(intent: RestIntent(seconds: 0)) { Text(stale ? "Done" : "Skip") }
+        }
+        .font(.subheadline.weight(.semibold))
+        .buttonStyle(.bordered).buttonBorderShape(.capsule).tint(Self.mint)
     }
 
     /// A ring that empties as the rest runs out.

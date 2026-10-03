@@ -1,7 +1,7 @@
 import SwiftUI
 import TrackCore
 
-/// Progress, as on the website: this week's volume over the last eight weeks, then three tiles that each open where
+/// Progress, as on the website: volume by day, week or month (D W M; Home keeps just the week), then three tiles that each open where
 /// their number comes from (the streak goes Home, the level explains XP, achievements lists all 24), then each
 /// exercise's latest personal record (a row opens its workout).
 struct ProgressPage: View {
@@ -9,31 +9,36 @@ struct ProgressPage: View {
     @Binding var settingsOpen: Bool
     @State private var xpHelp = false
     @State private var quests = false
+    @AppStorage("track.volumePeriod") private var period = Period.week
 
     var body: some View {
         let training = model.training
         let now = nowMillis()
         let unit = training.settings.unit
-        let week = training.sessions.weekVolumeChange(at: now)
+        let change = training.sessions.volumeChange(per: period, at: now)
         let records = Array(training.sessions.latestRecords.prefix(5))
         Page(title: "Progress", settingsOpen: $settingsOpen) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Volume this week").font(.subheadline).foregroundStyle(Palette.muted)
+                        Text("Volume \(period.now)").font(.subheadline).foregroundStyle(Palette.muted)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(weight(week.volume, unit)).font(.largeTitle.weight(.bold)).monospacedDigit()
+                            Text(weight(change.volume, unit)).font(.largeTitle.weight(.bold)).monospacedDigit().contentTransition(.numericText())
                             Text(unit.rawValue).font(.subheadline).foregroundStyle(Palette.muted)
                         }
                         .foregroundStyle(Palette.text)
                     }
                     Spacer()
-                    if let change = week.change {
-                        Chip(text: change == 0 ? "Same as last week" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs last week", accent: change > 0)
+                    Picker("Volume by", selection: $period.animation(.smooth(duration: 0.35))) {
+                        ForEach(Period.allCases, id: \.self) { Text($0.rawValue).accessibilityLabel($0.name) }
                     }
+                    .pickerStyle(.segmented).fixedSize()
                 }
-                WeekBars(volumes: training.sessions.weeklyVolumes(8, at: now))
-                HStack { Text("8 weeks ago"); Spacer(); Text("This week") }.font(.caption).foregroundStyle(Palette.muted)
+                if let change = change.change {
+                    Chip(text: change == 0 ? "Same as \(period.last)" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs \(period.last)", accent: change > 0)
+                }
+                VolumeBars(volumes: training.sessions.volumes(period.bars, per: period, at: now), label: period.name)
+                HStack { Text(period.first); Spacer(); Text(period.now.capitalized) }.font(.caption).foregroundStyle(Palette.muted)
             }
             .padding(20).glass()
             HStack(spacing: 10) {
@@ -154,9 +159,11 @@ private struct LevelTile: View {
     }
 }
 
-/// Eight weekly bars, this week's in the accent and the rest glass, growing in smoothly.
-private struct WeekBars: View {
+/// The volume bars, the present one in the accent and the rest glass, growing in smoothly and reshaping when the
+/// period changes.
+private struct VolumeBars: View {
     let volumes: [Double]
+    let label: String
     @State private var grown = false
 
     var body: some View {
@@ -173,6 +180,15 @@ private struct WeekBars: View {
         .frame(height: 140, alignment: .bottom)
         .onAppear { withAnimation(.smooth(duration: 0.7)) { grown = true } }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Weekly volume, last eight weeks")
+        .accessibilityLabel("Volume by \(label.lowercased()), last \(volumes.count)")
     }
+}
+
+extension Period {
+    var name: String { self == .day ? "Day" : self == .week ? "Week" : "Month" }
+    /// "today", "this week", "this month".
+    var now: String { self == .day ? "today" : "this \(name.lowercased())" }
+    var last: String { self == .day ? "yesterday" : "last \(name.lowercased())" }
+    var bars: Int { self == .day ? 7 : self == .week ? 8 : 6 }
+    var first: String { "\(bars - 1) \(name.lowercased())s ago" }
 }

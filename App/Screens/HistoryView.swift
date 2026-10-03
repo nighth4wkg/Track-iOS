@@ -65,7 +65,7 @@ struct HistoryView: View {
 
     private var filterButton: some View {
         GlassCircleButton(icon: "line.3.horizontal.decrease", label: datesOpen ? "Hide date range" : "Filter by date",
-                          active: from != nil || to != nil) { datesOpen.toggle() }
+                          active: from != nil || to != nil) { withAnimation(.smooth(duration: 0.3)) { datesOpen.toggle() } }
     }
 
     private func search(filtering: Bool, label: String) -> some View {
@@ -94,14 +94,19 @@ struct HistoryView: View {
             Text(label).foregroundStyle(Palette.text)
             Spacer()
             if let date = value.wrappedValue {
-                DatePicker(label, selection: Binding(get: { date }, set: { value.wrappedValue = $0; shownCount = 20 }), in: range, displayedComponents: .date)
+                DatePicker(label, selection: Binding(get: { date }, set: { new in withAnimation(.smooth) { value.wrappedValue = new; shownCount = 20 } }),
+                           in: range, displayedComponents: .date)
                     .labelsHidden()
-                Button { value.wrappedValue = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
+                Button { withAnimation(.smooth) { value.wrappedValue = nil } } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
                     .accessibilityLabel("Any \(label.lowercased()) date")
             } else {
-                Button("Any") { value.wrappedValue = min(max(range.lowerBound, Calendars.local.date(byAdding: .month, value: -1, to: .now)!), range.upperBound) }
+                Button("Any") {
+                    withAnimation(.smooth) { value.wrappedValue = min(max(range.lowerBound, Calendars.local.date(byAdding: .month, value: -1, to: .now)!), range.upperBound) }
+                }
                     .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
                     .padding(.horizontal, 12).frame(minHeight: 36).glass(radius: 12, fill: Palette.control, lifted: false)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
             }
         }
         .frame(minHeight: 44)

@@ -125,12 +125,11 @@ extension Exercise {
 }
 
 extension Array {
-    /// The array with the item at `index` moved by `direction` places; unchanged if either end is out of range.
-    public func moving(_ index: Int, by direction: Int) -> [Element] {
-        let destination = index + direction
-        guard indices.contains(index), indices.contains(destination) else { return self }
+    /// The array with the item at `from` moved to `to`'s place; unchanged if either is out of range.
+    public func moved(_ from: Int, to: Int) -> [Element] {
+        guard indices.contains(from), indices.contains(to) else { return self }
         var next = self
-        next.insert(next.remove(at: index), at: destination)
+        next.insert(next.remove(at: from), at: to)
         return next
     }
 }

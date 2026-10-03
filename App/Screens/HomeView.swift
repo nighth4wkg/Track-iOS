@@ -2,13 +2,11 @@ import SwiftUI
 import TrackCore
 
 /// Home, as on the website: today's date over "Ready to train" (or "Keep going"), the workout in progress or the Up
-/// next card, your splits (tap one for its page, swipe it left to delete it, ↑↓ to arrange), then this week's volume
+/// next card, your splits (tap one for its page, swipe it left to delete it, hold and drag to move it), then this week's volume
 /// and the next achievement.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Binding var settingsOpen: Bool
-    @State private var creating = false
-    @State private var arranging = false
     @State private var open: String?
 
     var body: some View {
@@ -28,75 +26,63 @@ struct HomeView: View {
                 UpNextCard(training: training, now: now)
             }
             SectionHeading(title: "Your splits") {
-                if training.splits.count > 1 {
-                    GlassCircleButton(icon: arranging ? "checkmark" : "arrow.up.arrow.down", label: arranging ? "Done arranging splits" : "Arrange splits",
-                                      active: arranging) { withAnimation(.smooth) { arranging.toggle() } }
-                }
-                if !training.splits.isEmpty { GlassCircleButton(icon: "plus", label: "Create split") { creating = true } }
+                if !training.splits.isEmpty { GlassCircleButton(icon: "plus", label: "Create split", action: create) }
             }
             if training.splits.isEmpty {
-                FirstSplitCard { creating = true }
+                FirstSplitCard(create: create)
             } else {
-                SplitList(arranging: arranging, nextId: nextId) { open = $0 }
+                SplitList(nextId: nextId) { open = $0 }
                 .navigationDestination(item: $open) { SplitPage(splitId: $0) }
             }
             HomeTiles(training: training, now: now)
         }
         .animation(.smooth(duration: 0.3), value: training.active?.id)
-        .sensoryFeedback(.selection, trigger: arranging)
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
-        .sheet(isPresented: $creating) {
-            NameSheet(title: "Create a split", name: "", action: "Create split") { name in
-                let split = Split(name: name)
-                model.update { $0.splits.append(split) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { open = split.id }
-            }
+    }
+
+    private func create() {
+        model.naming = Naming(title: "Create a split", action: "Create split") { name in
+            let split = Split(name: name)
+            model.update { $0.splits.append(split) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { open = split.id }
         }
     }
 }
 
-/// Your splits on one glass card: tap one for its page, swipe it left to delete it, ↑ ↓ while arranging. The end of
-/// each row says In progress, Next, or ›.
+/// Your splits on one glass card: tap one for its page, swipe it left to delete it, hold and drag it to move it. The
+/// end of each row says In progress, Next, or ›.
 private struct SplitList: View {
     @Environment(AppModel.self) private var model
-    let arranging: Bool
     let nextId: String?
     let open: (String) -> Void
+    @State private var dragging: String?
 
     var body: some View {
-        let splits = model.training.splits
+        let ids = model.training.splits.map(\.id)
         GlassList {
-            ForEach(Array(splits.enumerated()), id: \.element.id) { index, split in
+            ForEach(model.training.splits) { split in
                 SwipeToDelete(onDelete: { model.deleteSplit(split) }) {
-                    Button { if !arranging { open(split.id) } } label: {
-                        ListRow(mark: true, title: split.name, detail: split.exercises.isEmpty ? "Tap to add exercises" : split.summary) {
-                            end(split, index: index, total: splits.count)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PressStyle())
+                    Button { open(split.id) } label: { row(split).contentShape(Rectangle()) }
+                        .buttonStyle(PressStyle())
+                        .reorderHandle(split.id, dragging: $dragging) { row(split).padding(.horizontal, 16).padding(.vertical, 10).frame(width: 340).glass(fill: Palette.dialog) }
                 }
+                .reorderTarget(split.id, in: ids, dragging: $dragging) { from, to in model.update { $0.splits = $0.splits.moved(from, to: to) } }
             }
         }
     }
 
-    @ViewBuilder private func end(_ split: Split, index: Int, total: Int) -> some View {
-        if arranging {
-            HStack(spacing: 8) {
-                GlassCircleButton(icon: "arrow.up", label: "Move up") { move(index, -1) }.disabled(index == 0).opacity(index == 0 ? 0.35 : 1)
-                GlassCircleButton(icon: "arrow.down", label: "Move down") { move(index, 1) }.disabled(index == total - 1).opacity(index == total - 1 ? 0.35 : 1)
-            }
-        } else if model.training.active?.splitId == split.id {
+    private func row(_ split: Split) -> some View {
+        ListRow(mark: true, title: split.name, detail: split.exercises.isEmpty ? "Tap to add exercises" : split.summary) { end(split) }
+    }
+
+    @ViewBuilder private func end(_ split: Split) -> some View {
+        if model.training.active?.splitId == split.id {
             Chip(text: "In progress")
         } else if split.id == nextId {
             Chip(text: "Next", accent: true)
         } else {
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
         }
-    }
-
-    private func move(_ index: Int, _ direction: Int) {
-        withAnimation(.smooth(duration: 0.3)) { model.update { $0.splits = $0.splits.moving(index, by: direction) } }
     }
 }
 

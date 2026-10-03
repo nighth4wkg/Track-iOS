@@ -20,6 +20,16 @@ struct Confirm: Identifiable {
     let action: () -> Void
 }
 
+/// A name to type, in Track's dialog: creating or renaming a split or a workout.
+struct Naming: Identifiable {
+    let id = UUID()
+    let title: String
+    var name = ""
+    var placeholder = "Split name"
+    let action: String
+    let onSave: (String) -> Void
+}
+
 /// A short note at the bottom ("Set removed"), with Undo when there's something to bring back.
 struct Toast: Identifiable, Equatable {
     let id = UUID()
@@ -52,11 +62,11 @@ final class AppModel {
         get { nil }
         set { if let newValue { show(newValue) } }
     }
-    var confirm: Confirm?
+    var confirm: Confirm? { didSet { dialogChanged() } }
+    var naming: Naming? { didSet { dialogChanged() } }
     var toast: Toast?
     var tab = AppTab.home
     var workoutOpen = false
-    var arrangingExercises = false
     var finished: Finished?
     /// The level bar's XP before and after the last finished workout, for its fill on Progress.
     var xpFill: (from: Int, to: Int)?
@@ -111,13 +121,15 @@ final class AppModel {
         workoutOpen = false
     }
 
+    private func dialogChanged() { DialogWindow.update(open: confirm != nil || naming != nil, typing: naming != nil) }
+
     func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }
 
     // MARK: Workouts
 
     func start(_ split: Split, carryOver: Bool = true) {
         update { try $0.start(split, carryOver: carryOver) }
-        if training.active != nil { arrangingExercises = false; workoutOpen = true }
+        if training.active != nil { workoutOpen = true }
     }
 
     /// Starts a past workout again with its own numbers.

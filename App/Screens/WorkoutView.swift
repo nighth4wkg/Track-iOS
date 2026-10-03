@@ -1,13 +1,13 @@
 import SwiftUI
 import TrackCore
 
-/// The active workout, as on the website: ‹ keeps it for later, the name opens its options, Finish (Done while
-/// arranging); the progress bar; a one-line guide until the first workout is finished; a card per exercise; Add
+/// The active workout, as on the website: ‹ keeps it for later, the name opens its options, Finish; the progress bar; a one-line guide until the first workout is finished; a card per exercise; Add
 /// exercise; and the rest timer floating at the bottom. The keyboard's Next walks weight → reps → RIR → next set.
 struct WorkoutView: View {
     @Environment(AppModel.self) private var model
     @State private var addingExercise = false
     @State private var options = false
+    @State private var dragging: String?
     @FocusState private var focus: String?
 
     var body: some View {
@@ -27,8 +27,8 @@ struct WorkoutView: View {
                                  + " Swipe a set left to delete it.")
                                 .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
-                            ExerciseCard(exercise: exercise, first: index == 0, last: index == active.exercises.count - 1, bests: bests, focus: $focus)
+                        ForEach(active.exercises) { exercise in
+                            ExerciseCard(exercise: exercise, ids: active.exercises.map(\.id), bests: bests, focus: $focus, dragging: $dragging)
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
@@ -37,6 +37,7 @@ struct WorkoutView: View {
                     .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
                     .frame(maxWidth: 720).frame(maxWidth: .infinity)
                     .animation(.smooth(duration: 0.3), value: active.exercises.map(\.id))
+                    .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .background(Backdrop())
@@ -74,9 +75,7 @@ struct WorkoutView: View {
             .accessibilityLabel("\(active.name): workout options")
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if model.arrangingExercises {
-                Button("Done") { withAnimation(.smooth) { model.arrangingExercises = false } }.fontWeight(.semibold)
-            } else if #available(iOS 26, *) {
+            if #available(iOS 26, *) {
                 Button("Finish") { model.finish() }.fontWeight(.bold).foregroundStyle(Palette.primaryText)
                     .buttonStyle(.glassProminent).tint(Palette.primary).accessibilityLabel("Finish workout")
             } else {
@@ -94,12 +93,11 @@ struct WorkoutView: View {
     }
 }
 
-/// The workout's options, as the website's: rename, arrange exercises, switch kg ⇄ lb, start a rest, discard the
+/// The workout's options, as the website's: rename, switch kg ⇄ lb, start a rest, discard the
 /// workout, delete its split.
 struct WorkoutOptions: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    @State private var renaming = false
 
     var body: some View {
         let active = model.training.active
@@ -108,32 +106,24 @@ struct WorkoutOptions: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Workout options").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
             Text(active?.name ?? "").font(.subheadline).foregroundStyle(Palette.muted).padding(.bottom, 6)
-            option(split != nil ? "Rename split" : "Rename workout", "pencil") { renaming = true }
-            option(model.arrangingExercises ? "Finish arranging" : "Arrange exercises", "arrow.up") {
-                withAnimation(.smooth) { model.arrangingExercises.toggle() }
+            option(split != nil ? "Rename split" : "Rename workout", "pencil") {
                 dismiss()
+                model.naming = Naming(title: split != nil ? "Rename split" : "Rename workout", name: active?.name ?? "",
+                                      placeholder: split != nil ? "Split name" : "Workout name", action: "Save") { name in model.update { $0.active?.name = name } }
             }
             option(unit == .kg ? "Use pounds (lb)" : "Use kilograms (kg)", "arrow.left.arrow.right") {
                 model.update { $0.settings.unit = unit == .kg ? .lb : .kg }
             }
             option("Start rest timer", "timer") { model.startRest(); dismiss() }
-            option("Discard workout", "trash", danger: true) { dismiss(); later { model.discard() } }
+            option("Discard workout", "trash", danger: true) { dismiss(); model.discard() }
             if let split {
-                option("Delete split", "trash", danger: true) { dismiss(); later { model.deleteSplit(split) } }
+                option("Delete split", "trash", danger: true) { dismiss(); model.deleteSplit(split) }
             }
         }
         .padding(24)
-        .presentationDetents([.height(split != nil ? 470 : 410)])
+        .presentationDetents([.height(split != nil ? 410 : 350)])
         .presentationBackground(.ultraThinMaterial)
-        .sheet(isPresented: $renaming) {
-            NameSheet(title: split != nil ? "Rename split" : "Rename workout", name: active?.name ?? "", action: "Save") { name in
-                model.update { $0.active?.name = name }
-            }
-        }
     }
-
-    /// After this sheet has gone, so the dialog shows over the workout.
-    private func later(_ action: @escaping () -> Void) { DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: action) }
 
     private func option(_ title: String, _ icon: String, danger: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {

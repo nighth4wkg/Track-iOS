@@ -2,49 +2,131 @@ import SwiftUI
 import TrackCore
 import UIKit
 
-/// The website's dialog (components/confirm-dialog): a glass card over a dimmed page with the question, what it
-/// means, and Cancel beside the action (green, or red when it can't be undone). It fades and scales in smoothly.
-struct ConfirmOverlay: View {
+/// Track's dialogs (components/confirm-dialog, split-name-dialog) live in their own window above everything, so
+/// the dim covers the tab bar and any sheet too. The window lets touches through until a dialog is up.
+enum DialogWindow {
+    private static var window: UIWindow?
+    private static weak var main: UIWindow?
+
+    static func install(_ model: AppModel) {
+        MainActor.assumeIsolated {
+            guard window == nil, let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+            main = scene.keyWindow
+            let host = UIHostingController(rootView: DialogLayer().environment(model))
+            host.view.backgroundColor = .clear
+            let window = UIWindow(windowScene: scene)
+            window.windowLevel = .alert
+            window.rootViewController = host
+            window.overrideUserInterfaceStyle = main?.overrideUserInterfaceStyle ?? .unspecified
+            window.isUserInteractionEnabled = false
+            window.isHidden = false
+            Self.window = window
+        }
+    }
+
+    /// Takes touches while a dialog is up, and the keyboard while one asks for a name.
+    static func update(open: Bool, typing: Bool) {
+        MainActor.assumeIsolated {
+            if main == nil { main = window?.windowScene?.windows.first { $0 !== window } }
+            window?.isUserInteractionEnabled = open
+            if typing { window?.makeKey() } else if window?.isKeyWindow == true { main?.makeKey() }
+        }
+    }
+}
+
+/// The dim and the one dialog showing: a question (Cancel beside the action, green or red), or a name to type.
+/// It fades and scales in smoothly; tapping the dim cancels.
+private struct DialogLayer: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         ZStack {
-            if let confirm = model.confirm {
-                Color.black.opacity(0.45).ignoresSafeArea()
-                    .onTapGesture { withAnimation(.smooth(duration: 0.2)) { model.confirm = nil } }
+            if model.confirm != nil || model.naming != nil {
+                Color.black.opacity(0.5).ignoresSafeArea()
+                    .onTapGesture { model.confirm = nil; model.naming = nil }
                     .transition(.opacity)
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(confirm.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-                    Text(confirm.message).font(.subheadline).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 12) {
-                        Button("Cancel") { withAnimation(.smooth(duration: 0.2)) { model.confirm = nil } }
-                            .buttonStyle(SecondaryButtonStyle())
-                        if confirm.destructive {
-                            Button(confirm.label) { resolve(confirm) }
-                                .font(.headline).foregroundStyle(Palette.danger)
-                                .frame(maxWidth: .infinity, minHeight: 50).contentShape(Rectangle())
-                                .buttonStyle(PressStyle())
-                        } else {
-                            Button(confirm.label) { resolve(confirm) }.buttonStyle(PrimaryButtonStyle())
-                        }
-                    }
-                    .padding(.top, 8)
-                }
-                .padding(24)
-                .frame(maxWidth: 420)
-                .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(.ultraThinMaterial))
-                .glass(radius: 28, fill: Palette.card)
-                .padding(24)
-                .transition(.scale(scale: 0.94).combined(with: .opacity))
-                .sensoryFeedback(confirm.destructive ? .warning : .impact(weight: .light), trigger: confirm.id)
+            }
+            if let confirm = model.confirm {
+                ConfirmCard(confirm: confirm).id(confirm.id).dialogCard()
+                    .sensoryFeedback(confirm.destructive ? .warning : .impact(weight: .light), trigger: confirm.id)
+            } else if let naming = model.naming {
+                NameCard(naming: naming).id(naming.id).dialogCard()
             }
         }
         .animation(.smooth(duration: 0.25), value: model.confirm?.id)
+        .animation(.smooth(duration: 0.25), value: model.naming?.id)
+    }
+}
+
+private struct ConfirmCard: View {
+    @Environment(AppModel.self) private var model
+    let confirm: Confirm
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(confirm.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+            Text(confirm.message).font(.subheadline).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 12) {
+                Button("Cancel") { model.confirm = nil }.buttonStyle(SecondaryButtonStyle())
+                if confirm.destructive {
+                    Button(confirm.label, action: resolve).buttonStyle(SecondaryButtonStyle(danger: true))
+                } else {
+                    Button(confirm.label, action: resolve).buttonStyle(PrimaryButtonStyle())
+                }
+            }
+            .lineLimit(1).minimumScaleFactor(0.8)
+            .padding(.top, 10)
+        }
     }
 
-    private func resolve(_ confirm: Confirm) {
-        withAnimation(.smooth(duration: 0.2)) { model.confirm = nil }
+    private func resolve() {
+        model.confirm = nil
         confirm.action()
+    }
+}
+
+/// Naming a split or workout: "Give your routine a name that makes sense to you.", the field, Cancel and the action.
+private struct NameCard: View {
+    @Environment(AppModel.self) private var model
+    let naming: Naming
+    @State private var name = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(naming.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+            Text("Give your routine a name that makes sense to you.").font(.subheadline).foregroundStyle(Palette.muted)
+            TextField(naming.placeholder, text: $name).focused($focused).submitLabel(.done).onSubmit(save)
+                .font(.body.weight(.semibold)).padding(.horizontal, 14).frame(minHeight: 48)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
+                .onChange(of: name) { _, value in if value.count > 100 { name = String(value.prefix(100)) } }
+                .padding(.top, 6)
+            HStack(spacing: 12) {
+                Button("Cancel") { model.naming = nil }.buttonStyle(SecondaryButtonStyle())
+                Button(naming.action, action: save).buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty)
+            }
+            .padding(.top, 10)
+        }
+        .onAppear { name = naming.name; DispatchQueue.main.async { focused = true } }
+    }
+
+    private func save() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        model.naming = nil
+        naming.onSave(trimmed)
+    }
+}
+
+private extension View {
+    /// A solid card with the glass rim, centred, that scales in.
+    func dialogCard() -> some View {
+        padding(24)
+            .frame(maxWidth: 420)
+            .glass(radius: 28, fill: Palette.dialog)
+            .padding(20)
+            .transition(.scale(scale: 0.94).combined(with: .opacity))
     }
 }
 
@@ -81,9 +163,9 @@ struct ToastOverlay: View {
 }
 
 extension View {
-    /// Track's dialog and toast over this screen (each presented screen carries its own, so they show above it).
+    /// Track's toast over this screen (each presented screen carries its own, so it shows above it).
     func trackOverlays() -> some View {
-        overlay { ToastOverlay() }.overlay { ConfirmOverlay() }
+        overlay { ToastOverlay() }
     }
 }
 

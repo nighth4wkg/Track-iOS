@@ -3,41 +3,36 @@ import TrackCore
 
 /// One exercise, as the website's card: a header that opens and closes it (swipe the header left to remove the
 /// exercise), then its sets and Add set | the sides switch. It stays open until closed by hand or until every set is
-/// done; one opened or closed by hand stays that way until its sets change between all done and not. While
-/// arranging, every card folds to its header with ↑ ↓.
+/// done; one opened or closed by hand stays that way until its sets change between all done and not. Hold the
+/// header and drag to move the exercise.
 struct ExerciseCard: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
-    let first: Bool
-    let last: Bool
+    let ids: [String]
     let bests: RecordBests
     var focus: FocusState<String?>.Binding
+    @Binding var dragging: String?
     @State private var manual: (open: Bool, finished: Bool)?
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
-        let arranging = model.arrangingExercises
-        let open = !arranging && (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
+        let open = manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished
         VStack(spacing: 8) {
             SwipeToDelete(onDelete: { model.removeExercise(exercise) }) {
                 HStack(spacing: 8) {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    if arranging {
-                        GlassCircleButton(icon: "arrow.up", label: "Move \(exercise.name) up") { move(-1) }.disabled(first).opacity(first ? 0.35 : 1)
-                        GlassCircleButton(icon: "arrow.down", label: "Move \(exercise.name) down") { move(1) }.disabled(last).opacity(last ? 0.35 : 1)
-                    } else {
-                        Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
-                        Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
-                            .rotationEffect(.degrees(open ? 180 : 0))
-                    }
+                    Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
+                    Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
+                        .rotationEffect(.degrees(open ? 180 : 0))
                 }
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    guard !arranging else { return }
-                    withAnimation(.smooth(duration: 0.3)) { manual = (!open, finished) }
+                .onTapGesture { withAnimation(.smooth(duration: 0.3)) { manual = (!open, finished) } }
+                .reorderHandle(exercise.id, dragging: $dragging) {
+                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
+                        .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
                 }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityValue(open ? "Open" : "Closed")
@@ -73,6 +68,12 @@ struct ExerciseCard: View {
         .padding(16)
         .glass()
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .reorderTarget(exercise.id, in: ids, dragging: $dragging) { from, to in
+            model.update { training in
+                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
+                training.active?.exercises = moved
+            }
+        }
         .animation(.smooth(duration: 0.3), value: open)
         .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
@@ -88,15 +89,5 @@ struct ExerciseCard: View {
             let side = exercise.nextSide
             exercise.sets.append(TrainingSet(side: side))
         } }
-    }
-
-    private func move(_ direction: Int) {
-        guard let index = model.training.active?.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
-        withAnimation(.smooth(duration: 0.3)) {
-            model.update { training in
-                guard let moved = training.active?.exercises.moving(index, by: direction) else { return }
-                training.active?.exercises = moved
-            }
-        }
     }
 }

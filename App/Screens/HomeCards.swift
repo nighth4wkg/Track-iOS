@@ -42,7 +42,7 @@ struct HomeTiles: View {
     let now: Int
 
     var body: some View {
-        let week = training.sessions.weekVolumeChange(at: now)
+        let week = training.sessions.volumeChange(per: .week, at: now)
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Volume this week").font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
