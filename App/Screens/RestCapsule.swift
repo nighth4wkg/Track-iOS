@@ -40,7 +40,7 @@ struct RestCapsule: View {
                     let wait = Double(until) / 1000 - Date.now.timeIntervalSince1970
                     guard wait > 0 else { return }
                     try? await Task.sleep(for: .seconds(wait))
-                    if !Task.isCancelled, model.training.restUntil == until { ended += 1 }
+                    if !Task.isCancelled, model.training.restUntil == until { ended += 1; Sounds.play(.restDone) }
                 }
             }
         }

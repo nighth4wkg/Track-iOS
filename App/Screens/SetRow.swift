@@ -126,6 +126,7 @@ struct SetRow: View {
         guard let now, now != celebrated else { return }
         celebrated = now
         burst += 1
+        Sounds.play(.newBest)
         withAnimation(.smooth(duration: 0.3)) { hint = true }
         let mine = burst
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { if burst == mine { withAnimation(.smooth) { hint = false } } }
@@ -141,6 +142,7 @@ struct SetRow: View {
     private func delete() {
         withAnimation(.smooth(duration: 0.2)) { arm = 0 }
         armed = false
+        Sounds.play(.delete)
         withAnimation(.smooth(duration: 0.25)) { model.removeSet(set.id, in: exercise.id) }
     }
 
@@ -168,5 +170,6 @@ struct SetRow: View {
             }
             if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
         }
+        if started { Sounds.play(.setDone) }
     }
 }

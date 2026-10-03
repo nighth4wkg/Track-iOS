@@ -65,8 +65,7 @@ struct CompletionView: View {
                         } label: { Label("View workout", systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
                     }
-                    .padding(.top, 4)
-                    .rise(shown, 0.19)
+                    .padding(.top, 4).rise(shown, 0.19)
                 }
                 .padding(16)
                 .glass(radius: 24, fill: Palette.dialog)
@@ -87,6 +86,7 @@ struct CompletionView: View {
             .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: landed) { _, now in now && celebrate }
             .onAppear {
                 withAnimation(.smooth(duration: 0.35)) { shown = true }
+                Sounds.play(finished.leveledUp ? .levelUp : .workoutSaved)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { landed = true }
             }
         }
