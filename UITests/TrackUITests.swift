@@ -90,9 +90,9 @@ final class TrackUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Good pump"].waitForExistence(timeout: 3), "the note shows")
         app.buttons["Close"].firstMatch.tapWhenReady()
 
-        app.staticTexts["History"].firstMatch.swipeLeft()
+        swipePage(left: true)
         XCTAssertTrue(app.tabBars.buttons["Progress"].waitForSelected(), "swiping left goes to the next tab")
-        app.staticTexts["Progress"].firstMatch.swipeRight()
+        swipePage(left: false)
         XCTAssertTrue(app.tabBars.buttons["History"].waitForSelected(), "swiping right comes back")
     }
 
@@ -104,6 +104,14 @@ final class TrackUITests: XCTestCase {
         app.buttons["lb"].firstMatch.tapWhenReady()
         app.buttons["Close"].firstMatch.tapWhenReady()
         XCTAssertTrue(app.staticTexts["lb"].firstMatch.waitForExistence(timeout: 3), "Home shows pounds")
+    }
+
+    /// A sideways swipe across the page's upper part (the title area), away from the screen's edges.
+    private func swipePage(left: Bool) {
+        let window = app.windows.firstMatch
+        let from = window.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.8 : 0.2, dy: 0.16))
+        let to = window.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.2 : 0.8, dy: 0.16))
+        from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .fast, thenHoldForDuration: 0)
     }
 
     /// The first rest asks to send notifications (the system's alert, outside the app).

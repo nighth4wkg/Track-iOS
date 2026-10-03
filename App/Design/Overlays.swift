@@ -134,13 +134,16 @@ private extension View {
 }
 
 /// A short note at the bottom ("Set removed · Undo"), gone after a few seconds or a swipe down.
+/// Each screen carries one, and only the topmost screen's shows it (the last to appear), so a toast over the
+/// workout isn't also drawn on Home behind it.
 struct ToastOverlay: View {
     @Environment(AppModel.self) private var model
+    @State private var host = UUID()
 
     var body: some View {
         VStack {
             Spacer()
-            if let toast = model.toast {
+            if let toast = model.toast, model.toastHosts.last == host {
                 HStack(spacing: 12) {
                     Text(toast.text).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                     Spacer(minLength: 8)
@@ -163,6 +166,8 @@ struct ToastOverlay: View {
             }
         }
         .animation(.smooth(duration: 0.3), value: model.toast)
+        .onAppear { model.toastHosts.append(host) }
+        .onDisappear { model.toastHosts.removeAll { $0 == host } }
     }
 }
 

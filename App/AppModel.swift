@@ -69,6 +69,8 @@ final class AppModel {
     var confirm: Confirm? { didSet { dialogChanged() } }
     var naming: Naming? { didSet { dialogChanged() } }
     var toast: Toast?
+    /// The screens that can show the toast, in the order they came up (see ToastOverlay).
+    var toastHosts: [UUID] = []
     var tab = AppTab.home {
         didSet { tabStep = (AppTab.allCases.firstIndex(of: tab) ?? 0) > (AppTab.allCases.firstIndex(of: oldValue) ?? 0) ? 1 : -1 }
     }

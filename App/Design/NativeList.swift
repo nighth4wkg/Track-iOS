@@ -12,6 +12,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
     @ViewBuilder let row: (Item) -> Row
     @State private var heights: [Item.ID: CGFloat] = [:]
     @State private var zone = UUID().uuidString
+    @State private var frame: CGRect?
 
     var body: some View {
         List {
@@ -41,7 +42,9 @@ struct NativeList<Item: Identifiable, Row: View>: View {
         .frame(height: items.reduce(0) { $0 + (heights[$1.id] ?? 52) + insets.top + insets.bottom })
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .glass()
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { SwipeZones.frames[zone] = $0 }
+        // Its area keeps the tab swipe away; set again when it comes back (its frame may not have changed).
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0; SwipeZones.frames[zone] = $0 }
+        .onAppear { if let frame { SwipeZones.frames[zone] = frame } }
         .onDisappear { SwipeZones.frames[zone] = nil }
     }
 
