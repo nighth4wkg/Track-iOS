@@ -76,7 +76,7 @@ struct HistoryDetail: View {
             HStack(alignment: .top, spacing: 16) {
                 stat("Exercises", "\(exercises)")
                 stat("Sets", "\(current.completedSets.count)")
-                stat("Volume", weight(current.volume, unit), small: unit.rawValue, accent: true).layoutPriority(1)
+                stat("Volume", weight(current.volume, unit), small: unit.rawValue, accent: true).frame(minWidth: 120)
             }
             .padding(.top, 20)
         }
@@ -101,7 +101,7 @@ struct HistoryDetail: View {
     private func setRow(_ set: String, _ kg: String, _ reps: String, _ rir: String, numbers: Bool = false) -> some View {
         HStack(spacing: 8) {
             Text(set).foregroundStyle(Palette.muted).frame(width: 44, alignment: .leading)
-            Text(kg).frame(maxWidth: .infinity, alignment: .trailing).layoutPriority(1)
+            Text(kg).frame(minWidth: 64, maxWidth: .infinity, alignment: .trailing)
             Text(reps).frame(maxWidth: .infinity, alignment: .trailing)
             Text(rir).foregroundStyle(Palette.muted).fontWeight(.regular).frame(maxWidth: .infinity, alignment: .trailing)
         }
