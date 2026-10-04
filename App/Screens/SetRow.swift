@@ -24,7 +24,7 @@ struct SetRow: View {
     @State private var celebrated: String?
     @State private var burst = 0
     @State private var hint = false
-    /// Auto mode logs the set once its RIR is typed here; a RIR only carried over doesn't count.
+    /// Auto mode logs the set once its RIR is typed here, even the same number again; one only carried over doesn't.
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
 
@@ -103,7 +103,8 @@ struct SetRow: View {
 
     /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps".
     private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool, done: Bool) -> some View {
-        TextField(placeholder, text: text)
+        // Every keystroke counts, even one that types over a number with the same number.
+        TextField(placeholder, text: Binding(get: { text.wrappedValue }, set: { text.wrappedValue = $0; typedInto(id) }))
             .accessibilityLabel("\(exercise.name) set \(number) \(label)")
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
@@ -114,11 +115,12 @@ struct SetRow: View {
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(glow ? 0.8 : 0), lineWidth: 1.5))
             .shadow(color: Palette.record.opacity(0.45), radius: glow && hint ? 6 : 0)
             .focused(focus, equals: "\(set.id).\(id)")
-            .onChange(of: text.wrappedValue) {
-                if id == "rir", focus.wrappedValue == "\(set.id).rir" { rirTyped = true }
-                pending?.cancel()
-                pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
-            }
+    }
+
+    private func typedInto(_ id: String) {
+        if id == "rir" { rirTyped = true }
+        pending?.cancel()
+        pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
     }
 
     /// The website's wording for what a best beat.
@@ -169,25 +171,19 @@ struct SetRow: View {
     }
 
     /// The set as typed so far. Fields that still read as the set's own numbers (just shown, or carried over from
-    /// last time) are not an edit, so suggestions stay unlogged until changed or ticked.
+    /// last time) are not an edit, so suggestions stay unlogged until changed, ticked or their RIR typed.
     private var typed: TrainingSet {
-        if TrainingSet.display(kg: TrainingSet.kilograms(from: weight, unit: unit), unit: unit) == TrainingSet.display(kg: set.kg, unit: unit),
+        if !(autoLog && rirTyped), TrainingSet.display(kg: TrainingSet.kilograms(from: weight, unit: unit), unit: unit) == TrainingSet.display(kg: set.kg, unit: unit),
            TrainingSet.wholeNumber(reps) == set.reps, TrainingSet.wholeNumber(rir) == set.rir { return set }
         return set.edited(weight: weight, reps: reps, rir: rir, unit: unit, autoLog: autoLog && rirTyped)
     }
 
     /// Saves what was typed now (a pause, leaving the row, the ✓, the row going away).
-    private func flush() {
-        pending?.cancel()
-        pending = nil
-        save(typed)
-    }
+    private func flush() { pending?.cancel(); pending = nil; save(typed) }
 
-    /// The ✓ answers what you see: it logs the typed numbers, or un-logs a set that just logged itself.
-    private func tapCheck() {
-        flush()
-        model.toggle(set: set.id, in: exercise.id)
-    }
+    /// The ✓ answers what you see: it logs the typed numbers, or un-logs a set that just logged itself (and then
+    /// it stays un-logged until its RIR is typed again).
+    private func tapCheck() { flush(); rirTyped = false; model.toggle(set: set.id, in: exercise.id) }
 
     private func save(_ next: TrainingSet) {
         guard next != set else { return }

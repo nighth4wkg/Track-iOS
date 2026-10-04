@@ -2,9 +2,9 @@ import SwiftUI
 import TrackCore
 
 /// One exercise, as the website's card: a header that opens and closes it (swipe the header left to remove the
-/// exercise), then its sets and Add set | the sides switch. It stays open until closed by hand or until every set is
-/// done and you've moved on: the keyboard left the card (Next, Done), or a moment after the last ✓. One opened or
-/// closed by hand stays that way until its sets change between all done and not. Hold the
+/// exercise), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
+/// until every set is done (taking the keyboard with it); one opened or closed by hand stays that way until its sets
+/// change between all done and not. Hold the
 /// name and drag to move the exercise (see ReorderDrop); every card stays folded while one is held.
 struct ExerciseCard: View {
     @Environment(AppModel.self) private var model
@@ -19,13 +19,11 @@ struct ExerciseCard: View {
     /// The sets' height. A closed card keeps its sets, clipped to nothing, so opening many at once (after a drag)
     /// only animates heights instead of building every row in one frame.
     @State private var setsHeight: CGFloat?
-    /// Every set done and you've moved on: the card folds by itself.
-    @State private var folded = false
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
-        let open = dragging == nil && (manual.map { $0.finished == finished ? $0.open : !folded } ?? !folded)
+        let open = dragging == nil && (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
         VStack(spacing: 0) {
             SwipeToDelete(onDelete: { model.removeExercise(exercise) }) {
                 HStack(spacing: 8) {
@@ -83,18 +81,9 @@ struct ExerciseCard: View {
             if let id, !open, exercise.sets.contains(where: { id.hasPrefix($0.id) }) {
                 withAnimation(.smooth(duration: 0.3)) { manual = (true, finished) }
             }
-            // Finished, and the keyboard has left it: fold now, the cards below gliding up with it.
-            if finished, !folded, !typingHere(id) { withAnimation(.smooth(duration: 0.35)) { folded = true } }
         }
-        .onChange(of: finished) { _, now in
-            guard now else { folded = false; return }
-            // Finished with a ✓ (no keyboard here): fold after a beat, so the tick lands first.
-            guard !typingHere(focus.wrappedValue) else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                if !typingHere(focus.wrappedValue), exercise.sets.allSatisfy(\.done) { withAnimation(.smooth(duration: 0.35)) { folded = true } }
-            }
-        }
-        .onAppear { folded = finished }
+        // Its last set logged while typing in it: the card folds, so the keyboard goes too.
+        .onChange(of: finished) { _, now in if now, typingHere(focus.wrappedValue) { focus.wrappedValue = nil } }
         .padding(16)
         .glass(lifted: false)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
