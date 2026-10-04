@@ -77,6 +77,9 @@ final class TrackTour: XCTestCase {
         // Settings.
         tap(app.buttons["Settings"].firstMatch, "Settings"); snap("settings", after: 0.8)
         for tab in ["Data", "Account", "About", "Training"] { tap(app.buttons[tab].firstMatch, tab); snap("settings-\(tab)", after: 0.5) }
+        tap(app.buttons["System"].firstMatch, "appearance menu"); tap(app.buttons["Light"].firstMatch, "Light")
+        snap("settings-light", after: 0.8)
+        tap(app.buttons["Light"].firstMatch, "appearance menu"); tap(app.buttons["Dark"].firstMatch, "Dark")
         tap(app.buttons["Close"].firstMatch, "close settings")
 
         // A new split.

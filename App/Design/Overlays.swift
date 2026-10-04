@@ -172,9 +172,17 @@ struct ToastOverlay: View {
 }
 
 extension View {
-    /// Track's toast over this screen (each presented screen carries its own, so it shows above it).
-    func trackOverlays() -> some View {
-        overlay { ToastOverlay() }
+    /// Track's toast over this screen (each presented screen carries its own, so it shows above it), and the chosen
+    /// Light or Dark: a sheet is its own presentation, so an open Settings sheet switches the moment it's changed.
+    func trackOverlays() -> some View { modifier(Presented()) }
+}
+
+private struct Presented: ViewModifier {
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        let theme = model.training.settings.theme
+        content.overlay { ToastOverlay() }.preferredColorScheme(theme == .light ? .light : theme == .dark ? .dark : nil)
     }
 }
 
