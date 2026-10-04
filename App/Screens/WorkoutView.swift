@@ -21,7 +21,7 @@ struct WorkoutView: View {
             let fields = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
             let total = active.exercises.reduce(0) { $0 + $1.sets.count }
             let bests = model.bests
-            NavigationStack { ScrollViewReader { proxy in
+            NavigationStack {
                 ScrollView {
                     VStack(spacing: 12) {
                         Color.clear.frame(height: 0).id("top")
@@ -38,7 +38,7 @@ struct WorkoutView: View {
                             ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
                                          box: box, bests: bests, focus: $focus,
                                          focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
-                                         dragging: $dragging, held: dragging).equatable()
+                                         dragging: $dragging).equatable()
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
@@ -47,20 +47,24 @@ struct WorkoutView: View {
                     }
                     .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
                     .frame(maxWidth: 720).frame(maxWidth: .infinity)
+                    // While an exercise is held the cards wait unseen, moved without animating (ReorderList shows the moves).
+                    .transaction { if dragging != nil { $0.animation = nil } }
                     .animation(.smooth(duration: 0.3), value: active.exercises.map(\.id))
-                    // A card folding by itself (its last set ticked) or for a drag moves the cards below with it.
-                    .animation(.smooth(duration: 0.3), value: active.exercises.map { $0.sets.allSatisfy(\.done) })
-                    .animation(.smooth(duration: 0.3), value: dragging)
+                    .animation(.smooth(duration: 0.3), value: active.exercises.map { $0.sets.allSatisfy(\.done) }) // a card folding moves the rest
+                    .opacity(dragging == nil ? 1 : 0).allowsHitTesting(dragging == nil)
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
+                .scrollDisabled(dragging != nil).onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.viewport = $0 }
+                // A drag the system cancelled leaves the list up: a tap puts the cards back.
+                .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
+                    .onTapGesture { withAnimation(.smooth(duration: 0.3)) { dragging = nil } } } }
                 .scrollDismissesKeyboard(.interactively)
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 .safeAreaInset(edge: .bottom) { RestCapsule() }
-                .onAppear { box.scroll = { edge in proxy.scrollTo(edge, anchor: edge == "top" ? .top : .bottom) } }
-            } }
+            }
             .onDrop(of: [.text], delegate: drop(active))
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { box.height = $0 }
             .background(Backdrop())

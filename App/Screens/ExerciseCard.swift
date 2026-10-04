@@ -5,7 +5,7 @@ import TrackCore
 /// exercise), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
 /// until every set is done (taking the keyboard with it); one opened or closed by hand stays that way until its sets
 /// change between all done and not. Hold the
-/// name and drag to move the exercise (see ReorderDrop); every card stays folded while one is held.
+/// name and drag to move the exercise (see ReorderList).
 struct ExerciseCard: View, Equatable {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
@@ -18,8 +18,6 @@ struct ExerciseCard: View, Equatable {
     /// this tells it (and its rows) when the keyboard comes or goes here.
     let focusHere: String?
     @Binding var dragging: String?
-    /// The exercise held for a drag, as a value: a binding reads the same live value on both sides of a comparison.
-    let held: String?
     @State private var manual: (open: Bool, finished: Bool)?
     /// The sets' height. A closed card keeps its sets, clipped to nothing, so opening many at once (after a drag)
     /// only animates heights instead of building every row in one frame.
@@ -28,7 +26,7 @@ struct ExerciseCard: View, Equatable {
     var body: some View {
         let done = exercise.sets.filter(\.done).count
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
-        let open = held == nil && (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
+        let open = (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
         VStack(spacing: 0) {
             SwipeToDelete(onDelete: { model.removeExercise(exercise) }) {
                 HStack(spacing: 8) {
@@ -41,7 +39,7 @@ struct ExerciseCard: View, Equatable {
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
                 .onTapGesture { withAnimation(.smooth(duration: 0.3)) { manual = (!open, finished) } }
-                .reorderHandle(exercise.id, dragging: $dragging) {
+                .reorderHandle(exercise.id, box: box, dragging: $dragging) {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                         .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
                 }
@@ -96,8 +94,7 @@ struct ExerciseCard: View, Equatable {
         .padding(16)
         .glass(lifted: false)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .opacity(held == exercise.id ? 0.4 : 1)
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.frames[exercise.id] = $0 }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.cards[exercise.id] = $0 }
         .animation(.smooth(duration: 0.3), value: open)
         .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
@@ -105,7 +102,7 @@ struct ExerciseCard: View, Equatable {
 
     /// Saving a set redraws only its card, not every card in the workout (the keyboard focus updates each by itself).
     static func == (a: Self, b: Self) -> Bool {
-        a.exercise == b.exercise && a.unit == b.unit && a.autoLog == b.autoLog && a.bests.id == b.bests.id && a.held == b.held
+        a.exercise == b.exercise && a.unit == b.unit && a.autoLog == b.autoLog && a.bests.id == b.bests.id
             && a.focusHere == b.focusHere
     }
 

@@ -44,6 +44,12 @@ final class TrackTour: XCTestCase {
         tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH 'workout options'")).firstMatch, "workout options")
         snap("workout-options", after: 0.8); tap(app.buttons["Close"].firstMatch, "close options"); snap("options-closed", after: 0.8)
 
+        app.swipeDown(); app.swipeDown(); snap("workout-top")
+        let lat = app.staticTexts["Lat pulldown"].firstMatch, press = app.staticTexts["Overhead Press"].firstMatch
+        if lat.waitForExistence(timeout: 3), press.exists {
+            lat.press(forDuration: 1.2, thenDragTo: press, withVelocity: .slow, thenHoldForDuration: 0.8)
+            snap("dropped-0.1s", after: 0.1); snap("dropped-settled", after: 1)
+        } else { print("TOUR missing: drag") }
         tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Resume workout'")).firstMatch, "Resume"); snap("resumed", after: 1)
         tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
