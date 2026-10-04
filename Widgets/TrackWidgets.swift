@@ -17,12 +17,13 @@ struct RestLiveActivity: Widget {
             HStack(spacing: 14) {
                 ring(context.state, size: 44, line: 5)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Rest · \(context.attributes.workout)").font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                    Text(context.state.resting ? "Rest · \(context.attributes.workout)" : context.attributes.workout)
+                        .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                     countdown(context.state).font(.title.weight(.bold))
                 }
                 .layoutPriority(1)
                 Spacer(minLength: 4)
-                controls(stale: context.isStale)
+                if context.state.resting { controls(stale: context.isStale) }
             }
             .padding(16)
             .activityBackgroundTint(Color(red: 0x12 / 255, green: 0x14 / 255, blue: 0x18 / 255).opacity(0.85))
@@ -33,7 +34,7 @@ struct RestLiveActivity: Widget {
                     HStack(spacing: 10) {
                         ring(context.state, size: 36, line: 4)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text("Rest").font(.headline)
+                            Text(context.state.resting ? "Rest" : "Ready").font(.headline)
                             Text(context.attributes.workout).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                     }
@@ -45,7 +46,7 @@ struct RestLiveActivity: Widget {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(.trailing, 6)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    controls(stale: context.isStale, wide: true).padding(.horizontal, 6).padding(.top, 6)
+                    if context.state.resting { controls(stale: context.isStale, wide: true).padding(.horizontal, 6).padding(.top, 6) }
                 }
             } compactLeading: {
                 ring(context.state, size: 20, line: 3)
@@ -65,9 +66,13 @@ struct RestLiveActivity: Widget {
         return now...max(now, state.until)
     }
 
-    /// The time left, counting down on its own.
-    private func countdown(_ state: RestAttributes.ContentState) -> some View {
-        Text(timerInterval: Self.left(state), countsDown: true).monospacedDigit().lineLimit(1)
+    /// The time left, counting down on its own; between rests, "Go".
+    @ViewBuilder private func countdown(_ state: RestAttributes.ContentState) -> some View {
+        if state.resting {
+            Text(timerInterval: Self.left(state), countsDown: true).monospacedDigit().lineLimit(1)
+        } else {
+            Text("Go").lineLimit(1)
+        }
     }
 
     /// +30s while it runs, then Skip (Done once it's over): they change the rest in Track. In the Dynamic Island they
@@ -86,11 +91,16 @@ struct RestLiveActivity: Widget {
     }
 
     /// A ring that empties as the rest runs out.
-    private func ring(_ state: RestAttributes.ContentState, size: CGFloat, line: CGFloat) -> some View {
-        let start = min(state.until.addingTimeInterval(-Double(state.seconds)), state.until)
-        return ProgressView(timerInterval: start...state.until, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
-            .progressViewStyle(.circular)
-            .tint(Self.mint)
-            .frame(width: size, height: size)
+    /// Between rests, a mint tick instead.
+    @ViewBuilder private func ring(_ state: RestAttributes.ContentState, size: CGFloat, line: CGFloat) -> some View {
+        if state.resting {
+            let start = min(state.until.addingTimeInterval(-Double(state.seconds)), state.until)
+            ProgressView(timerInterval: start...state.until, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
+                .progressViewStyle(.circular)
+                .tint(Self.mint)
+                .frame(width: size, height: size)
+        } else {
+            Image(systemName: "checkmark.circle.fill").resizable().foregroundStyle(Self.mint).frame(width: size, height: size)
+        }
     }
 }

@@ -4,11 +4,15 @@ import TrackCore
 /// A set, as the website's row: its number (or side), kg · reps · RIR, and the ✓. Last time's numbers are suggestions
 /// with a faint ✓ ("tap to repeat"); in auto mode, changing a number logs the set. A set that beats every earlier
 /// result turns its ✓ into a trophy, glows, and says what it beat. Swipe left to arm a red ✕ that deletes it (Undo).
+/// As on the website, what you type shows at once (✓, trophy, errors) and is saved when you pause, leave the row or
+/// tap ✓, so typing never waits on the whole workout redrawing.
 struct SetRow: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     let set: TrainingSet
     let number: Int
+    let unit: TrackCore.Settings.Unit
+    let autoLog: Bool
     let bests: RecordBests
     let earlier: [TrainingSet]
     var focus: FocusState<String?>.Binding
@@ -22,27 +26,28 @@ struct SetRow: View {
     @State private var hint = false
     /// Auto mode logs the set once its RIR is typed here; a RIR only carried over doesn't count.
     @State private var rirTyped = false
+    @State private var pending: Task<Void, Never>?
 
     var body: some View {
-        let unit = model.training.settings.unit
-        let record = bests.record(for: exercise.name, set, earlierToday: earlier)
-        let carried = !set.done && set.kg != nil && set.reps != nil
+        let shown = typed
+        let record = bests.record(for: exercise.name, shown, earlierToday: earlier)
+        let carried = !shown.done && shown.kg != nil && shown.reps != nil
         let error = inputError(unit)
         VStack(alignment: .leading, spacing: 4) {
             if hint, let record {
-                (Text("New best ").bold() + Text(describe(record, unit))).font(.caption).foregroundStyle(Palette.record)
+                (Text("New best ").bold() + Text(describe(record, shown))).font(.caption).foregroundStyle(Palette.record)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             HStack(spacing: 8) {
                 Text(set.side.map { $0 == .left ? "L" : "R" } ?? "\(number)")
                     .font(.body.weight(.bold)).monospacedDigit()
-                    .foregroundStyle(record != nil ? Palette.record : set.done ? Palette.accent : Palette.muted)
+                    .foregroundStyle(record != nil ? Palette.record : shown.done ? Palette.accent : Palette.muted)
                     .frame(width: 28)
-                field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, placeholder: "—", glow: record != nil)
-                field($reps, id: "reps", label: "reps", keyboard: .numberPad, placeholder: "—", glow: record != nil)
-                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "0", glow: record != nil)
-                check(done: set.done, carried: carried, record: record != nil)
+                field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, placeholder: "—", glow: record != nil, done: shown.done)
+                field($reps, id: "reps", label: "reps", keyboard: .numberPad, placeholder: "—", glow: record != nil, done: shown.done)
+                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "0", glow: record != nil, done: shown.done)
+                check(done: shown.done, carried: carried, record: record != nil)
             }
             if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
         }
@@ -54,13 +59,16 @@ struct SetRow: View {
             withAnimation(.smooth(duration: 0.2)) { arm = arming ? 1 : 0 }
             armed = arming
         }))
-        .animation(.smooth(duration: 0.25), value: set.done)
+        .animation(.smooth(duration: 0.25), value: shown.done)
         .animation(.smooth(duration: 0.3), value: hint)
-        .onAppear { load(unit); celebrated = signature(record) }
+        .onAppear { load(unit); celebrated = signature(record, shown) }
+        .onDisappear(perform: flush)
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
-        .onChange(of: signature(record)) { _, now in celebrate(now) }
-        .onChange(of: focus.wrappedValue) { _, id in
+        .onChange(of: signature(record, shown)) { _, now in celebrate(now) }
+        .onChange(of: focus.wrappedValue) { old, id in
+            // Leaving the row saves it straight away.
+            if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
             // Tapping a number selects it, so typing replaces it (the website's select-on-focus).
             if id?.hasPrefix(set.id) == true {
                 DispatchQueue.main.async { UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil) }
@@ -70,7 +78,7 @@ struct SetRow: View {
     }
 
     private func check(done: Bool, carried: Bool, record: Bool) -> some View {
-        Button { armed ? delete() : model.toggle(set: set.id, in: exercise.id) } label: {
+        Button { armed ? delete() : tapCheck() } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(record ? Palette.record : done ? Palette.primary : Palette.control)
@@ -94,23 +102,27 @@ struct SetRow: View {
     }
 
     /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps".
-    private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool) -> some View {
+    private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool, done: Bool) -> some View {
         TextField(placeholder, text: text)
             .accessibilityLabel("\(exercise.name) set \(number) \(label)")
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
             .font(.body.weight(.bold)).monospacedDigit()
-            .foregroundStyle(set.done ? Palette.accent : Palette.text)
+            .foregroundStyle(done ? Palette.accent : Palette.text)
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(glow ? 0.8 : 0), lineWidth: 1.5))
             .shadow(color: Palette.record.opacity(0.45), radius: glow && hint ? 6 : 0)
             .focused(focus, equals: "\(set.id).\(id)")
-            .onChange(of: text.wrappedValue) { save() }
+            .onChange(of: text.wrappedValue) {
+                if id == "rir", focus.wrappedValue == "\(set.id).rir" { rirTyped = true }
+                pending?.cancel()
+                pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
+            }
     }
 
     /// The website's wording for what a best beat.
-    private func describe(_ record: LiveRecord, _ unit: TrackCore.Settings.Unit) -> String {
+    private func describe(_ record: LiveRecord, _ set: TrainingSet) -> String {
         let w = { (kg: Double) in "\(TrainingSet.display(kg: kg, unit: unit)) \(unit.rawValue)" }
         switch record {
         case .heaviest(let kg): return "Heaviest ever · up from \(w(kg))"
@@ -120,7 +132,7 @@ struct SetRow: View {
         }
     }
 
-    private func signature(_ record: LiveRecord?) -> String? {
+    private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? {
         record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" }
     }
 
@@ -156,15 +168,28 @@ struct SetRow: View {
         if TrainingSet.wholeNumber(rir) != set.rir { rir = shown.2 }
     }
 
-    /// Saves what was typed. Fields that still read as the set's own numbers (just shown, or carried over from last
-    /// time) are not an edit, so suggestions stay unlogged until changed or ticked.
-    private func save() {
-        let settings = model.training.settings
-        let unit = settings.unit
+    /// The set as typed so far. Fields that still read as the set's own numbers (just shown, or carried over from
+    /// last time) are not an edit, so suggestions stay unlogged until changed or ticked.
+    private var typed: TrainingSet {
         if TrainingSet.display(kg: TrainingSet.kilograms(from: weight, unit: unit), unit: unit) == TrainingSet.display(kg: set.kg, unit: unit),
-           TrainingSet.wholeNumber(reps) == set.reps, TrainingSet.wholeNumber(rir) == set.rir { return }
-        if focus.wrappedValue == "\(set.id).rir" { rirTyped = true }
-        let next = set.edited(weight: weight, reps: reps, rir: rir, unit: unit, autoLog: settings.logSets != .manual && rirTyped)
+           TrainingSet.wholeNumber(reps) == set.reps, TrainingSet.wholeNumber(rir) == set.rir { return set }
+        return set.edited(weight: weight, reps: reps, rir: rir, unit: unit, autoLog: autoLog && rirTyped)
+    }
+
+    /// Saves what was typed now (a pause, leaving the row, the ✓, the row going away).
+    private func flush() {
+        pending?.cancel()
+        pending = nil
+        save(typed)
+    }
+
+    /// The ✓ answers what you see: it logs the typed numbers, or un-logs a set that just logged itself.
+    private func tapCheck() {
+        flush()
+        model.toggle(set: set.id, in: exercise.id)
+    }
+
+    private func save(_ next: TrainingSet) {
         guard next != set else { return }
         let started = next.done && !set.done
         model.update { training in

@@ -35,7 +35,8 @@ struct WorkoutView: View {
                                 .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
                         }
                         ForEach(active.exercises) { exercise in
-                            ExerciseCard(exercise: exercise, box: box, bests: bests, focus: $focus, dragging: $dragging)
+                            ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
+                                         box: box, bests: bests, focus: $focus, dragging: $dragging)
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)

@@ -9,6 +9,8 @@ struct RestAttributes: ActivityAttributes {
         var until: Date
         /// The rest's full length, for the ring.
         var seconds: Int
+        /// False between rests: the activity stays for the whole workout and says you're ready for the next set.
+        var resting = true
     }
     /// The workout resting in, as "Upper".
     var workout: String

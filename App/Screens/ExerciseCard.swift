@@ -3,11 +3,14 @@ import TrackCore
 
 /// One exercise, as the website's card: a header that opens and closes it (swipe the header left to remove the
 /// exercise), then its sets and Add set | the sides switch. It stays open until closed by hand or until every set is
-/// done; one opened or closed by hand stays that way until its sets change between all done and not. Hold the
+/// done and you've moved on: the keyboard left the card (Next, Done), or a moment after the last ✓. One opened or
+/// closed by hand stays that way until its sets change between all done and not. Hold the
 /// name and drag to move the exercise (see ReorderDrop); every card stays folded while one is held.
 struct ExerciseCard: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
+    let unit: TrackCore.Settings.Unit
+    let autoLog: Bool
     let box: ReorderBox
     let bests: RecordBests
     var focus: FocusState<String?>.Binding
@@ -16,11 +19,13 @@ struct ExerciseCard: View {
     /// The sets' height. A closed card keeps its sets, clipped to nothing, so opening many at once (after a drag)
     /// only animates heights instead of building every row in one frame.
     @State private var setsHeight: CGFloat?
+    /// Every set done and you've moved on: the card folds by itself.
+    @State private var folded = false
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
-        let open = dragging == nil && (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
+        let open = dragging == nil && (manual.map { $0.finished == finished ? $0.open : !folded } ?? !folded)
         VStack(spacing: 0) {
             SwipeToDelete(onDelete: { model.removeExercise(exercise) }) {
                 HStack(spacing: 8) {
@@ -43,14 +48,14 @@ struct ExerciseCard: View {
             VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         Text("SET").frame(width: 28)
-                        Text(model.training.settings.unit.rawValue.uppercased()).frame(maxWidth: .infinity)
+                        Text(unit.rawValue.uppercased()).frame(maxWidth: .infinity)
                         Text("REPS").frame(maxWidth: .infinity)
                         Text("RIR").frame(maxWidth: .infinity)
                         Color.clear.frame(width: 52, height: 1)
                     }
                     .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted)
                     ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
-                        SetRow(exercise: exercise, set: set, number: index + 1, bests: bests,
+                        SetRow(exercise: exercise, set: set, number: index + 1, unit: unit, autoLog: autoLog, bests: bests,
                                earlier: Array(exercise.sets.prefix(index)), focus: focus)
                             .transition(.opacity)
                     }
@@ -78,7 +83,18 @@ struct ExerciseCard: View {
             if let id, !open, exercise.sets.contains(where: { id.hasPrefix($0.id) }) {
                 withAnimation(.smooth(duration: 0.3)) { manual = (true, finished) }
             }
+            // Finished, and the keyboard has left it: fold now, the cards below gliding up with it.
+            if finished, !folded, !typingHere(id) { withAnimation(.smooth(duration: 0.35)) { folded = true } }
         }
+        .onChange(of: finished) { _, now in
+            guard now else { folded = false; return }
+            // Finished with a ✓ (no keyboard here): fold after a beat, so the tick lands first.
+            guard !typingHere(focus.wrappedValue) else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                if !typingHere(focus.wrappedValue), exercise.sets.allSatisfy(\.done) { withAnimation(.smooth(duration: 0.35)) { folded = true } }
+            }
+        }
+        .onAppear { folded = finished }
         .padding(16)
         .glass(lifted: false)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -87,6 +103,11 @@ struct ExerciseCard: View {
         .animation(.smooth(duration: 0.3), value: open)
         .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
+    }
+
+    private func typingHere(_ id: String?) -> Bool {
+        guard let id else { return false }
+        return exercise.sets.contains { id.hasPrefix($0.id) }
     }
 
     private var sidesLabel: String {

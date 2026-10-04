@@ -117,13 +117,13 @@ final class AppModel {
         do { try change(&next) } catch { message = error.localizedDescription; return }
         next.syncRoutine()
         next.editedAt = nowMillis()
-        if next.restUntil != training.restUntil {
+        if next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
             if let until = next.restUntil, until > nowMillis() {
                 RestAlert.schedule(at: until)
                 RestLive.show(until: until, seconds: max(1, (until - nowMillis()) / 1000), workout: next.active?.name ?? "Track")
             } else {
                 RestAlert.cancel()
-                RestLive.end()
+                if next.active != nil { RestLive.idle() } else { RestLive.end() }
             }
         }
         training = next
@@ -166,7 +166,7 @@ final class AppModel {
 
     func start(_ split: Split, carryOver: Bool = true) {
         update { try $0.start(split, carryOver: carryOver) }
-        if training.active != nil { workoutOpen = true }
+        if training.active != nil { workoutOpen = true; RestAlert.prepare() }
     }
 
     /// Starts a past workout again with its own numbers.
