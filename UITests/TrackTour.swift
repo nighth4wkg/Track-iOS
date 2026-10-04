@@ -45,22 +45,23 @@ final class TrackTour: XCTestCase {
         snap("workout-options", after: 0.8); tap(app.buttons["Close"].firstMatch, "close options"); snap("options-closed", after: 0.8)
 
         tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
-        tap(app.buttons["Resume your active workout"].firstMatch, "Resume"); snap("resumed", after: 1)
+        tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Resume workout'")).firstMatch, "Resume"); snap("resumed", after: 1)
         tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
         tap(app.buttons["dialog-action"], "confirm finish"); snap("recap", after: 1.5)
         app.swipeUp(); snap("recap-scrolled")
         tap(app.buttons["Continue"].firstMatch, "Continue"); snap("progress", after: 1)
 
         // The tabs.
-        for period in ["Day", "Month", "Week"] { tap(app.buttons[period].firstMatch, period); snap("progress-\(period)", after: 0.6) }
+        for period in ["D", "M", "W"] { tap(app.buttons[period].firstMatch, period); snap("progress-\(period)", after: 0.6) }
         app.swipeUp(); snap("progress-scrolled"); app.swipeDown()
         tap(app.tabBars.buttons["Rank"], "Rank"); snap("rank", after: 0.8)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bodyweight'")).firstMatch, "bodyweight"); snap("bodyweight", after: 0.8)
         tap(app.buttons["Close"].firstMatch, "close bodyweight")
         app.swipeUp(); snap("rank-scrolled"); app.swipeDown()
         tap(app.tabBars.buttons["History"], "History"); snap("history", after: 0.8)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Any'")).firstMatch, "date filter"); snap("history-date", after: 0.8)
-        app.swipeDown(); snap("history-date-closed", after: 0.8)
+        tap(app.buttons["Filter by date"].firstMatch, "date filter"); snap("history-filter", after: 0.8)
+        tap(app.buttons["Any"].firstMatch, "From: Any"); snap("history-from-date", after: 0.8)
+        tap(app.buttons["Hide date range"].firstMatch, "hide dates"); snap("history-filter-hidden", after: 0.8)
         tap(app.staticTexts["FBEOD"].exists ? app.staticTexts["FBEOD"].firstMatch : app.staticTexts["Full body"].firstMatch, "a workout")
         snap("detail", after: 1); app.swipeUp(); snap("detail-large", after: 0.8)
         tap(app.buttons["Close"].firstMatch, "close detail"); snap("history-again", after: 0.8)
@@ -76,7 +77,7 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Create split"].firstMatch, "Create split"); snap("create-split", after: 0.8)
         app.typeText("Legs"); tap(app.buttons["dialog-action"], "create"); snap("split-page", after: 1)
         tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("library", after: 1)
-        app.typeText("squat"); snap("library-search", after: 0.6)
+        tap(app.textFields["Search exercises…"], "search"); app.typeText("squat"); snap("library-search", after: 0.6)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add '")).firstMatch, "add an exercise"); snap("split-with-exercise", after: 0.8)
         tap(app.navigationBars.buttons.firstMatch, "back"); snap("home-new-split", after: 0.8)
         let row = app.cells.containing(.staticText, identifier: "Legs").firstMatch

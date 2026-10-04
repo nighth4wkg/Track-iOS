@@ -36,7 +36,9 @@ struct WorkoutView: View {
                         }
                         ForEach(active.exercises) { exercise in
                             ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
-                                         box: box, bests: bests, focus: $focus, dragging: $dragging).equatable()
+                                         box: box, bests: bests, focus: $focus,
+                                         focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
+                                         dragging: $dragging, held: dragging).equatable()
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
