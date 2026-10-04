@@ -91,6 +91,41 @@ final class TrackTour: XCTestCase {
         if row.waitForExistence(timeout: 3) { row.swipeLeft(); snap("split-swiped", after: 0.5) }
     }
 
+    /// A first install, in light mode with pounds and ✓-only logging: the welcome, every empty screen, a template,
+    /// and a first workout to its recap.
+    func testFirstRun() {
+        app.terminate()
+        var seed = (try? JSONSerialization.jsonObject(with: Data((ProcessInfo.processInfo.environment["TRACK_SEED"] ?? "{}").utf8))) as? [String: Any] ?? [:]
+        seed["splits"] = []; seed["sessions"] = []; seed["active"] = NSNull(); seed["restUntil"] = NSNull()
+        var settings = seed["settings"] as? [String: Any] ?? [:]
+        settings["theme"] = "light"; settings["logSets"] = "manual"; settings["unit"] = "lb"; settings["bodyweight"] = NSNull()
+        seed["settings"] = settings
+        app.launchArguments = []
+        app.launchEnvironment["TRACK_SEED"] = String(data: try! JSONSerialization.data(withJSONObject: seed), encoding: .utf8)
+        app.launch()
+        snap("welcome", after: 1)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Sync across'")).firstMatch, "sync card"); snap("sync-soon")
+        tap(app.buttons["Not now"], "Not now")
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Keep it on'")).firstMatch, "local card"); snap("empty-home", after: 1)
+        for tab in ["History", "Progress", "Rank"] { tap(app.tabBars.buttons[tab], tab); snap("empty-\(tab)", after: 0.8) }
+        tap(app.textFields["Bodyweight"], "bodyweight field"); app.typeText("165"); snap("rank-bodyweight-typed")
+        tap(app.buttons["Save"].firstMatch, "save bodyweight"); snap("rank-unranked", after: 1)
+        tap(app.tabBars.buttons["Home"], "Home")
+        tap(app.buttons["Push"].firstMatch, "Push template"); snap("template-added", after: 1)
+        tap(app.buttons["Start workout"].firstMatch, "Start"); allowNotifications(); snap("first-workout", after: 1)
+        tap(check("Bench Press set 1"), "✓ empty set"); snap("tick-empty-set", after: 0.8)
+        let kg = app.textFields["Bench Press set 1 weight in lb"]
+        tap(kg, "lb field"); app.typeText("135"); app.textFields["Bench Press set 1 reps"].tap(); app.typeText("10")
+        app.textFields["Bench Press set 1 RIR"].tap(); app.typeText("2"); snap("manual-typed-not-logged", after: 1)
+        tap(check("Bench Press set 1"), "✓ set 1"); snap("manual-ticked", after: 0.8)
+        tap(app.buttons["Done"].firstMatch, "keyboard Done")
+        tap(app.buttons["Finish workout"].firstMatch, "Finish"); tap(app.buttons["dialog-action"], "confirm"); snap("first-recap", after: 1.5)
+        tap(app.buttons["Continue"].firstMatch, "Continue"); snap("first-progress", after: 1)
+        tap(app.tabBars.buttons["History"], "History"); snap("first-history", after: 0.8)
+        tap(app.tabBars.buttons["Rank"], "Rank"); snap("first-rank", after: 0.8)
+        tap(app.tabBars.buttons["Home"], "Home"); snap("home-after-first", after: 0.8)
+    }
+
     private func snap(_ name: String, after delay: TimeInterval = 0.5) {
         if delay > 0 { Thread.sleep(forTimeInterval: delay) }
         step += 1
