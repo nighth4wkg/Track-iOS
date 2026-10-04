@@ -66,6 +66,8 @@ struct WorkoutView: View {
                 .safeAreaInset(edge: .bottom) { RestCapsule() }
             }
             .onDrop(of: [.text], delegate: drop(active))
+            // Behind it the whole screen takes the drop too, status bar included: let go anywhere and the drag ends.
+            .background { Color.clear.ignoresSafeArea().onDrop(of: [.text], delegate: drop(active)) }
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { box.height = $0 }
             .background(Backdrop())
             .offset(x: pull)
