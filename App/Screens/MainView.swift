@@ -20,6 +20,7 @@ struct MainView: View {
                 .tabItem { Label("Rank", systemImage: "medal") }.tag(AppTab.rank)
         }
         .tint(Palette.accent)
+        .opacity(model.workoutOpen && model.workoutCovers ? 0 : 1)
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView().trackOverlays().presentationBackground(.clear) }

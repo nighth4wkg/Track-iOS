@@ -36,7 +36,7 @@ struct WorkoutView: View {
                         }
                         ForEach(active.exercises) { exercise in
                             ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
-                                         box: box, bests: bests, focus: $focus, dragging: $dragging)
+                                         box: box, bests: bests, focus: $focus, dragging: $dragging).equatable()
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
@@ -67,6 +67,8 @@ struct WorkoutView: View {
             .overlay(alignment: .leading) { edgeSwipe }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .onAppear { dragging = nil; pull = 0 }
+            .task { try? await Task.sleep(for: .seconds(0.6)); model.workoutCovers = true }
+            .onDisappear { model.workoutCovers = false }
             .sheet(isPresented: $addingExercise) {
                 ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
             }
@@ -90,10 +92,10 @@ struct WorkoutView: View {
     private var edgeSwipe: some View {
         Color.clear.frame(width: 16).contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 8, coordinateSpace: .global)
-                .onChanged { pull = max(0, $0.translation.width) }
+                .onChanged { pull = max(0, $0.translation.width); if model.workoutCovers { model.workoutCovers = false } }
                 .onEnded { drag in
                     guard drag.translation.width > width / 3 || drag.predictedEndTranslation.width > width / 2 else {
-                        withAnimation(.smooth(duration: 0.25)) { pull = 0 }
+                        withAnimation(.smooth(duration: 0.25)) { pull = 0 } completion: { model.workoutCovers = true }
                         return
                     }
                     withAnimation(.smooth(duration: 0.25)) { pull = width } completion: {
@@ -155,7 +157,11 @@ struct WorkoutOptions: View {
         let split = model.training.splits.first { $0.id == active?.splitId }
         let unit = model.training.settings.unit
         VStack(alignment: .leading, spacing: 10) {
-            Text("Workout options").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+            HStack(alignment: .top) {
+                Text("Workout options").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
+                Spacer()
+                GlassCircleButton(icon: "xmark", label: "Close") { dismiss() }.padding(.top, -6).padding(.trailing, -6)
+            }
             Text(active?.name ?? "").font(.subheadline).foregroundStyle(Palette.muted).padding(.bottom, 6)
             option(split != nil ? "Rename split" : "Rename workout", "pencil") {
                 dismiss()
@@ -172,7 +178,8 @@ struct WorkoutOptions: View {
             }
         }
         .padding(24)
-        .presentationDetents([.height(split != nil ? 410 : 350)])
+        .presentationDetents([.height(split != nil ? 420 : 360)])
+        .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
     }
 

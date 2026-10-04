@@ -6,7 +6,7 @@ import TrackCore
 /// until every set is done (taking the keyboard with it); one opened or closed by hand stays that way until its sets
 /// change between all done and not. Hold the
 /// name and drag to move the exercise (see ReorderDrop); every card stays folded while one is held.
-struct ExerciseCard: View {
+struct ExerciseCard: View, Equatable {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     let unit: TrackCore.Settings.Unit
@@ -82,8 +82,12 @@ struct ExerciseCard: View {
                 withAnimation(.smooth(duration: 0.3)) { manual = (true, finished) }
             }
         }
-        // Its last set logged while typing in it: the card folds, so the keyboard goes too.
-        .onChange(of: finished) { _, now in if now, typingHere(focus.wrappedValue) { focus.wrappedValue = nil } }
+        // Done or not done again: back to folding by itself (one opened by hand and re-ticked folds too). Its last
+        // set logged while typing in it: the card folds, so the keyboard goes too.
+        .onChange(of: finished) { _, now in
+            manual = nil
+            if now, typingHere(focus.wrappedValue) { focus.wrappedValue = nil }
+        }
         .padding(16)
         .glass(lifted: false)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -92,6 +96,11 @@ struct ExerciseCard: View {
         .animation(.smooth(duration: 0.3), value: open)
         .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
+    }
+
+    /// Saving a set redraws only its card, not every card in the workout (the keyboard focus updates each by itself).
+    static func == (a: Self, b: Self) -> Bool {
+        a.exercise == b.exercise && a.unit == b.unit && a.autoLog == b.autoLog && a.bests.id == b.bests.id && a.dragging == b.dragging
     }
 
     private func typingHere(_ id: String?) -> Bool {

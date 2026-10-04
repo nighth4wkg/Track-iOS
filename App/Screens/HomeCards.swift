@@ -31,7 +31,9 @@ struct UpNextCard: View {
 
     private func lastDone(_ last: Int?) -> String {
         guard let last else { return "Not done yet" }
-        let days = (now - last) / 86_400_000
+        // Calendar days, so last night's workout is "yesterday" this morning, not "today".
+        let day = { (time: Int) in Calendars.local.startOfDay(for: Date(timeIntervalSince1970: Double(time) / 1000)) }
+        let days = Calendars.local.dateComponents([.day], from: day(last), to: day(now)).day ?? 0
         return days < 1 ? "Done today" : days == 1 ? "Last done yesterday" : "Last done \(days) days ago"
     }
 }

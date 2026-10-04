@@ -8,23 +8,21 @@ enum Catalog {
               let data = try? Data(contentsOf: url), let names = try? JSONDecoder().decode([String].self, from: data) else { return [] }
         return names
     }()
+    /// Worked out once, so a keystroke in the search only compares.
+    private static let simple = names.map(simplify)
+    private static let known = Set(names.map { $0.lowercased() })
 
     /// Matches for a search, best first: what you use most, then names starting with the words typed, then names
     /// containing them. Case and punctuation don't matter. With no search, your exercises first, then the library.
     static func search(_ query: String, usage: [String: Int]) -> [String] {
         let words = simplify(query).split(separator: " ")
-        let own = usage.keys.filter { name in !names.contains { $0.caseInsensitiveCompare(name) == .orderedSame } }
-        let all = own.sorted() + names
-        let matches = words.isEmpty ? all : all.filter { name in let simple = simplify(name); return words.allSatisfy { simple.contains($0) } }
-        return matches.enumerated().sorted { a, b in
-            let (ua, ub) = (usage[a.element] ?? 0, usage[b.element] ?? 0)
-            if ua != ub { return ua > ub }
-            if let first = words.first {
-                let (pa, pb) = (simplify(a.element).hasPrefix(first), simplify(b.element).hasPrefix(first))
-                if pa != pb { return pa }
-            }
-            return a.offset < b.offset
-        }.map(\.element)
+        let own = usage.keys.filter { !known.contains($0.lowercased()) }.sorted()
+        let all = Array(zip(own, own.map(simplify))) + Array(zip(names, simple))
+        let matches = all.enumerated().compactMap { offset, entry -> (uses: Int, starts: Bool, offset: Int, name: String)? in
+            guard words.allSatisfy({ entry.1.contains($0) }) else { return nil }
+            return (usage[entry.0] ?? 0, words.first.map { entry.1.hasPrefix($0) } ?? false, offset, entry.0)
+        }
+        return matches.sorted { a, b in a.uses != b.uses ? a.uses > b.uses : a.starts != b.starts ? a.starts : a.offset < b.offset }.map(\.name)
     }
 
     static func simplify(_ text: String) -> String {
@@ -43,8 +41,9 @@ struct ExercisePicker: View {
     let onPick: (String) -> Void
 
     var body: some View {
-        var usage: [String: Int] = [:]
-        for session in model.training.sessions { for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
+        let usage = model.derived("usage") { sessions in
+            sessions.reduce(into: [String: Int]()) { usage, session in for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
+        }
         let results = Catalog.search(query, usage: usage)
         let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(100))
         let custom = !typed.isEmpty && !results.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }

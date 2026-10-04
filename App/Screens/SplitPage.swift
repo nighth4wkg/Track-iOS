@@ -11,6 +11,8 @@ struct SplitPage: View {
 
     var body: some View {
         if let split = model.training.splits.first(where: { $0.id == splitId }) {
+            // Its workout is on: the split follows the workout, so changes belong there (here they'd be undone).
+            let live = model.training.active?.splitId == split.id
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .top) {
@@ -20,9 +22,9 @@ struct SplitPage: View {
                                 .foregroundStyle(split.exercises.isEmpty ? Palette.accent : Palette.muted)
                         }
                         Spacer()
-                        GlassCircleButton(icon: "pencil", label: "Rename split") {
+                        if !live { GlassCircleButton(icon: "pencil", label: "Rename split") {
                             model.naming = Naming(title: "Rename split", name: split.name, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
-                        }
+                        } }
                     }
                     if split.exercises.isEmpty {
                         EmptyCard(icon: "dumbbell", title: "Build your session.", detail: "Search the exercise library to add your first movement.")
@@ -30,8 +32,8 @@ struct SplitPage: View {
                         Button { model.start(split) } label: { Label("Start workout", systemImage: "play") }
                             .buttonStyle(PrimaryButtonStyle()).disabled(model.training.active != nil)
                         SmallHeader(title: "Your exercises")
-                        NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: { remove($0, from: split) },
-                                   onMove: { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } }) { exercise in
+                        NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: live ? nil : { remove($0, from: split) },
+                                   onMove: live ? nil : { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } }) { exercise in
                             HStack {
                                 Text(exercise.name).foregroundStyle(Palette.text)
                                 Spacer()
@@ -40,7 +42,12 @@ struct SplitPage: View {
                             .frame(minHeight: 28)
                         }
                     }
-                    Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
+                    if live {
+                        Text("This split’s workout is on. Change its exercises in the workout; the split keeps them.")
+                            .font(.footnote).foregroundStyle(Palette.muted)
+                    } else {
+                        Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
+                    }
                     if model.training.active != nil {
                         Button("Resume your active workout") { model.workoutOpen = true }
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).frame(maxWidth: .infinity, minHeight: 44)

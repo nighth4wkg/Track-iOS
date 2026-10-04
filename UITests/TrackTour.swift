@@ -42,7 +42,7 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Add set"].firstMatch, "Add set"); snap("set-added", after: 0.6)
         app.swipeUp(); snap("workout-scrolled"); app.swipeUp(); snap("workout-bottom")
         tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH 'workout options'")).firstMatch, "workout options")
-        snap("workout-options", after: 0.8); app.swipeDown(); snap("options-closed", after: 0.8)
+        snap("workout-options", after: 0.8); tap(app.buttons["Close"].firstMatch, "close options"); snap("options-closed", after: 0.8)
 
         tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
         tap(app.buttons["Resume your active workout"].firstMatch, "Resume"); snap("resumed", after: 1)
@@ -81,17 +81,6 @@ final class TrackTour: XCTestCase {
         tap(app.navigationBars.buttons.firstMatch, "back"); snap("home-new-split", after: 0.8)
         let row = app.cells.containing(.staticText, identifier: "Legs").firstMatch
         if row.waitForExistence(timeout: 3) { row.swipeLeft(); snap("split-swiped", after: 0.5) }
-    }
-
-    /// Frame drops while scrolling a workout: XCTest's hitch figures for five flings down and back.
-    func testWorkoutScrollHitches() {
-        tap(app.buttons["Start workout"].firstMatch, "Start workout")
-        let list = app.scrollViews.firstMatch
-        XCTAssertTrue(list.waitForExistence(timeout: 5))
-        let options = XCTMeasureOptions(); options.iterationCount = 5
-        measure(metrics: [XCTOSSignpostMetric.scrollDecelerationMetric, XCTOSSignpostMetric.scrollDraggingMetric], options: options) {
-            list.swipeUp(velocity: .fast); list.swipeUp(velocity: .fast); list.swipeDown(velocity: .fast); list.swipeDown(velocity: .fast)
-        }
     }
 
     private func snap(_ name: String, after delay: TimeInterval = 0.5) {

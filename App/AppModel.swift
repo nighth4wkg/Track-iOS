@@ -79,6 +79,8 @@ final class AppModel {
     /// The tab whose page last came up, so coming back from a split's page doesn't count as switching.
     @ObservationIgnored var arrivedTab = AppTab.home
     var workoutOpen = false
+    /// The open workout fully covers the tabs (not sliding in or pulled aside), so they needn't be drawn under it.
+    var workoutCovers = false
     var finished: Finished?
     /// The level bar's XP before and after the last finished workout, for its fill on Progress.
     var xpFill: (from: Int, to: Int)?

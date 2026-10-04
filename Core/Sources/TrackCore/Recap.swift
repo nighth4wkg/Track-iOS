@@ -118,7 +118,9 @@ public enum LiveRecord: Equatable, Sendable {
 }
 
 /// Each exercise's earlier results (weight × reps), computed once per workout.
-public struct RecordBests: Sendable {
+public struct RecordBests: Sendable, Identifiable {
+    /// New for each working out, so screens can tell a changed history at a glance.
+    public let id = UUID()
     var points: [String: [(kg: Double, reps: Int)]] = [:]
 
     public init(_ sessions: [Session]) {
