@@ -18,8 +18,11 @@ struct SplitPage: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(split.name).font(.system(size: 34, weight: .bold)).foregroundStyle(Palette.text)
-                            Text(split.exercises.isEmpty ? "Tap to add exercises" : split.summary).font(.body)
-                                .foregroundStyle(split.exercises.isEmpty ? Palette.accent : Palette.muted)
+                            if split.exercises.isEmpty && !live {
+                                Button("Tap to add exercises") { picking = true }.font(.body).foregroundStyle(Palette.accent)
+                            } else {
+                                Text(split.summary).font(.body).foregroundStyle(Palette.muted)
+                            }
                         }
                         Spacer()
                         if !live { GlassCircleButton(icon: "pencil", label: "Rename split") {

@@ -70,7 +70,7 @@ final class TrackUITests: XCTestCase {
         name.tap()
         name.typeText("Arms day")
         app.buttons["dialog-action"].tapWhenReady()
-        XCTAssertTrue(app.staticTexts["Tap to add exercises"].waitForExistence(timeout: 5), "the new split's page opens")
+        XCTAssertTrue(app.buttons["Tap to add exercises"].waitForExistence(timeout: 5), "the new split’s page opens")
 
         app.buttons["Add exercise"].firstMatch.tapWhenReady()
         app.textFields["Search exercises…"].tapWhenReady()

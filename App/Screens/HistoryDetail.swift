@@ -49,11 +49,12 @@ struct HistoryDetail: View {
                     }
                     .buttonStyle(PressStyle())
                     Spacer()
-                    Button { model.repeatWorkout(current) } label: {
+                    // While another workout is on, it says why instead of doing nothing.
+                    Button { model.training.active == nil ? model.repeatWorkout(current) : model.show("Finish or discard your current workout first.") } label: {
                         Label("Repeat workout", systemImage: "play").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.primaryText)
                             .padding(.horizontal, 16).frame(minHeight: 44).background(Capsule().fill(Palette.primary))
                     }
-                    .buttonStyle(PressStyle()).disabled(model.training.active != nil).opacity(model.training.active != nil ? 0.45 : 1)
+                    .buttonStyle(PressStyle()).opacity(model.training.active != nil ? 0.45 : 1)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
                 .background(.bar)
