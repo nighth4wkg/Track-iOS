@@ -1,0 +1,118 @@
+import XCTest
+
+/// Every screen and flow, used as a person would, with a screenshot at each step ("NN-what") to check by eye: the
+/// looks, the motion caught mid-way, and what each tap did. It never stops on something missing; it prints
+/// "TOUR missing: …" and carries on, so one run shows everything.
+final class TrackTour: XCTestCase {
+    private let app = XCUIApplication()
+    private var step = 0
+
+    override func setUp() {
+        continueAfterFailure = true
+        app.launchArguments = ["-track.storageMode", "local"]
+        app.launchEnvironment["TRACK_SEED"] = ProcessInfo.processInfo.environment["TRACK_SEED"]
+        app.launch()
+    }
+
+    func testTour() {
+        snap("home")
+        app.swipeUp(); snap("home-scrolled"); app.swipeDown()
+
+        // A workout, from the start.
+        tap(app.buttons["Start workout"].firstMatch, "Start workout")
+        snap("start-0.1s", after: 0.1); snap("start-settled", after: 1)
+        let rir1 = app.textFields["Bench Press set 1 RIR"]
+        tap(rir1, "set 1 RIR"); snap("rir-tapped-not-logged", after: 1)
+        rir1.typeText("2"); snap("rir-typed", after: 0.1); snap("rir-saved", after: 1)
+        allowNotifications(); snap("resting")
+        tap(app.textFields["Bench Press set 1 reps"], "set 1 reps")
+        app.typeText("9"); snap("logged-set-edited", after: 1)
+        tap(app.buttons["Done"].firstMatch, "keyboard Done"); snap("keyboard-gone")
+        for n in 2...3 { tap(check("Bench Press set \(n)"), "✓ set \(n)"); snap("ticked-\(n)", after: 0.15) }
+        snap("bench-folded", after: 1)
+        tap(check("Bench Press set 3"), "untick after fold"); snap("untick-folded-card", after: 0.6)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press' AND NOT label CONTAINS 'set'")).firstMatch, "open folded card"); snap("folded-opened", after: 0.6)
+        tap(check("Bench Press set 3"), "untick set 3"); snap("unticked", after: 0.8)
+        tap(check("Bench Press set 3"), "retick set 3"); snap("reticked", after: 1)
+
+        let next = app.textFields.matching(NSPredicate(format: "label ENDSWITH 'set 1 RIR' AND NOT label BEGINSWITH 'Bench'")).firstMatch
+        if next.waitForExistence(timeout: 3) {
+            next.swipeLeft(); snap("set-delete-armed", after: 0.5); next.swipeRight(); snap("set-delete-disarmed", after: 0.5)
+        }
+        tap(app.buttons["Add set"].firstMatch, "Add set"); snap("set-added", after: 0.6)
+        app.swipeUp(); snap("workout-scrolled"); app.swipeUp(); snap("workout-bottom")
+        tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH 'workout options'")).firstMatch, "workout options")
+        snap("workout-options", after: 0.8); app.swipeDown(); snap("options-closed", after: 0.8)
+
+        tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
+        tap(app.buttons["Resume your active workout"].firstMatch, "Resume"); snap("resumed", after: 1)
+        tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
+        tap(app.buttons["dialog-action"], "confirm finish"); snap("recap", after: 1.5)
+        app.swipeUp(); snap("recap-scrolled")
+        tap(app.buttons["Continue"].firstMatch, "Continue"); snap("progress", after: 1)
+
+        // The tabs.
+        for period in ["Day", "Month", "Week"] { tap(app.buttons[period].firstMatch, period); snap("progress-\(period)", after: 0.6) }
+        app.swipeUp(); snap("progress-scrolled"); app.swipeDown()
+        tap(app.tabBars.buttons["Rank"], "Rank"); snap("rank", after: 0.8)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bodyweight'")).firstMatch, "bodyweight"); snap("bodyweight", after: 0.8)
+        tap(app.buttons["Close"].firstMatch, "close bodyweight")
+        app.swipeUp(); snap("rank-scrolled"); app.swipeDown()
+        tap(app.tabBars.buttons["History"], "History"); snap("history", after: 0.8)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Any'")).firstMatch, "date filter"); snap("history-date", after: 0.8)
+        app.swipeDown(); snap("history-date-closed", after: 0.8)
+        tap(app.staticTexts["FBEOD"].exists ? app.staticTexts["FBEOD"].firstMatch : app.staticTexts["Full body"].firstMatch, "a workout")
+        snap("detail", after: 1); app.swipeUp(); snap("detail-large", after: 0.8)
+        tap(app.buttons["Close"].firstMatch, "close detail"); snap("history-again", after: 0.8)
+        app.swipeUp(); snap("history-scrolled"); app.swipeDown()
+
+        // Settings.
+        tap(app.buttons["Settings"].firstMatch, "Settings"); snap("settings", after: 0.8)
+        for tab in ["Data", "Account", "About", "Training"] { tap(app.buttons[tab].firstMatch, tab); snap("settings-\(tab)", after: 0.5) }
+        tap(app.buttons["Close"].firstMatch, "close settings")
+
+        // A new split.
+        tap(app.tabBars.buttons["Home"], "Home")
+        tap(app.buttons["Create split"].firstMatch, "Create split"); snap("create-split", after: 0.8)
+        app.typeText("Legs"); tap(app.buttons["dialog-action"], "create"); snap("split-page", after: 1)
+        tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("library", after: 1)
+        app.typeText("squat"); snap("library-search", after: 0.6)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add '")).firstMatch, "add an exercise"); snap("split-with-exercise", after: 0.8)
+        tap(app.navigationBars.buttons.firstMatch, "back"); snap("home-new-split", after: 0.8)
+        let row = app.cells.containing(.staticText, identifier: "Legs").firstMatch
+        if row.waitForExistence(timeout: 3) { row.swipeLeft(); snap("split-swiped", after: 0.5) }
+    }
+
+    /// Frame drops while scrolling a workout: XCTest's hitch figures for five flings down and back.
+    func testWorkoutScrollHitches() {
+        tap(app.buttons["Start workout"].firstMatch, "Start workout")
+        let list = app.scrollViews.firstMatch
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        let options = XCTMeasureOptions(); options.iterationCount = 5
+        measure(metrics: [XCTOSSignpostMetric.scrollDecelerationMetric, XCTOSSignpostMetric.scrollDraggingMetric], options: options) {
+            list.swipeUp(velocity: .fast); list.swipeUp(velocity: .fast); list.swipeDown(velocity: .fast); list.swipeDown(velocity: .fast)
+        }
+    }
+
+    private func snap(_ name: String, after delay: TimeInterval = 0.5) {
+        if delay > 0 { Thread.sleep(forTimeInterval: delay) }
+        step += 1
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = String(format: "%02d-%@", step, name)
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
+    private func tap(_ element: XCUIElement, _ what: String) {
+        if element.waitForExistence(timeout: 4), element.isHittable { element.tap() } else { print("TOUR missing: \(what) (step \(step))") }
+    }
+
+    private func check(_ set: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", set + ":")).firstMatch
+    }
+
+    private func allowNotifications() {
+        let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]
+        if allow.waitForExistence(timeout: 2) { allow.tap() }
+    }
+}

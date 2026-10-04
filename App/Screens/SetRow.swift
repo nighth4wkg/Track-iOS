@@ -24,7 +24,8 @@ struct SetRow: View {
     @State private var celebrated: String?
     @State private var burst = 0
     @State private var hint = false
-    /// Auto mode logs the set once its RIR is typed here, even the same number again; one only carried over doesn't.
+    /// Auto mode logs the set once a key is pressed in its RIR, even the same number again. Tapping into the RIR, or a
+    /// RIR only carried over, doesn't count.
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
 
@@ -70,9 +71,11 @@ struct SetRow: View {
             // Leaving the row saves it straight away.
             if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
             // Tapping a number selects it, so typing replaces it (the website's select-on-focus).
-            if id?.hasPrefix(set.id) == true {
-                DispatchQueue.main.async { UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil) }
-            }
+            if id?.hasPrefix(set.id) == true { DispatchQueue.main.async { UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil) } }
+        }
+        // Only keystrokes post this (not focusing, selecting or loading numbers), so it says what was really typed.
+        .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)) { _ in
+            if let id = focus.wrappedValue, id.hasPrefix("\(set.id).") { typedInto(String(id.dropFirst(set.id.count + 1))) }
         }
         .sensoryFeedback(.success, trigger: burst)
     }
@@ -103,8 +106,7 @@ struct SetRow: View {
 
     /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps".
     private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool, done: Bool) -> some View {
-        // Every keystroke counts, even one that types over a number with the same number.
-        TextField(placeholder, text: Binding(get: { text.wrappedValue }, set: { text.wrappedValue = $0; typedInto(id) }))
+        TextField(placeholder, text: text)
             .accessibilityLabel("\(exercise.name) set \(number) \(label)")
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)

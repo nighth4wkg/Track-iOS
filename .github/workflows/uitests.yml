@@ -31,6 +31,7 @@ jobs:
           for domain in com.apple.Preferences com.apple.keyboard.preferences; do
             xcrun simctl spawn "$udid" defaults write "$domain" DidShowContinuousPathIntroduction -bool true
           done
+          xcrun simctl ui "$udid" appearance dark
           echo "UDID=$udid" >> "$GITHUB_ENV"
       - name: Build for testing
         run: |
@@ -47,7 +48,7 @@ jobs:
             -resultBundlePath out/results.xcresult CODE_SIGNING_ALLOWED=NO test-without-building > test.log 2>&1
           status=$?
           kill -INT $rec; wait $rec
-          grep -E "Test Case|error:|XCTAssert|failed|passed" test.log | tail -n 60
+          grep -E "Test Case|error:|XCTAssert|failed|passed|TOUR|Hitch|hitch|values:" test.log | tail -n 120
           xcrun xcresulttool export attachments --path out/results.xcresult --output-path out/shots > /dev/null 2>&1 || true
           exit $status
       - uses: actions/upload-artifact@v4

@@ -2,7 +2,7 @@ import SwiftUI
 import TrackCore
 
 /// Home, as on the website: today's date over "Ready to train" (or "Keep going"), the workout in progress or the Up
-/// next card, your splits (tap one for its page, swipe it left for Delete, hold and drag to move it), then this
+/// next card (swapped at once: Start opens the workout over it, and a fading native list would leave a gap), your splits (tap one for its page, swipe it left for Delete, hold and drag to move it), then this
 /// week's volume and the next achievement.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
@@ -20,7 +20,6 @@ struct HomeView: View {
             }
             if let active = training.active {
                 NativeList(items: [active], deleteLabel: "Discard", onDelete: { _ in model.discard() }, insets: EdgeInsets()) { ResumeCard(active: $0) }
-                    .transition(.opacity)
             } else if training.nextSplit != nil {
                 UpNextCard(training: training, now: now)
             }
@@ -35,7 +34,6 @@ struct HomeView: View {
             }
             HomeTiles(training: training, now: now)
         }
-        .animation(.smooth(duration: 0.3), value: training.active?.id)
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
     }
 

@@ -20,7 +20,7 @@ final class TrackUITests: XCTestCase {
         add(shot)
     }
 
-    /// Start the next split, log a set by typing it, log one by typing its RIR again, add a set (it copies weight and reps, not RIR), delete it with
+    /// Start the next split, log a set by typing it, tap into a RIR without logging, log one by typing its RIR again, add a set (it copies weight and reps, not RIR), delete it with
     /// the swipe and bring it back, then finish: the recap, then Progress.
     func testWorkoutFromStartToRecap() {
         app.buttons["Start workout"].firstMatch.tapWhenReady()
@@ -33,6 +33,9 @@ final class TrackUITests: XCTestCase {
         allowNotificationsIfAsked()
         let rir2 = app.textFields["Bench Press set 2 RIR"]
         rir2.tapWhenReady()
+        app.textFields["Bench Press set 2 reps"].tap()
+        XCTAssertFalse(setButton("Bench Press set 2", done: true).waitForExistence(timeout: 1.5), "tapping into RIR doesn't log")
+        rir2.tap()
         let same = (rir2.value as? String) ?? ""
         XCTAssertFalse(same.isEmpty || same == rir2.placeholderValue, "set 2 carries last time's RIR")
         rir2.typeText(same)
