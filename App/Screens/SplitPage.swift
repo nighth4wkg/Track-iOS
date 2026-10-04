@@ -56,7 +56,8 @@ struct SplitPage: View {
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).frame(maxWidth: .infinity, minHeight: 44)
                     }
                     Button { model.deleteSplit(split) } label: { Label("Delete split", systemImage: "trash") }
-                        .buttonStyle(SecondaryButtonStyle(danger: true))
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.danger).frame(maxWidth: .infinity, minHeight: 44)
+                        .buttonStyle(PressStyle()).padding(.top, 24)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)
                 .frame(maxWidth: 720).frame(maxWidth: .infinity)

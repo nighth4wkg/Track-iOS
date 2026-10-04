@@ -128,11 +128,12 @@ struct CompletionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The change against last time, tinted green or red (nil: muted, untinted).
+    /// The change against last time, tinted green when up (nil: muted, untinted).
     private func volumeNote(_ delta: Double?, _ unit: TrackCore.Settings.Unit) -> (String, Color?) {
         guard let delta else { return ("First result", nil) }
         if delta == 0 { return ("Same as last", nil) }
-        return ("\(delta > 0 ? "+" : "−")\(weight(abs(delta), unit)) vs last", delta > 0 ? Palette.accent : Palette.danger)
+        // Less than last time is said plainly, not in red: a shorter session is still a workout.
+        return ("\(delta > 0 ? "+" : "−")\(weight(abs(delta), unit)) vs last", delta > 0 ? Palette.accent : nil)
     }
 
     /// Records, achievements (three, then "+N more"), rank ups, a new level and the XP, as glass chips.
@@ -146,7 +147,7 @@ struct CompletionView: View {
             }
             ForEach(finished.rankUps, id: \.self) { chip($0, icon: "medal") }
             if finished.leveledUp { chip("Level \(finished.level)", icon: "star.fill") }
-            if finished.xp > 0 { chip("+\(finished.xp) XP", icon: nil, accent: true) }
+            if finished.xp > 0 { chip("+\(finished.xp.formatted()) XP", icon: nil, accent: true) }
         }
     }
 

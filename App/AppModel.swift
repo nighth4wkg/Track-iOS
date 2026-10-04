@@ -168,7 +168,7 @@ final class AppModel {
 
     func start(_ split: Split, carryOver: Bool = true) {
         update { try $0.start(split, carryOver: carryOver) }
-        if training.active != nil { workoutOpen = true; RestAlert.prepare() }
+        if training.active != nil { workoutOpen = true }
     }
 
     /// Starts a past workout again with its own numbers.

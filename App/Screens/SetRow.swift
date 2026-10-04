@@ -35,11 +35,6 @@ struct SetRow: View {
         let carried = !shown.done && shown.kg != nil && shown.reps != nil
         let error = inputError(unit)
         VStack(alignment: .leading, spacing: 4) {
-            if hint, let record {
-                (Text("New best ").bold() + Text(describe(record, shown))).font(.caption).foregroundStyle(Palette.record)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
             HStack(spacing: 8) {
                 Text(set.side.map { $0 == .left ? "L" : "R" } ?? "\(number)")
                     .font(.body.weight(.bold)).monospacedDigit()
@@ -47,7 +42,7 @@ struct SetRow: View {
                     .frame(width: 28)
                 field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, placeholder: "—", glow: record != nil, done: shown.done)
                 field($reps, id: "reps", label: "reps", keyboard: .numberPad, placeholder: "—", glow: record != nil, done: shown.done)
-                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "0", glow: record != nil, done: shown.done)
+                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "—", glow: record != nil, done: shown.done)
                 check(done: shown.done, carried: carried, record: record != nil)
             }
             if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
@@ -66,7 +61,7 @@ struct SetRow: View {
         .onDisappear(perform: flush)
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
-        .onChange(of: signature(record, shown)) { _, now in celebrate(now) }
+        .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { "New best · " + describe($0, shown) }) }
         .onChange(of: focus.wrappedValue) { old, id in
             // Leaving the row saves it straight away.
             if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
@@ -142,9 +137,10 @@ struct SetRow: View {
 
     /// A set that becomes a best celebrates at once; a best that improves celebrates again. One already there when the
     /// row appeared stays calm.
-    private func celebrate(_ now: String?) {
+    private func celebrate(_ now: String?, _ text: String?) {
         guard let now, now != celebrated else { return }
         celebrated = now
+        if let text { model.show(text) }
         burst += 1
         withAnimation(.smooth(duration: 0.3)) { hint = true }
         let mine = burst

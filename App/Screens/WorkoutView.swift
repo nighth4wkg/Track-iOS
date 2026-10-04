@@ -152,8 +152,7 @@ struct WorkoutView: View {
     }
 }
 
-/// The workout's options, as the website's: rename, switch kg ⇄ lb, start a rest, discard the
-/// workout, delete its split.
+/// The workout's options, as the website's: rename, switch kg ⇄ lb, start a rest, discard the workout.
 struct WorkoutOptions: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -179,12 +178,9 @@ struct WorkoutOptions: View {
             }
             option("Start rest timer", "timer") { model.startRest(); dismiss() }
             option("Discard workout", "trash", danger: true) { dismiss(); model.discard() }
-            if let split {
-                option("Delete split", "trash", danger: true) { dismiss(); model.deleteSplit(split) }
-            }
         }
         .padding(24)
-        .presentationDetents([.height(split != nil ? 420 : 360)])
+        .presentationDetents([.height(360)])
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
     }

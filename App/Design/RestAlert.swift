@@ -6,21 +6,16 @@ import UserNotifications
 enum RestAlert {
     private static let id = "track.rest"
 
-    /// Asks once, as a workout starts (a calm moment), never while you're logging a set. A question left unanswered
-    /// is asked again only at the next workout.
-    static func prepare() {
-        guard ScreenshotMode.screen == nil else { return } // the prompt would cover the screenshots
-        let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .notDetermined else { return }
-            center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        }
-    }
-
-    /// Schedules the alert when notifications are allowed; otherwise does nothing (no prompt mid-workout).
+    /// Schedules the alert. The very first rest asks whether Track may notify (iOS asks only once, ever), so the
+    /// question comes when its point is plain, not over the workout as it opens.
     static func schedule(at until: Int) {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
+            if settings.authorizationStatus == .notDetermined {
+                guard ScreenshotMode.screen == nil else { return } // the prompt would cover the screenshots
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in if granted { schedule(at: until) } }
+                return
+            }
             guard [.authorized, .provisional, .ephemeral].contains(settings.authorizationStatus) else { return }
             let content = UNMutableNotificationContent()
             content.title = "Rest’s up"

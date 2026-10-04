@@ -27,13 +27,14 @@ struct RankPage: View {
                 let ranked = ranks.filter { $0.best != nil }
                 let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + Double($1.rank) + $1.progress } / Double(ranked.count)
                 let overall = min(Ranks.names.count - 1, Int(score))
-                overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit)
+                overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit,
+                            basis: ranked.isEmpty || ranked.count == ranks.count ? nil : "Based on \(ranked.count) of \(count(ranks.count, "muscle"))")
                 if let closest = ranked.filter({ $0.next != nil }).max(by: { $0.progress < $1.progress }), let next = closest.next, let best = closest.best {
                     // The rank up that's nearest, and the one lift that gets it.
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Nearest rank up").font(.subheadline).foregroundStyle(Palette.muted)
                         Text("\(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])").font(.headline).foregroundStyle(Palette.rankText[closest.rank + 1])
-                        Text("Lift \(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps) on \(best.exercise)")
+                        Text("Lift \(loadable(next.kg, unit)) × \(next.reps) on \(best.exercise)")
                             .font(.subheadline).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
@@ -45,7 +46,7 @@ struct RankPage: View {
         }
     }
 
-    private func overallCard(_ overall: Int?, progress: Double, bodyweight: Double, unit: TrackCore.Settings.Unit) -> some View {
+    private func overallCard(_ overall: Int?, progress: Double, bodyweight: Double, unit: TrackCore.Settings.Unit, basis: String?) -> some View {
         let color = overall.map { Palette.ranks[$0] } ?? Palette.muted
         let text = overall.map { Palette.rankText[$0] } ?? Palette.muted
         return VStack(spacing: 8) {
@@ -56,10 +57,11 @@ struct RankPage: View {
             Text("Overall").font(.subheadline).foregroundStyle(Palette.muted).padding(.top, 4)
             Text(overall.map { Ranks.names[$0] } ?? "Unranked").font(.largeTitle.weight(.bold)).foregroundStyle(text)
             Text(overall.map { toGo($0, progress) } ?? "Log a lift to get ranked").font(.subheadline).foregroundStyle(Palette.muted)
+            if let basis { Text(basis).font(.caption).foregroundStyle(Palette.muted) }
             HStack(spacing: 6) {
                 ForEach(Ranks.names.indices, id: \.self) { index in
                     VStack(spacing: 6) {
-                        RankBar(progress: overall.map { index < $0 ? 1 : index == $0 ? progress : 0 } ?? 0, color: Palette.ranks[index])
+                        RankBar(progress: overall.map { index < $0 || index == Ranks.names.count - 1 && index == $0 ? 1 : index == $0 ? progress : 0 } ?? 0, color: Palette.ranks[index])
                         Text(Ranks.names[index]).font(.caption2.weight(index == overall ? .bold : .regular))
                             .foregroundStyle(index == overall ? Palette.rankText[index] : Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
                     }
@@ -118,6 +120,12 @@ struct RankPage: View {
     }
 }
 
+/// A target as weight you can load on a bar: up to the next 2.5 kg or 5 lb ("175 lb", not "174.17 lb").
+private func loadable(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
+    let step = TrainingSet.kilograms(from: unit == .kg ? "2.5" : "5", unit: unit) ?? 2.5
+    return "\(TrainingSet.display(kg: (kg / step - 1e-9).rounded(.up) * step, unit: unit)) \(unit.rawValue)"
+}
+
 /// "5% left to Strong", or the top.
 func toGo(_ rank: Int, _ progress: Double) -> String {
     rank >= Ranks.names.count - 1 ? "Top rank" : "\(max(1, Int(((1 - progress) * 100).rounded(.up))))% left to \(Ranks.names[rank + 1])"
@@ -146,7 +154,7 @@ private struct MuscleRow: View {
             if open, let best = rank.best {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Best: \(best.exercise), \(TrainingSet.display(kg: best.kg, unit: unit)) \(unit.rawValue) × \(best.reps)")
-                    if let next = rank.next { Text("Next: \(TrainingSet.display(kg: next.kg, unit: unit)) \(unit.rawValue) × \(next.reps)") }
+                    if let next = rank.next { Text("Next: \(loadable(next.kg, unit)) × \(next.reps)") }
                 }
                 .font(.footnote).foregroundStyle(Palette.text)
                 .frame(maxWidth: .infinity, alignment: .leading)

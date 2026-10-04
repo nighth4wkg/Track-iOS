@@ -112,7 +112,7 @@ struct ExerciseCard: View, Equatable {
     }
 
     private var sidesLabel: String {
-        switch exercise.startingSide { case nil: "Both sides"; case .left?: "Left / Right"; case .right?: "Right / Left" }
+        switch exercise.startingSide { case nil: "Sides: both"; case .left?: "Sides: left first"; case .right?: "Sides: right first" }
     }
 
     /// A new set with the last one's weight and reps to start from (RIR blank), on the other side if in sides.

@@ -50,13 +50,13 @@ struct Page<Content: View>: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                let streak = model.derived("streak \(dayKey(nowMillis()))") { $0.weeklyStreak(at: nowMillis()) }
                 ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
                 // The brand sits on the bar itself, as on the website: no glass bubble behind it.
                 ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
-                ToolbarSpacer(.fixed, placement: .topBarLeading)
-                ToolbarItem(placement: .topBarLeading) {
-                    let now = nowMillis()
-                    let streak = model.derived("streak \(dayKey(now))") { $0.weeklyStreak(at: now) }
+                // The streak shows once there is one: a 0 on day one reads as broken.
+                if streak > 0 { ToolbarSpacer(.fixed, placement: .topBarLeading) }
+                if streak > 0 { ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 3) {
                         Image(systemName: "flame").foregroundStyle(Palette.streak)
                         Text("\(streak)").foregroundStyle(Palette.text)
@@ -65,7 +65,7 @@ struct Page<Content: View>: View {
                     .padding(.horizontal, 6)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
-                }
+                } }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { settingsOpen = true } label: { Image(systemName: "gearshape").foregroundStyle(Palette.text) }
                         .accessibilityLabel("Settings")

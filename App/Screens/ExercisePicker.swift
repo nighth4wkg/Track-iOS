@@ -68,9 +68,6 @@ struct ExercisePicker: View {
                         Text(results.isEmpty ? "No exercises" : "Showing \(min(shown, results.count)) of \(results.count)")
                     }
                     .font(.caption.weight(.semibold)).foregroundStyle(Palette.muted)
-                    if custom {
-                        Button { pick(typed) } label: { Label("Add “\(typed.prefix(50))”", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
-                    }
                     if results.isEmpty {
                         Text("No matching exercises.").font(.subheadline).foregroundStyle(Palette.muted).padding(.vertical, 8)
                     } else {
@@ -92,6 +89,10 @@ struct ExercisePicker: View {
                         if results.count > shown {
                             Button("Show more") { shown += 50 }.buttonStyle(SecondaryButtonStyle())
                         }
+                    }
+                    if custom {
+                        Button { pick(typed) } label: { Label("Add “\(typed.prefix(50))” as your own", systemImage: "plus") }
+                            .buttonStyle(SecondaryButtonStyle())
                     }
                 }
                 .padding(16)

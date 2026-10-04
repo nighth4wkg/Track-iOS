@@ -60,12 +60,7 @@ struct HistoryDetail: View {
                 .background(.bar)
                 .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -73,7 +68,11 @@ struct HistoryDetail: View {
     /// accent), over a hairline.
     private func header(_ current: Session, exercises: Int, unit: TrackCore.Settings.Unit) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(current.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text)
+            HStack(alignment: .top) {
+                Text(current.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text)
+                Spacer()
+                GlassCircleButton(icon: "xmark", label: "Close") { dismiss() }
+            }
             Text(Date(timeIntervalSince1970: Double(current.finishedAt ?? current.startedAt) / 1000)
                 .formatted(.gregorian.weekday(.abbreviated).month(.abbreviated).day().year()))
                 .font(.subheadline).foregroundStyle(Palette.muted)

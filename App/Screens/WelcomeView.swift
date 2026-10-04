@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The first screen: where to keep your training. Sync (an account shared with the website) or this iPhone only.
-/// Only the sync card carries the accent. Local can turn on sync later in Settings.
+/// What works today comes first and carries the accent; sync follows, marked Soon. Local can turn on sync later in Settings.
 struct WelcomeView: View {
     @Environment(AppModel.self) private var model
     @State private var syncSoon = false
@@ -15,13 +15,13 @@ struct WelcomeView: View {
                     Text("Welcome to Track").font(.largeTitle.weight(.bold)).foregroundStyle(Palette.text)
                 }
                 Text("Choose where your workouts live.").font(.body).foregroundStyle(Palette.muted).padding(.bottom, 8)
-                ChoiceCard(icon: "arrow.triangle.2.circlepath.icloud", title: "Sync across devices",
-                           detail: "Sign up or log in. Your workouts on iPhone, iPad and the web.", accent: true, badge: "Soon") {
-                    syncSoon = true
-                }
                 ChoiceCard(icon: "iphone", title: "Keep it on this iPhone",
-                           detail: "No account. Everything stays on this device.") {
+                           detail: "No account. Everything stays on this device.", accent: true) {
                     withAnimation(.smooth) { model.choose(.local) }
+                }
+                ChoiceCard(icon: "arrow.triangle.2.circlepath.icloud", title: "Sync across devices",
+                           detail: "Sign up or log in. Your workouts on iPhone, iPad and the web.", badge: "Soon") {
+                    syncSoon = true
                 }
                 Text("You can turn on sync later in Settings.")
                     .font(.footnote).foregroundStyle(Palette.muted)
