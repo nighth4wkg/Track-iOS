@@ -44,7 +44,7 @@ extension AppModel {
     func finish() {
         guard let active = training.active else { return }
         let done = active.completedSets.count
-        guard done > 0 else { message = "Tap the circle beside each set you’ve done, then finish."; return }
+        guard done > 0 else { show("Tap the circle beside each set you’ve done, then finish."); return }
         confirm = Confirm(title: "Finish this workout?",
                           message: "Save \(count(done, "done set")). Sets not marked done are left out.",
                           label: "Finish workout") { [weak self] in self?.save() }

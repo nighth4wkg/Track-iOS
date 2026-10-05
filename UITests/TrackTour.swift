@@ -24,7 +24,7 @@ final class TrackTour: XCTestCase {
         let rir1 = app.textFields["Bench Press set 1 RIR"]
         tap(rir1, "set 1 RIR"); snap("rir-tapped-not-logged", after: 1)
         rir1.typeText("2"); snap("rir-typed", after: 0.1); snap("rir-saved", after: 1)
-        allowNotifications(); snap("resting")
+        allowNotificationsIfAsked(); snap("resting")
         tap(app.textFields["Bench Press set 1 reps"], "set 1 reps")
         app.typeText("9"); snap("logged-set-edited", after: 1)
         tap(app.buttons["Done"].firstMatch, "keyboard Done"); snap("keyboard-gone")
@@ -115,7 +115,7 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Save"].firstMatch, "save bodyweight"); snap("rank-unranked", after: 1)
         tap(app.tabBars.buttons["Home"], "Home")
         tap(app.buttons["Push"].firstMatch, "Push template"); snap("template-added", after: 1)
-        tap(app.buttons["Start workout"].firstMatch, "Start"); allowNotifications(); snap("first-workout", after: 1)
+        tap(app.buttons["Start workout"].firstMatch, "Start"); allowNotificationsIfAsked(); snap("first-workout", after: 1)
         tap(check("Bench Press set 1"), "✓ empty set"); snap("tick-empty-set", after: 0.8)
         let kg = app.textFields["Bench Press set 1 weight in lb"]
         tap(kg, "lb field"); app.typeText("135"); app.textFields["Bench Press set 1 reps"].tap(); app.typeText("10")
@@ -144,10 +144,5 @@ final class TrackTour: XCTestCase {
 
     private func check(_ set: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", set + ":")).firstMatch
-    }
-
-    private func allowNotifications() {
-        let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]
-        if allow.waitForExistence(timeout: 2) { allow.tap() }
     }
 }

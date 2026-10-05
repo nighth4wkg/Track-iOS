@@ -12,7 +12,6 @@ enum RestAlert {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             if settings.authorizationStatus == .notDetermined {
-                guard ScreenshotMode.screen == nil else { return } // the prompt would cover the screenshots
                 center.requestAuthorization(options: [.alert, .sound]) { granted, _ in if granted { schedule(at: until) } }
                 return
             }

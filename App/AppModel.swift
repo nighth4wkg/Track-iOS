@@ -61,11 +61,6 @@ final class AppModel {
     private(set) var mode: StorageMode?
     /// Why the saved copy couldn't be read, if it couldn't. The app then starts empty without overwriting it.
     private(set) var loadError: String?
-    /// A problem to show, such as finishing without a logged set: it appears as a toast on whatever screen is in front.
-    var message: String? {
-        get { nil }
-        set { if let newValue { show(newValue) } }
-    }
     var confirm: Confirm? { didSet { dialogChanged() } }
     var naming: Naming? { didSet { dialogChanged() } }
     var toast: Toast?
@@ -116,7 +111,7 @@ final class AppModel {
     /// that throws is shown and not applied.
     func update(_ change: (inout Training) throws -> Void) {
         var next = training
-        do { try change(&next) } catch { message = error.localizedDescription; return }
+        do { try change(&next) } catch { show(error.localizedDescription); return }
         next.syncRoutine()
         next.editedAt = nowMillis()
         if next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
@@ -132,7 +127,7 @@ final class AppModel {
         guard canSave, let file else { return }
         saver.async { [weak self] in
             do { try file.save(next) } catch {
-                DispatchQueue.main.async { self?.message = "Couldn’t save on this iPhone. Free up some space and try again." }
+                DispatchQueue.main.async { self?.show("Couldn’t save on this iPhone. Free up some space and try again.") }
             }
         }
     }

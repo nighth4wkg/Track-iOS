@@ -40,7 +40,7 @@ struct BackupSection: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             guard let data = try? Data(contentsOf: url), let backup = try? TrainingFile.decode(data), backup.version == 1 else {
-                model.message = "This file is not a valid Track backup."
+                model.show("This file is not a valid Track backup.")
                 return
             }
             // Track's own dialog, with the website's wording.

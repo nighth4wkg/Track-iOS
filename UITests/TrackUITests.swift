@@ -125,11 +125,6 @@ final class TrackUITests: XCTestCase {
         from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .fast, thenHoldForDuration: 0)
     }
 
-    /// The first rest asks to send notifications (the system's alert, outside the app).
-    private func allowNotificationsIfAsked() {
-        let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]
-        if allow.waitForExistence(timeout: 3) { allow.tap() }
-    }
 
     /// The Simulator's one-time "slide to type" tip over the keyboard.
     private func dismissKeyboardTip() {
@@ -140,6 +135,12 @@ final class TrackUITests: XCTestCase {
     private func setButton(_ set: String, done: Bool) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", set, done ? "done. Tap to undo" : "")).firstMatch
     }
+}
+
+/// The first rest asks to send notifications (the system's alert, outside the app).
+func allowNotificationsIfAsked() {
+    let allow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]
+    if allow.waitForExistence(timeout: 3) { allow.tap() }
 }
 
 extension XCUIElement {

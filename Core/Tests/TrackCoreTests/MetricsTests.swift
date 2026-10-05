@@ -69,9 +69,4 @@ final class MetricsTests: XCTestCase {
         XCTAssertEqual(training.nextSplit?.split.id, "a")
         XCTAssertEqual(training.nextSplit?.lastDone, at(2026, 9, 29))
     }
-
-    func testRecordsAreTheHeaviestLoggedWeight() {
-        let records = [workout(at(2026, 9, 29), kg: 60), workout(at(2026, 9, 30), kg: 70)].personalRecords
-        XCTAssertEqual(records["Bench Press"], 70)
-    }
 }

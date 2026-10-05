@@ -1,4 +1,4 @@
-# The demo training for the screenshot run: the website-checked test fixture, moved so its latest workout was
+# The demo training the UI tests start from (TRACK_SEED): the website-checked test fixture, moved so its latest workout was
 # yesterday, with no workout in progress and the theme following the simulator's appearance.
 import json, sys, time
 

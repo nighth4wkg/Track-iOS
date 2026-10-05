@@ -81,15 +81,6 @@ extension Array where Element == Session {
         while weeks.contains(cursor) { streak += 1; cursor = back(cursor) }
         return streak
     }
-
-    /// The heaviest logged weight per exercise, by name.
-    public var personalRecords: [String: Double] {
-        var records: [String: Double] = [:]
-        for session in self { for exercise in session.exercises {
-            for set in exercise.sets where set.done && set.isValid { records[exercise.name] = Swift.max(records[exercise.name] ?? 0, set.kg!) }
-        } }
-        return records
-    }
 }
 
 // MARK: Levels
