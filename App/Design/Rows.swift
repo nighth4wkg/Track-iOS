@@ -4,6 +4,7 @@ import TrackCore
 /// One row: a 44pt glass tile, a name over one line of detail, then the row's end.
 struct ListRow<Trailing: View>: View {
     var icon: String?
+    var tint = Palette.text
     var mark = false
     let title: String
     let detail: String
@@ -14,10 +15,10 @@ struct ListRow<Trailing: View>: View {
             Group {
                 if mark { TrackMark(size: 20) } else if let icon { Image(systemName: icon).font(.body.weight(.semibold)) }
             }
-            .foregroundStyle(Palette.text)
+            .foregroundStyle(tint)
             .frame(width: 44, height: 44).glass(radius: 12, fill: Palette.control, lifted: false)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline).foregroundStyle(Palette.text).lineLimit(1)
+                Text(title).font(.headline).foregroundStyle(Palette.text).lineLimit(2)
                 Text(detail).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1)
             }
             Spacer(minLength: 8)
@@ -97,5 +98,6 @@ func count(_ value: Int, _ noun: String) -> String { "\(value) \(noun)\(value ==
 extension FormatStyle where Self == Date.FormatStyle {
     /// Dates as on the website: always the Gregorian calendar, so an iPhone set to the Buddhist one doesn't show
     /// "2569 BE". The words and order still follow the iPhone's language.
-    static var gregorian: Date.FormatStyle { Date.FormatStyle(calendar: Calendars.local, timeZone: .current) }
+    /// In English, as the website writes dates ("Sep 23", "Sunday, Oct 4"), whatever the phone's region.
+    static var gregorian: Date.FormatStyle { Date.FormatStyle(locale: Locale(identifier: "en"), calendar: Calendars.local, timeZone: .current) }
 }

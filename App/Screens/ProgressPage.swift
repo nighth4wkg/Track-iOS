@@ -62,7 +62,7 @@ struct ProgressPage: View {
                     ForEach(records, id: \.after.exercise) { record in
                         let after = record.after
                         Button { model.history = training.sessions.first { $0.id == after.sessionId } } label: {
-                            ListRow(icon: "trophy", title: after.exercise,
+                            ListRow(icon: "trophy", tint: Palette.record, title: after.exercise,
                                     detail: "\(TrainingSet.display(kg: after.kg, unit: unit)) \(unit.rawValue) × \(after.reps) · \(Date(timeIntervalSince1970: Double(after.date) / 1000).formatted(.gregorian.month(.abbreviated).day()))") {
                                 Text(record.kind == .weight ? "+\(TrainingSet.display(kg: after.kg - record.before.kg, unit: unit)) \(unit.rawValue)"
                                      : "+\(count(after.reps - record.before.reps, "rep"))")

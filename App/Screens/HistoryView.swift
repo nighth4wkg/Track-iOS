@@ -121,7 +121,7 @@ struct HistoryView: View {
         let first = Date(timeIntervalSince1970: Double(start) / 1000)
         let last = Calendars.local.date(byAdding: .day, value: 6, to: first)!
         let sameMonth = Calendars.local.component(.month, from: first) == Calendars.local.component(.month, from: last)
-        return "\(first.formatted(.gregorian.month(.abbreviated).day())) – \(last.formatted(sameMonth ? .dateTime.day() : .dateTime.month(.abbreviated).day()))"
+        return "\(first.formatted(.gregorian.month(.abbreviated).day())) – \(last.formatted(sameMonth ? .gregorian.day() : .gregorian.month(.abbreviated).day()))"
     }
 }
 
