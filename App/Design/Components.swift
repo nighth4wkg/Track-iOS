@@ -10,6 +10,8 @@ struct Page<Content: View>: View {
     var caption: String?
     /// A control beside the title, as History's filter.
     var accessory: AnyView?
+    /// Between the title and each card: the website's 16pt (Home's grid, 24pt).
+    var spacing: CGFloat = 16
     @Binding var settingsOpen: Bool
     @ViewBuilder let content: Content
     @State private var position = ScrollPosition(edge: .top)
@@ -18,19 +20,19 @@ struct Page<Content: View>: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                // The website's page: 24pt from the edges, a 32pt semibold title.
+                VStack(alignment: .leading, spacing: spacing) {
                     VStack(alignment: .leading, spacing: 4) {
-                        if let caption { Text(caption).font(.body).foregroundStyle(Palette.muted) }
+                        if let caption { Text(caption).font(.system(size: 16)).foregroundStyle(Palette.muted) }
                         HStack {
-                            Text(title).font(.system(size: 34, weight: .bold)).tracking(-0.5).foregroundStyle(Palette.text)
+                            Text(title).font(.system(size: 32, weight: .semibold)).foregroundStyle(Palette.text)
                             Spacer()
                             accessory
                         }
                     }
-                    .padding(.bottom, 8)
                     content
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 24)
                 .padding(.bottom, 32)
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)

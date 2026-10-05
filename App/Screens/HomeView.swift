@@ -14,7 +14,7 @@ struct HomeView: View {
         let now = nowMillis()
         let nextId = training.active == nil ? training.nextSplit?.split.id : nil
         Page(title: training.active == nil ? "Ready to train" : "Keep going",
-             caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), settingsOpen: $settingsOpen) {
+             caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), spacing: 24, settingsOpen: $settingsOpen) {
             if let error = model.loadError {
                 Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(Palette.danger)
             }
