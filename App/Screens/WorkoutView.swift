@@ -66,7 +66,9 @@ struct WorkoutView: View {
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
-                .safeAreaInset(edge: .bottom) { RestCapsule() }
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 0) { RestCapsule(); if focus != nil { keyboardBar(fields) } }.animation(.smooth(duration: 0.25), value: focus == nil)
+                }
             }
             .onDrop(of: [.text], delegate: drop(active))
             // Behind it the whole screen takes the drop too, status bar included: let go anywhere and the drag ends.
@@ -150,12 +152,22 @@ struct WorkoutView: View {
                     .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(Palette.primary)
             }
         }
-        ToolbarItemGroup(placement: .keyboard) {
+    }
+
+    /// While typing: Next (weight → reps → RIR → next set) and Done, in Track's pills a little above the keyboard
+    /// (the system's keyboard bar sat right on it, over the rest timer).
+    private func keyboardBar(_ fields: [String]) -> some View {
+        HStack(spacing: 8) {
             Spacer()
             if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
-                Button("Next") { self.focus = fields[index + 1] }.fontWeight(.semibold)
+                Button("Next") { self.focus = fields[index + 1] }.foregroundStyle(Palette.accent)
+                    .padding(.horizontal, 18).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
             }
-            Button("Done") { focus = nil }.fontWeight(.semibold)
+            Button("Done") { focus = nil }.foregroundStyle(Palette.primaryText)
+                .padding(.horizontal, 18).frame(minHeight: 44).glass(radius: 22, fill: Palette.primary, lifted: false)
         }
+        .font(.subheadline.weight(.semibold)).buttonStyle(PressStyle())
+        .padding(.horizontal, 16).padding(.bottom, 10)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }

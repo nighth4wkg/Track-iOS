@@ -3,7 +3,7 @@ import TrackCore
 
 /// A set, as the website's row: its number (or side), kg · reps · RIR, and the ✓. Last time's numbers are suggestions
 /// with a faint ✓ ("tap to repeat"); in auto mode, changing a number logs the set. A set that beats every earlier
-/// result turns its ✓ into a trophy, glows, and says what it beat. Swipe left to arm a red ✕ that deletes it (Undo).
+/// result turns its ✓ into a trophy, glows, and its card's header says what it beat for a moment (RecordNote). Swipe left to arm a red ✕ that deletes it (Undo).
 /// As on the website, what you type shows at once (✓, trophy, errors) and is saved when you pause, leave the row or
 /// tap ✓, so typing never waits on the whole workout redrawing.
 struct SetRow: View {
@@ -16,6 +16,8 @@ struct SetRow: View {
     let bests: RecordBests
     let earlier: [TrainingSet]
     var focus: FocusState<String?>.Binding
+    /// A best to show in the card's header, as what it beat.
+    var onRecord: (String) -> Void = { _ in }
     @State private var weight = ""
     @State private var reps = ""
     @State private var rir = ""
@@ -63,7 +65,8 @@ struct SetRow: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in if pending != nil { flush() } }
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
-        .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { "New best · " + describe($0, shown) }) }
+        .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
+        .onChange(of: rir) { _, value in if let n = Int(value), n > 10 { rir = "10" } } // RIR goes up to 10
         .onChange(of: focus.wrappedValue) { old, id in
             // Leaving the row saves it straight away.
             if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
@@ -123,17 +126,6 @@ struct SetRow: View {
         pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
     }
 
-    /// The website's wording for what a best beat.
-    private func describe(_ record: LiveRecord, _ set: TrainingSet) -> String {
-        let w = { (kg: Double) in "\(TrainingSet.display(kg: kg, unit: unit)) \(unit.rawValue)" }
-        switch record {
-        case .heaviest(let kg): return "Heaviest ever · up from \(w(kg))"
-        case .weightForReps(let kg): return "Heaviest for \(set.reps ?? 0) reps · up from \(w(kg))"
-        case .repsForWeight(let reps): return "Most reps at \(w(set.kg ?? 0)) · up from \(reps)"
-        case .repsAtOrAbove(let reps): return "More reps than any heavier set · was \(reps)"
-        }
-    }
-
     private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? {
         record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" }
     }
@@ -143,7 +135,7 @@ struct SetRow: View {
     private func celebrate(_ now: String?, _ text: String?) {
         guard let now, now != celebrated else { return }
         celebrated = now
-        if let text { model.show(text) }
+        if let text { onRecord(text); AccessibilityNotification.Announcement("New best. " + text).post() }
         burst += 1
         withAnimation(.smooth(duration: 0.3)) { hint = true }
         let mine = burst

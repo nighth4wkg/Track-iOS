@@ -22,6 +22,8 @@ struct ExerciseCard: View, Equatable {
     /// The sets' height. A closed card keeps its sets, clipped to nothing, so opening many at once (after a drag)
     /// only animates heights instead of building every row in one frame.
     @State private var setsHeight: CGFloat?
+    /// A set's new best, shown over the header for a moment (each one a new id, so a better one restarts it).
+    @State private var best: (text: String, id: Int)?
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
@@ -43,6 +45,9 @@ struct ExerciseCard: View, Equatable {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                         .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
                 }
+                .overlay { if let best { RecordNote(text: best.text).transition(.scale(scale: 0.96).combined(with: .opacity)) } }
+                .animation(.smooth(duration: 0.3), value: best?.id)
+                .task(id: best?.id) { if best != nil { try? await Task.sleep(for: .seconds(2.8)); best = nil } }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityValue(open ? "Open" : "Closed")
                 // Moving without the drag, for VoiceOver and Switch Control.
@@ -60,7 +65,8 @@ struct ExerciseCard: View, Equatable {
                     .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted)
                     ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
                         SetRow(exercise: exercise, set: set, number: index + 1, unit: unit, autoLog: autoLog, bests: bests,
-                               earlier: Array(exercise.sets.prefix(index)), focus: focus)
+                               earlier: Array(exercise.sets.prefix(index)), focus: focus,
+                               onRecord: { best = ($0, (best?.id ?? 0) + 1) })
                             .transition(.opacity)
                     }
                     HStack(spacing: 0) {
