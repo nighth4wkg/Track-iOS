@@ -87,10 +87,11 @@ final class WorkoutTests: XCTestCase {
     func testTheSplitTakesTheWorkoutsShapeOnlyWhenFinished() throws {
         var training = Training()
         training.splits = [split()]
-        try training.start(split())
+        let original = training.splits[0]
+        try training.start(original)
         training.updateActive(exercise: "row") { $0.sets.append(TrainingSet(kg: 40, reps: 10, rir: 1, done: true)) }
         training.discard()
-        XCTAssertEqual(training.splits[0], split(), "a discarded workout leaves the split alone")
+        XCTAssertEqual(training.splits[0], original, "a discarded workout leaves the split alone")
         try training.start(split())
         training.updateActive(exercise: "row") { $0.sets.append(TrainingSet(kg: 40, reps: 10, rir: 1, done: true)) }
         try training.finish()
