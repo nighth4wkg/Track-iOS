@@ -59,14 +59,14 @@ struct HomeTiles: View {
                         .font(.footnote.weight(.semibold)).foregroundStyle(change > 0 ? Palette.accent : Palette.muted).lineLimit(1)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading).padding(16).glass()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(16).glass()
             if let next = model.derived("nearest quest", { $0.nearestQuest() }) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Next achievement").font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
                     Text(next.quest.title).font(.headline).foregroundStyle(Palette.text).lineLimit(2)
                     GoalBar(questId: next.quest.id, progress: max(0.04, Double(next.value) / Double(next.quest.threshold)))
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading).padding(16).glass()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(16).glass()
             }
         }
         .fixedSize(horizontal: false, vertical: true)

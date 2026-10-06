@@ -85,3 +85,11 @@ extension AppModel {
         }
     }
 }
+
+extension Training {
+    /// Like updateActive, for a change that can fail (marking a set done without numbers).
+    mutating func updateActiveThrowing(exercise id: String, _ change: (inout Exercise) throws -> Void) throws {
+        guard let index = active?.exercises.firstIndex(where: { $0.id == id }) else { return }
+        try change(&active!.exercises[index])
+    }
+}

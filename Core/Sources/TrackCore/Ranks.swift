@@ -131,7 +131,7 @@ extension Array where Element == Session {
         } }
         return Muscle.allCases.map { muscle in
             guard let top = best[muscle] else { return MuscleRank(muscle: muscle, rank: 0, progress: 0, best: nil, next: nil) }
-            let rank = Swift.min(Ranks.names.count - 1, Int(top.score.rounded(.down)))
+            let rank = Swift.max(0, Swift.min(Ranks.names.count - 1, Int(top.score.rounded(.down))))
             let elite = rank == Ranks.names.count - 1
             // The weight that reaches the next rank, rounded up to the next 0.5 kg so lifting it really does. None at
             // Elite: there is no rank above it (at[] holds the four thresholds above Starter).

@@ -74,6 +74,8 @@ final class AppModel {
     /// The tab whose page last came up, so coming back from a split's page doesn't count as switching.
     @ObservationIgnored var arrivedTab = AppTab.home
     var workoutOpen = false
+    /// Today, refreshed when Track comes back on a new day, so Home's date, "Done today" and the week move on.
+    private(set) var day = dayKey(nowMillis())
     /// The open workout fully covers the tabs (not sliding in or pulled aside), so they needn't be drawn under it.
     var workoutCovers = false
     var finished: Finished?
@@ -95,10 +97,11 @@ final class AppModel {
         mode = UserDefaults.standard.string(forKey: Self.modeKey).flatMap(StorageMode.init)
         do {
             training = try file?.load() ?? Training()
+            if file == nil { loadError = "Track can’t save on this iPhone right now, so new workouts won’t be kept." }
         } catch {
             training = Training()
             canSave = false
-            loadError = "Your saved workouts couldn’t be read, so they were left untouched."
+            loadError = "Your saved workouts couldn’t be read, so they were left untouched. New changes won’t be kept until you restore a backup in Settings → Data."
         }
     }
 
@@ -107,12 +110,10 @@ final class AppModel {
         UserDefaults.standard.set(choice.rawValue, forKey: Self.modeKey)
     }
 
-    /// Changes the training data, keeps the split in step with the workout, and saves it on this device. A change
-    /// that throws is shown and not applied.
+    /// Changes the training data and saves it on this device. A change that throws is shown and not applied.
     func update(_ change: (inout Training) throws -> Void) {
         var next = training
         do { try change(&next) } catch { show(error.localizedDescription); return }
-        next.syncRoutine()
         next.editedAt = nowMillis()
         if next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
             if let until = next.restUntil, until > nowMillis() {
@@ -149,8 +150,16 @@ final class AppModel {
     /// Each exercise's past bests for the live record check.
     var bests: RecordBests { derived("bests") { RecordBests($0) } }
 
-    /// Replaces everything with a backup (the website's backup file, or one exported here).
+    /// The saved copy that couldn't be read, to export as it is.
+    var unreadableFile: URL? { canSave ? nil : file?.url }
+
+    /// Replaces everything with a backup (the website's backup file, or one exported here). An unreadable copy is
+    /// moved aside first, so saving can resume without destroying it.
     func restore(_ backup: Training) {
+        if !canSave, (try? file?.setAside()) != nil {
+            canSave = true
+            loadError = nil
+        }
         update { $0 = backup }
         workoutOpen = false
     }
@@ -158,6 +167,8 @@ final class AppModel {
     private func dialogChanged() { DialogWindow.update(open: confirm != nil || naming != nil, typing: naming != nil) }
 
     func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }
+
+    func refreshDay() { if dayKey(nowMillis()) != day { day = dayKey(nowMillis()) } }
 
     // MARK: Workouts
 
@@ -183,13 +194,5 @@ final class AppModel {
             }
             if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
         }
-    }
-}
-
-extension Training {
-    /// Like updateActive, for a change that can fail (marking a set done without numbers).
-    mutating func updateActiveThrowing(exercise id: String, _ change: (inout Exercise) throws -> Void) throws {
-        guard let index = active?.exercises.firstIndex(where: { $0.id == id }) else { return }
-        try change(&active!.exercises[index])
     }
 }

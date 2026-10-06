@@ -1,4 +1,5 @@
 import SwiftUI
+import TrackCore
 
 // Track's Sheen theme, from the website's tokens (app/styles/sheen-theme.css, liquid-glass.css, appearance.css):
 // glass surfaces with a light rim, one mint accent used sparingly, and the system font at Dynamic Type sizes.
@@ -11,11 +12,14 @@ enum Palette {
     static let accent = Color(light: 0x0A7A48, dark: 0x48E58D)
     static let primary = Color(light: 0x3FD583, dark: 0x48E58D)
     static let primaryText = Color(light: 0x0D2A1A, dark: 0x102B1C)
+    /// Red fills (delete buttons), and their deeper end; red text is dangerText, lighter in dark mode to stay readable.
     static let danger = Color(hex: 0xE52626)
+    static let dangerDeep = Color(hex: 0xBD1616)
+    static let dangerText = Color(light: 0xC82F48, dark: 0xFF9EAA)
     /// Personal bests (app/styles/rewards.css).
     static let record = Color(light: 0xA06A00, dark: 0xF2C14E)
     /// The streak flame (components/header-streak).
-    static let streak = Color(light: 0xC2620E, dark: 0xF5A546)
+    static let streak = Color(light: 0xC46A12, dark: 0xFFB76B)
     static let card = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.58, darkOpacity: 0.05)
     static let control = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.70, darkOpacity: 0.08)
     /// Dialogs: solid, so what's behind doesn't tint them.
@@ -23,6 +27,19 @@ enum Palette {
     static let input = Color(light: 0xE7EBF2, dark: 0x000000, lightOpacity: 0.78, darkOpacity: 0.22)
     static let rim = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 1, darkOpacity: 0.24)
     static let shadow = Color(light: 0x2A3A52, dark: 0x000000, lightOpacity: 0.08, darkOpacity: 0.35)
+}
+
+/// One of the website's fixed sizes that still grows with the system text size (Dynamic Type).
+private struct ScaledFont: ViewModifier {
+    @ScaledMetric var size: CGFloat
+    let weight: Font.Weight
+    func body(content: Content) -> some View { content.font(.system(size: size, weight: weight)) }
+}
+
+extension View {
+    func scaledFont(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        modifier(ScaledFont(size: size, weight: weight))
+    }
 }
 
 extension Color {
@@ -139,5 +156,15 @@ struct Brand: View {
         .foregroundStyle(Palette.text)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Track")
+    }
+}
+
+/// Light, Dark or System for every window at once, sheets included, the moment it changes.
+enum Appearance {
+    static func apply(_ theme: TrackCore.Settings.Theme) {
+        let style: UIUserInterfaceStyle = theme == .light ? .light : theme == .dark ? .dark : .unspecified
+        for scene in UIApplication.shared.connectedScenes {
+            for window in (scene as? UIWindowScene)?.windows ?? [] { window.overrideUserInterfaceStyle = style }
+        }
     }
 }

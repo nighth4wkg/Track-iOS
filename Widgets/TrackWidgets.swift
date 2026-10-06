@@ -11,6 +11,8 @@ struct TrackWidgets: WidgetBundle {
 /// both driven by the system from the end time, so they stay smooth with Track closed.
 struct RestLiveActivity: Widget {
     private static let mint = Color(red: 0x48 / 255, green: 0xE5 / 255, blue: 0x8D / 255)
+    /// A tap opens the workout itself, not Home (TrackApp's onOpenURL).
+    private static let workout = URL(string: "track://workout")
 
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestAttributes.self) { context in
@@ -28,6 +30,7 @@ struct RestLiveActivity: Widget {
             .padding(16)
             .activityBackgroundTint(Color(red: 0x12 / 255, green: 0x14 / 255, blue: 0x18 / 255).opacity(0.85))
             .activitySystemActionForegroundColor(.white)
+            .widgetURL(Self.workout)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -57,6 +60,7 @@ struct RestLiveActivity: Widget {
                 ring(context.state, size: 20, line: 3)
             }
             .keylineTint(Self.mint)
+            .widgetURL(Self.workout)
         }
     }
 

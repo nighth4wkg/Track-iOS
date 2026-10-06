@@ -56,7 +56,7 @@ struct ExercisePicker: View {
                         TextField("Search exercises…", text: $query).submitLabel(.done)
                             .onSubmit { if let first = results.first { pick(first) } else if custom { pick(typed) } }
                         if !query.isEmpty {
-                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
+                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted).frame(width: 44, height: 44).contentShape(Rectangle()) }
                                 .accessibilityLabel("Clear search")
                         }
                     }
@@ -80,7 +80,8 @@ struct ExercisePicker: View {
                                         if let times = usage[name] { Text(count(times, "time")).font(.caption).foregroundStyle(Palette.muted) }
                                         Image(systemName: "plus").font(.body.weight(.semibold)).foregroundStyle(Palette.accent)
                                     }
-                                    .frame(minHeight: 32).contentShape(Rectangle())
+                                    .frame(minHeight: 44).contentShape(Rectangle())
+                                    .padding(.vertical, -6) // a 44pt tap area, into the row's padding, at the same look
                                 }
                                 .buttonStyle(PressStyle())
                                 .accessibilityLabel("Add \(name)")

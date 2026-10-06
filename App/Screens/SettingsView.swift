@@ -1,5 +1,6 @@
 import SwiftUI
 import TrackCore
+import UserNotifications
 
 /// Settings, as the website's sheet: "Settings" with ✕, the Training · Data · Account · About tabs (tap, drag the
 /// selection, or swipe the page), and rows of a label with its glass select. Every choice ticks.
@@ -77,6 +78,8 @@ private struct TrainingSettings: View {
     @State private var draft = ""
     @State private var error: String?
     @FocusState private var typing: Bool
+    /// Notifications turned off for Track: the rest timer can't alert with the phone locked.
+    @State private var alertsOff = false
 
     private func saveCustom() {
         guard let seconds = Int(draft), (15...600).contains(seconds) else { error = "Enter 15–600 seconds."; return }
@@ -116,10 +119,18 @@ private struct TrainingSettings: View {
                                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.input))
                                 .focused($typing).onSubmit(saveCustom)
                                 .onChange(of: typing) { _, now in if !now { saveCustom() } }
+                                .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { typing = false }.fontWeight(.semibold) } }
                             Text("sec").foregroundStyle(Palette.muted)
                         }
                     }
-                    if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
+                    if let error { Text(error).font(.caption).foregroundStyle(Palette.dangerText) }
+                }
+            }
+            if alertsOff {
+                Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
+                    ListRow(icon: "bell.slash", title: "Rest alerts are off", detail: "Allow notifications for Track in Settings") {
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                    }
                 }
             }
             SettingRow(icon: "circle.lefthalf.filled", label: "Appearance") {
@@ -128,6 +139,7 @@ private struct TrainingSettings: View {
             }
         }
         .onAppear { draft = String(settings.restSeconds) }
+        .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }
         .animation(.smooth(duration: 0.3), value: custom)
     }
 }
@@ -141,7 +153,7 @@ private struct DataSettings: View {
             .font(.subheadline).foregroundStyle(Palette.muted)
         GlassList {
             ListRow(icon: model.mode == .sync ? "icloud" : "iphone", title: "Sync status",
-                    detail: "Saved on this iPhone · \(count(model.training.sessions.count, "workout"))") { EmptyView() }
+                    detail: model.loadError == nil ? "Saved on this iPhone · \(count(model.training.sessions.count, "workout"))" : "Not saving: restore a backup below") { EmptyView() }
             BackupSection()
         }
     }
@@ -156,40 +168,5 @@ private struct AccountSettings: View {
             ListRow(icon: "arrow.triangle.2.circlepath.icloud", title: "Turn on sync", detail: "Coming soon") { EmptyView() }
                 .opacity(0.6)
         }
-    }
-}
-
-private struct AboutSettings: View {
-    @State private var copied = false
-    private static let discord = "n1ghthawq"
-
-    var body: some View {
-        Text("A personal project").font(.headline).foregroundStyle(Palette.text)
-        Text("Track is purely vibe-coded: built with AI assistance and made for my own personal training. It’s shared as-is, so there may be rough edges.")
-            .font(.subheadline).foregroundStyle(Palette.muted)
-        GlassList {
-            Button {
-                UIPasteboard.general.string = Self.discord
-                copied = true
-            } label: {
-                ListRow(icon: "bubble.left", title: "Found a problem?", detail: "Message \(Self.discord) on Discord") {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc").foregroundStyle(copied ? Palette.accent : Palette.muted)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(PressStyle())
-            .sensoryFeedback(.success, trigger: copied) { _, now in now }
-            Link(destination: URL(string: "https://trackk.pages.dev/privacy")!) {
-                ListRow(icon: "shield", title: "Privacy", detail: "What Track stores and how to delete it") {
-                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
-                }
-            }
-            ListRow(mark: true, title: "Track for iPhone", detail: "Version \(Self.version)") { EmptyView() }
-        }
-    }
-
-    static var version: String {
-        let info = Bundle.main.infoDictionary
-        return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
     }
 }

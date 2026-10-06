@@ -6,6 +6,7 @@ import TrackCore
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @State private var settingsOpen = false
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
         @Bindable var model = model
@@ -19,6 +20,10 @@ struct MainView: View {
             RankPage(settingsOpen: $settingsOpen)
                 .tabItem { Label("Rank", systemImage: "medal") }.tag(AppTab.rank)
         }
+        // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
+        .id(model.day)
+        .onChange(of: phase) { _, now in if now == .active { model.refreshDay() } }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
         .tint(Palette.accent)
         .opacity(model.workoutOpen && model.workoutCovers ? 0 : 1)
         .sensoryFeedback(.selection, trigger: model.tab)

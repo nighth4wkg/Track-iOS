@@ -24,12 +24,22 @@ struct BackupSection: View {
     @State private var restored = 0
 
     var body: some View {
-        ShareLink(item: BackupFile(training: model.training),
-                  preview: SharePreview("Track backup", image: Image(systemName: "doc"))) {
-            ListRow(icon: "square.and.arrow.up", title: "Export backup", detail: "Save a copy of everything as a file") { EmptyView() }
-                .contentShape(Rectangle())
+        // While the saved copy can't be read, the export is that file as it is (the website's recovery export), not
+        // the empty app.
+        if let unreadable = model.unreadableFile {
+            ShareLink(item: unreadable) {
+                ListRow(icon: "square.and.arrow.up", title: "Export unreadable data", detail: "Save the copy Track couldn’t read") { EmptyView() }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
+        } else {
+            ShareLink(item: BackupFile(training: model.training),
+                      preview: SharePreview("Track backup", image: Image(systemName: "doc"))) {
+                ListRow(icon: "square.and.arrow.up", title: "Export backup", detail: "Save a copy of everything as a file") { EmptyView() }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
         }
-        .buttonStyle(PressStyle())
         Button { importing = true } label: {
             ListRow(icon: "square.and.arrow.down", title: "Restore backup", detail: "Replace this iPhone’s data from a file") { EmptyView() }
                 .contentShape(Rectangle())
@@ -39,7 +49,7 @@ struct BackupSection: View {
             guard case .success(let url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url), let backup = try? TrainingFile.decode(data), backup.version == 1 else {
+            guard let data = try? Data(contentsOf: url), let backup = try? TrainingFile.decode(data), backup.isValid else {
                 model.show("This file is not a valid Track backup.")
                 return
             }

@@ -95,7 +95,7 @@ struct HistoryView: View {
                            in: range, displayedComponents: .date)
                     .labelsHidden()
                     .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
-                Button { withAnimation(.smooth) { value.wrappedValue = nil } } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }
+                Button { withAnimation(.smooth) { value.wrappedValue = nil } } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted).frame(width: 44, height: 44).contentShape(Rectangle()) }
                     .accessibilityLabel("Any \(label.lowercased()) date")
             } else {
                 Button("Any") {
@@ -103,6 +103,7 @@ struct HistoryView: View {
                 }
                     .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
                     .padding(.horizontal, 12).frame(minHeight: 36).glass(radius: 12, fill: Palette.control, lifted: false)
+                    .frame(minHeight: 44).contentShape(Rectangle())
                     .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
             }
         }

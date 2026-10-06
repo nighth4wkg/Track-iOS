@@ -11,7 +11,9 @@ struct WorkoutView: View {
     @State private var options = false
     @State private var dragging: String?
     @State private var box = ReorderBox()
-    /// How far the page is pulled right by the edge swipe.
+    /// How far the page is pulled right by the edge swipe: live while the finger is down (gone, animated, if the
+    /// system cancels the swipe), then the slide away.
+    @GestureState(resetTransaction: Transaction(animation: .smooth(duration: 0.25))) private var drag: CGFloat = 0
     @State private var pull: CGFloat = 0
     @State private var width: CGFloat = 400
     @FocusState private var focus: String?
@@ -54,6 +56,7 @@ struct WorkoutView: View {
                     .opacity(dragging == nil ? 1 : 0).allowsHitTesting(dragging == nil)
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
+                .scrollEdgeEffectStyle(.hard, for: .top) // the timer stays readable over scrolled sets
                 .scrollDisabled(dragging != nil).onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.viewport = $0 }
                 // A drag the system cancelled leaves the list up: a tap puts the cards back.
                 .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
@@ -70,11 +73,15 @@ struct WorkoutView: View {
             .background { Color.clear.ignoresSafeArea().onDrop(of: [.text], delegate: drop(active)) }
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { box.height = $0 }
             .background(Backdrop())
-            .offset(x: pull)
-            .shadow(color: .black.opacity(pull > 0 ? 0.25 : 0), radius: 20)
+            .offset(x: pull + drag)
+            .shadow(color: .black.opacity(pull + drag > 0 ? 0.25 : 0), radius: 20)
             .overlay(alignment: .leading) { edgeSwipe }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .onAppear { dragging = nil; pull = 0 }
+            // Settled back (let go short, or cancelled): the tabs underneath needn't be drawn again.
+            .onChange(of: drag) { _, now in
+                if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if pull == 0, drag == 0 { model.workoutCovers = true } } }
+            }
             .task { try? await Task.sleep(for: .seconds(0.6)); model.workoutCovers = true }
             .onDisappear { model.workoutCovers = false }
             .sheet(isPresented: $addingExercise) {
@@ -100,12 +107,11 @@ struct WorkoutView: View {
     private var edgeSwipe: some View {
         Color.clear.frame(width: 16).contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 8, coordinateSpace: .global)
-                .onChanged { pull = max(0, $0.translation.width); if model.workoutCovers { model.workoutCovers = false } }
+                .updating($drag) { value, drag, _ in drag = max(0, value.translation.width) }
+                .onChanged { _ in if model.workoutCovers { model.workoutCovers = false } }
                 .onEnded { drag in
-                    guard drag.translation.width > width / 3 || drag.predictedEndTranslation.width > width / 2 else {
-                        withAnimation(.smooth(duration: 0.25)) { pull = 0 } completion: { model.workoutCovers = true }
-                        return
-                    }
+                    guard drag.translation.width > width / 3 || drag.predictedEndTranslation.width > width / 2 else { return }
+                    pull = max(0, drag.translation.width)
                     withAnimation(.smooth(duration: 0.25)) { pull = width } completion: {
                         var instant = Transaction()
                         instant.disablesAnimations = true
@@ -151,48 +157,5 @@ struct WorkoutView: View {
             }
             Button("Done") { focus = nil }.fontWeight(.semibold)
         }
-    }
-}
-
-/// The workout's options, as the website's: rename, switch kg ⇄ lb, start a rest, discard the workout.
-struct WorkoutOptions: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        let active = model.training.active
-        let split = model.training.splits.first { $0.id == active?.splitId }
-        let unit = model.training.settings.unit
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                Text("Workout options").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-                Spacer()
-                GlassCircleButton(icon: "xmark", label: "Close") { dismiss() }.padding(.top, -6).padding(.trailing, -6)
-            }
-            Text(active?.name ?? "").font(.subheadline).foregroundStyle(Palette.muted).padding(.bottom, 6)
-            option(split != nil ? "Rename split" : "Rename workout", "pencil") {
-                dismiss()
-                model.naming = Naming(title: split != nil ? "Rename split" : "Rename workout", name: active?.name ?? "",
-                                      label: split != nil ? "Split name" : "Workout name", action: "Save name") { name in model.update { $0.active?.name = name } }
-            }
-            option(unit == .kg ? "Use pounds (lb)" : "Use kilograms (kg)", "arrow.left.arrow.right") {
-                model.update { $0.settings.unit = unit == .kg ? .lb : .kg }
-            }
-            option("Start rest timer", "timer") { model.startRest(); dismiss() }
-            option("Discard workout", "trash", danger: true) { dismiss(); model.discard() }
-        }
-        .padding(24)
-        .presentationDetents([.height(360)])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(.ultraThinMaterial)
-    }
-
-    private func option(_ title: String, _ icon: String, danger: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: icon).font(.headline).foregroundStyle(danger ? Palette.danger : Palette.text)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .glass(radius: 24, fill: danger ? .clear : Palette.control, lifted: false)
-        }
-        .buttonStyle(PressStyle())
     }
 }

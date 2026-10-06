@@ -4,7 +4,7 @@ name: App
 on:
   push:
     branches: [main]
-    paths: ['App/**', 'Core/Sources/**', 'Core/Package.swift', 'project.yml', '.github/workflows/app.yml']
+    paths: ['App/**', 'Widgets/**', 'Core/Sources/**', 'Core/Package.swift', 'project.yml', '.github/workflows/app.yml']
   workflow_dispatch:
 concurrency:
   group: app-${{ github.ref }}

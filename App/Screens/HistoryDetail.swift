@@ -83,7 +83,7 @@ struct HistoryDetail: View {
             }
             .padding(.top, 20)
         }
-        .padding(.horizontal, 16).padding(.bottom, 16)
+        .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 16) // clear of the sheet's grabber
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 1) }
     }

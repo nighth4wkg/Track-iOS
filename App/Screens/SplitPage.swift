@@ -17,7 +17,7 @@ struct SplitPage: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(split.name).font(.system(size: 34, weight: .bold)).foregroundStyle(Palette.text)
+                            Text(split.name).scaledFont(34, weight: .bold).foregroundStyle(Palette.text)
                             if split.exercises.isEmpty && !live {
                                 Button("Tap to add exercises") { picking = true }.font(.body).foregroundStyle(Palette.accent)
                             } else {
@@ -56,7 +56,7 @@ struct SplitPage: View {
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).frame(maxWidth: .infinity, minHeight: 44)
                     }
                     Button { model.deleteSplit(split) } label: { Label("Delete split", systemImage: "trash") }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.danger).frame(maxWidth: .infinity, minHeight: 44)
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.dangerText).frame(maxWidth: .infinity, minHeight: 44)
                         .buttonStyle(PressStyle()).padding(.top, 24)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)

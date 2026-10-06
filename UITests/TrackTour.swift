@@ -1,11 +1,12 @@
 import XCTest
 
 /// Every screen and flow, used as a person would, with a screenshot at each step ("NN-what") to check by eye: the
-/// looks, the motion caught mid-way, and what each tap did. It never stops on something missing; it prints
-/// "TOUR missing: …" and carries on, so one run shows everything.
+/// looks, the motion caught mid-way, and what each tap did. It doesn't stop on something missing: it prints
+/// "TOUR missing: …" and carries on, so one run shows everything, then fails if anything was missing.
 final class TrackTour: XCTestCase {
     private let app = XCUIApplication()
     private var step = 0
+    private var missing: [String] = []
 
     override func setUp() {
         continueAfterFailure = true
@@ -13,6 +14,8 @@ final class TrackTour: XCTestCase {
         app.launchEnvironment["TRACK_SEED"] = ProcessInfo.processInfo.environment["TRACK_SEED"]
         app.launch()
     }
+
+    override func tearDown() { XCTAssertEqual(missing, [], "steps the tour couldn't do") }
 
     func testTour() {
         snap("home")
@@ -30,7 +33,7 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Done"].firstMatch, "keyboard Done"); snap("keyboard-gone")
         for n in 2...3 { tap(check("Bench Press set \(n)"), "✓ set \(n)"); snap("ticked-\(n)", after: 0.15) }
         snap("bench-folded", after: 1)
-        tap(check("Bench Press set 3"), "untick after fold"); snap("untick-folded-card", after: 0.6)
+        XCTAssertFalse(check("Bench Press set 3").isHittable, "a folded card hides its sets"); snap("untick-folded-card", after: 0.6)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press' AND NOT label CONTAINS 'set'")).firstMatch, "open folded card"); snap("folded-opened", after: 0.6)
         tap(check("Bench Press set 3"), "untick set 3"); snap("unticked", after: 0.8)
         tap(check("Bench Press set 3"), "retick set 3"); snap("reticked", after: 1)
@@ -50,7 +53,7 @@ final class TrackTour: XCTestCase {
             lat.press(forDuration: 1.2, thenDragTo: press, withVelocity: .slow, thenHoldForDuration: 0.8)
             snap("dropped-0.1s", after: 0.1); snap("dropped-settled", after: 1)
             print("TOUR order: \(app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Lat pulldown", "Overhead Press"])).allElementsBoundByIndex.map { "\($0.label)@\(Int($0.frame.minY))" })")
-        } else { print("TOUR missing: drag") }
+        } else { missing.append("drag"); print("TOUR missing: drag") }
         tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Resume workout'")).firstMatch, "Resume"); snap("resumed", after: 1)
         tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
@@ -59,7 +62,7 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Continue"].firstMatch, "Continue"); snap("progress", after: 1)
 
         // The tabs.
-        for period in ["D", "M", "W"] { tap(app.buttons[period].firstMatch, period); snap("progress-\(period)", after: 0.6) }
+        for period in ["Day", "Month", "Week"] { tap(app.buttons[period].firstMatch, period); snap("progress-\(period.prefix(1))", after: 0.6) }
         app.swipeUp(); snap("progress-scrolled"); app.swipeDown()
         tap(app.tabBars.buttons["Rank"], "Rank"); snap("rank", after: 0.8)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bodyweight'")).firstMatch, "bodyweight"); snap("bodyweight", after: 0.8)
@@ -120,7 +123,7 @@ final class TrackTour: XCTestCase {
         let kg = app.textFields["Bench Press set 1 weight in lb"]
         tap(kg, "lb field"); app.typeText("135"); app.textFields["Bench Press set 1 reps"].tap(); app.typeText("10")
         app.textFields["Bench Press set 1 RIR"].tap(); app.typeText("2"); snap("manual-typed-not-logged", after: 1)
-        tap(check("Bench Press set 1"), "✓ set 1"); snap("manual-ticked", after: 0.8)
+        tap(check("Bench Press set 1"), "✓ set 1"); allowNotificationsIfAsked(); snap("manual-ticked", after: 0.8)
         tap(app.buttons["Done"].firstMatch, "keyboard Done")
         tap(app.buttons["Finish workout"].firstMatch, "Finish"); tap(app.buttons["dialog-action"], "confirm"); snap("first-recap", after: 1.5)
         tap(app.buttons["Continue"].firstMatch, "Continue"); snap("first-progress", after: 1)
@@ -139,7 +142,7 @@ final class TrackTour: XCTestCase {
     }
 
     private func tap(_ element: XCUIElement, _ what: String) {
-        if element.waitForExistence(timeout: 4), element.isHittable { element.tap() } else { print("TOUR missing: \(what) (step \(step))") }
+        if element.waitForExistence(timeout: 4), element.isHittable { element.tap() } else { missing.append(what); print("TOUR missing: \(what) (step \(step))") }
     }
 
     private func check(_ set: String) -> XCUIElement {

@@ -21,10 +21,10 @@ struct ProgressPage: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Volume \(period.now)").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
+                        Text("Volume \(period.now)").scaledFont(14, weight: .semibold).foregroundStyle(Palette.muted)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(weight(change.volume, unit)).font(.system(size: 28, weight: .bold)).monospacedDigit().contentTransition(.numericText())
-                            Text(unit.rawValue).font(.system(size: 16, weight: .semibold)).foregroundStyle(Palette.muted)
+                            Text(weight(change.volume, unit)).scaledFont(28, weight: .bold).monospacedDigit().contentTransition(.numericText())
+                            Text(unit.rawValue).scaledFont(16, weight: .semibold).foregroundStyle(Palette.muted)
                         }
                         .foregroundStyle(Palette.text)
                     }
@@ -32,7 +32,7 @@ struct ProgressPage: View {
                     Picker("Volume by", selection: $period.animation(.smooth(duration: 0.35))) {
                         ForEach(Period.allCases, id: \.self) { Text($0.rawValue).accessibilityLabel($0.name) }
                     }
-                    .pickerStyle(.segmented).fixedSize()
+                    .pickerStyle(.segmented).controlSize(.large).fixedSize()
                 }
                 if let change = change.change {
                     Chip(text: change == 0 ? "Same as \(period.last)" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs \(period.last)", accent: change > 0)
@@ -40,7 +40,7 @@ struct ProgressPage: View {
                 VStack(spacing: 8) {
                     VolumeBars(volumes: model.derived("bars \(period) \(dayKey(now))") { $0.volumes(period.bars, per: period, at: now) }, label: period.name)
                     HStack { Text(period.first); Spacer(); Text(period.now.prefix(1).uppercased() + period.now.dropFirst()) }
-                        .font(.system(size: 12)).foregroundStyle(Palette.muted)
+                        .scaledFont(12).foregroundStyle(Palette.muted)
                 }
             }
             // The website's measures: 16 inside, a 28pt total, 112pt bars, tiles 8 apart.
@@ -70,7 +70,7 @@ struct ProgressPage: View {
                                     detail: "\(TrainingSet.display(kg: after.kg, unit: unit)) \(unit.rawValue) × \(after.reps) · \(Date(timeIntervalSince1970: Double(after.date) / 1000).formatted(.gregorian.month(.abbreviated).day()))") {
                                 Text(record.kind == .weight ? "+\(TrainingSet.display(kg: after.kg - record.before.kg, unit: unit)) \(unit.rawValue)"
                                      : "+\(count(after.reps - record.before.reps, "rep"))")
-                                    .font(.system(size: 14, weight: .bold)).monospacedDigit().foregroundStyle(Palette.accent)
+                                    .scaledFont(14, weight: .bold).monospacedDigit().foregroundStyle(Palette.accent)
                             }
                             .contentShape(Rectangle())
                         }
@@ -90,8 +90,8 @@ struct ProgressPage: View {
                     Image(systemName: icon).foregroundStyle(icon == "flame" ? Palette.streak : Palette.muted)
                     Text(value).monospacedDigit().foregroundStyle(Palette.text)
                 }
-                .font(.system(size: 20, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
-                Text(label).font(.system(size: 14)).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
+                .scaledFont(20, weight: .bold).lineLimit(1).minimumScaleFactor(0.7)
+                Text(label).scaledFont(14).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(.vertical, 16).padding(.horizontal, 12).glass()
         }
@@ -114,9 +114,9 @@ private struct LevelTile: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) { Image(systemName: "rosette").foregroundStyle(Palette.muted); Text("Lv \(progress.level)").monospacedDigit() }
-                    .font(.system(size: 20, weight: .bold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
+                    .scaledFont(20, weight: .bold).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
                 Text(earned.map { "+\($0) XP" } ?? "\(progress.current)/\(progress.required) XP")
-                    .font(.system(size: 14, weight: earned == nil ? .regular : .bold)).monospacedDigit()
+                    .scaledFont(14, weight: earned == nil ? .regular : .bold).monospacedDigit()
                     .foregroundStyle(earned == nil ? Palette.muted : Palette.accent).lineLimit(1).minimumScaleFactor(0.8)
                     .contentTransition(.numericText())
                 Spacer(minLength: 4)

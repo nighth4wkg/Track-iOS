@@ -45,6 +45,9 @@ struct ExerciseCard: View, Equatable {
                 }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityValue(open ? "Open" : "Closed")
+                // Moving without the drag, for VoiceOver and Switch Control.
+                .accessibilityAction(named: "Move up") { move(by: -1) }
+                .accessibilityAction(named: "Move down") { move(by: 1) }
             }
             VStack(spacing: 8) {
                     HStack(spacing: 8) {
@@ -118,5 +121,13 @@ struct ExerciseCard: View, Equatable {
     /// A new set with the last one's weight and reps to start from (RIR blank), on the other side if in sides.
     private func addSet() {
         model.update { $0.updateActive(exercise: exercise.id) { exercise in exercise.sets.append(exercise.nextSet) } }
+    }
+
+    private func move(by step: Int) {
+        model.update { training in
+            guard let from = training.active?.exercises.firstIndex(where: { $0.id == exercise.id }),
+                  training.active?.exercises.indices.contains(from + step) == true else { return }
+            training.active?.exercises.swapAt(from, from + step)
+        }
     }
 }

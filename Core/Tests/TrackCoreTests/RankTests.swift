@@ -44,4 +44,8 @@ final class RankTests: XCTestCase {
         XCTAssertEqual(chest.progress, 1)
         XCTAssertNil(chest.next)
     }
+
+    func testABadBodyweightDoesNotCrash() {
+        XCTAssertTrue([session([("Bench Press", 80, 5)])].muscleRanks(bodyweight: -70).allSatisfy { $0.rank >= 0 })
+    }
 }

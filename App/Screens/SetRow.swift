@@ -45,7 +45,7 @@ struct SetRow: View {
                 field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "—", glow: record != nil, done: shown.done)
                 check(done: shown.done, carried: carried, record: record != nil)
             }
-            if let error { Text(error).font(.caption).foregroundStyle(Palette.danger) }
+            if let error { Text(error).font(.caption).foregroundStyle(Palette.dangerText) }
         }
         .contentShape(Rectangle())
         .gesture(HorizontalPan(onChange: { x in
@@ -59,6 +59,8 @@ struct SetRow: View {
         .animation(.smooth(duration: 0.3), value: hint)
         .onAppear { load(unit); celebrated = signature(record, shown) }
         .onDisappear(perform: flush)
+        // Leaving the app saves a number still waiting on its pause.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in if pending != nil { flush() } }
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
         .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { "New best · " + describe($0, shown) }) }
@@ -81,7 +83,7 @@ struct SetRow: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(record ? Palette.record : done ? Palette.primary : Palette.control)
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(LinearGradient(colors: [Palette.danger, Color(hex: 0xBD1616)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(LinearGradient(colors: [Palette.danger, Palette.dangerDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .opacity(arm)
                 Image(systemName: record ? "trophy.fill" : "checkmark").font(.body.weight(.bold))
                     .foregroundStyle(done ? Palette.primaryText : Palette.muted.opacity(carried ? 0.9 : 0.4))
@@ -95,6 +97,7 @@ struct SetRow: View {
         .buttonStyle(.borderless)
         .accessibilityLabel(armed ? "Delete \(exercise.name) set \(number)"
             : "\(exercise.name) set \(number)\(record ? ", new best" : ""): \(done ? "done. Tap to undo" : carried ? "same as last time. Tap to log" : "mark done")")
+        .accessibilityAction(named: "Delete set") { delete() } // the swipe, for VoiceOver
         .sensoryFeedback(trigger: done) { _, now in now ? .impact(weight: .medium) : .selection }
         .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
     }
@@ -106,11 +109,11 @@ struct SetRow: View {
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
             .font(.body.weight(.bold)).monospacedDigit()
-            .foregroundStyle(done ? Palette.accent : Palette.text)
+            .foregroundStyle(glow ? Palette.record : done ? Palette.accent : Palette.text)
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(glow ? 0.8 : 0), lineWidth: 1.5))
-            .shadow(color: Palette.record.opacity(0.45), radius: glow && hint ? 6 : 0)
+            .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
             .focused(focus, equals: "\(set.id).\(id)")
     }
 
@@ -148,7 +151,7 @@ struct SetRow: View {
     }
 
     private func inputError(_ unit: TrackCore.Settings.Unit) -> String? {
-        if !weight.isEmpty, TrainingSet.kilograms(from: weight, unit: unit).map({ $0 <= 5000 }) != true { return "Enter a weight from 0 to 5,000 kg." }
+        if !weight.isEmpty, TrainingSet.kilograms(from: weight, unit: unit).map({ $0 <= 5000 }) != true { return "Enter a weight from 0 to \(unit == .kg ? "5,000 kg" : "11,023 lb")." }
         if !reps.isEmpty, TrainingSet.wholeNumber(reps).map({ (1...1000).contains($0) }) != true { return "Reps must be a whole number from 1 to 1,000." }
         if !rir.isEmpty, TrainingSet.wholeNumber(rir).map({ (0...10).contains($0) }) != true { return "RIR must be a whole number from 0 to 10." }
         return nil

@@ -16,7 +16,7 @@ struct HomeView: View {
         Page(title: training.active == nil ? "Ready to train" : "Keep going",
              caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), spacing: 24, settingsOpen: $settingsOpen) {
             if let error = model.loadError {
-                Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(Palette.danger)
+                Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(Palette.dangerText)
             }
             if let active = training.active {
                 NativeList(items: [active], deleteLabel: "Discard", onDelete: { _ in model.discard() }, insets: EdgeInsets()) { ResumeCard(active: $0) }

@@ -5,9 +5,9 @@ extension Palette {
     /// Starter, Novice, Solid, Strong, Elite: vivid in both themes for bars and the medal (the website's dark-theme
     /// colours, which read clearly on the light glass too); text uses `rankText`, a shade deeper in light mode.
     static let ranks: [Color] = [Color(hex: 0x9AA3AB), Color(hex: 0x4E9EF0), Color(hex: 0x2FD27A), Color(hex: 0xA77CF7), Color(hex: 0xF2BE3B)]
-    static let rankText: [Color] = [Color(light: 0x6B7680, dark: 0x9AA3AB), Color(light: 0x2A7FD6, dark: 0x5AA7EC),
-                                    Color(light: 0x14A35A, dark: 0x48E58D), Color(light: 0x8A55EE, dark: 0xB287F5),
-                                    Color(light: 0xC99212, dark: 0xF2C14E)]
+    static let rankText: [Color] = [Color(light: 0x5F6A73, dark: 0x9AA3AB), Color(light: 0x1F6FBF, dark: 0x5AA7EC),
+                                    Color(light: 0x16804A, dark: 0x48E58D), Color(light: 0x7447C9, dark: 0xB287F5),
+                                    Color(light: 0x8A6A00, dark: 0xF2C14E)]
 }
 
 /// Rank: each muscle ranked from its strongest lift relative to bodyweight, the overall rank (the average place on
@@ -77,6 +77,7 @@ struct RankPage: View {
                 Label("\(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue)", systemImage: "pencil")
                     .font(.caption.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
                     .padding(.horizontal, 10).frame(minHeight: 32).glass(radius: 16, fill: Palette.control, lifted: false)
+                    .frame(minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(PressStyle()).padding(14)
             .accessibilityLabel("Bodyweight \(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue). Change")
@@ -84,7 +85,8 @@ struct RankPage: View {
     }
 
     private func setup(unit: TrackCore.Settings.Unit) -> some View {
-        VStack(spacing: 12) {
+        let valid = TrainingSet.kilograms(from: bodyweightText, unit: unit).map { $0 >= 20 && $0 <= 400 } == true
+        return VStack(spacing: 12) {
             Image(systemName: "medal").font(.system(size: 30, weight: .semibold)).foregroundStyle(Palette.text)
                 .frame(width: 64, height: 64).glass(radius: 18, fill: Palette.control, lifted: false)
             Text("Unlock your ranks").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
@@ -95,8 +97,11 @@ struct RankPage: View {
                     .frame(minHeight: 48).background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
                 Text(unit.rawValue).foregroundStyle(Palette.muted)
             }
-            Button("Save") { save(unit) }.buttonStyle(PrimaryButtonStyle())
-                .disabled(TrainingSet.kilograms(from: bodyweightText, unit: unit).map { $0 >= 20 && $0 <= 400 } != true)
+            .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { typing = false }.fontWeight(.semibold) } }
+            if !valid, !bodyweightText.isEmpty {
+                Text("Enter a bodyweight from \(unit == .kg ? "20 to 400 kg" : "44 to 880 lb").").font(.caption).foregroundStyle(Palette.dangerText)
+            }
+            Button("Save") { save(unit) }.buttonStyle(PrimaryButtonStyle()).disabled(!valid)
         }
         .padding(24).frame(maxWidth: .infinity).glass()
     }
@@ -106,7 +111,7 @@ struct RankPage: View {
         model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
                               name: TrainingSet.display(kg: bodyweight, unit: unit), label: "Bodyweight (\(unit.rawValue))", placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true, action: "Save") { text in
             guard let kg = TrainingSet.kilograms(from: text, unit: unit), kg >= 20, kg <= 400 else {
-                model.show("Enter a bodyweight between \(unit == .kg ? "20 and 400 kg" : "44 and 880 lb")).")
+                model.show("Enter a bodyweight from \(unit == .kg ? "20 to 400 kg" : "44 to 880 lb").")
                 return
             }
             withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
@@ -164,7 +169,7 @@ private struct MuscleRow: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture { withAnimation(.smooth(duration: 0.3)) { open.toggle() } }
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(.isButton).accessibilityValue(open ? "Open" : "Closed")
         .sensoryFeedback(.selection, trigger: open)
     }
 }

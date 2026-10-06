@@ -35,11 +35,13 @@ extension Training {
         restUntil = nil
     }
 
-    /// Saves the active workout to the history: only sets marked done, and only exercises with any.
+    /// Saves the active workout to the history: only sets marked done, and only exercises with any. The split takes
+    /// the workout's shape now, not while it runs, so a discarded workout leaves the split as it was.
     public mutating func finish(now: Int = nowMillis()) throws {
         guard var session = active else { throw TrainingError.noActiveWorkout }
         if now < session.startedAt { throw TrainingError.finishBeforeStart }
         if session.completedSets.isEmpty { throw TrainingError.nothingLogged }
+        syncRoutine()
         session.finishedAt = now
         session.exercises = session.exercises.compactMap { exercise in
             var kept = exercise
@@ -63,8 +65,8 @@ extension Training {
         change(&active!.exercises[index])
     }
 
-    /// Keeps the split in step with the active workout's shape (its name, exercises, set counts and sides), so the
-    /// next start begins from it. Numbers are not copied into the split.
+    /// Gives the split the active workout's shape (its name, exercises, set counts and sides), so the next start
+    /// begins from it. Numbers are not copied into the split.
     public mutating func syncRoutine() {
         guard let active, let index = splits.firstIndex(where: { $0.id == active.splitId }) else { return }
         let routine = splits[index]

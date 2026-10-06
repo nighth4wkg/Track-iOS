@@ -85,7 +85,7 @@ struct SwipeToDelete<Content: View>: View {
                 .foregroundStyle(.white)
                 .frame(width: width - 8, height: 52)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(LinearGradient(colors: [Palette.danger, Color(hex: 0xBD1616)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                    .fill(LinearGradient(colors: [Palette.danger, Palette.dangerDeep], startPoint: .topLeading, endPoint: .bottomTrailing)))
             }
             .buttonStyle(PressStyle())
             .offset(x: width + offset)

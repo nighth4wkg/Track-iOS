@@ -27,7 +27,7 @@ struct RestCapsule: View {
                             Text(left > 0 ? "Rest" : "Ready for your next set").font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
                         }
                         Spacer(minLength: 4)
-                        if left > 0 { pill("+30s") { model.changeRest(by: 30) } }
+                        if left > 0 { pill("+30s") { model.changeRest(by: 30) }.accessibilityLabel("Add 30 seconds") }
                         pill(left > 0 ? "Skip" : "Done") { model.changeRest(by: 0) }
                     }
                     .padding(.leading, 14).padding(.trailing, 10).padding(.vertical, 10)

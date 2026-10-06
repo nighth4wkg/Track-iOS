@@ -28,7 +28,7 @@ final class WorkoutTests: XCTestCase {
         var training = Training()
         try training.start(split(), now: 1000)
         XCTAssertThrowsError(try training.finish(now: 2000)) { XCTAssertEqual($0 as? TrainingError, .nothingLogged) }
-        training.updateActive(exercise: "bench") { $0.sets[1] = try! $0.sets[1].edited(weight: "50", reps: "10", rir: "2", unit: .kg, autoLog: true) }
+        training.updateActive(exercise: "bench") { $0.sets[1] = $0.sets[1].edited(weight: "50", reps: "10", rir: "2", unit: .kg, autoLog: true) }
         try training.finish(now: 61_000)
         XCTAssertNil(training.active)
         XCTAssertEqual(training.sessions.count, 1)
@@ -62,6 +62,7 @@ final class WorkoutTests: XCTestCase {
         XCTAssertNil(set.edited(weight: "60", reps: "-8", rir: "2", unit: .kg).reps)
         XCTAssertEqual(set.edited(weight: "60", reps: " 8 ", rir: "2", unit: .kg).reps, 8)
         XCTAssertEqual(set.edited(weight: "132.28", reps: "5", rir: "1", unit: .lb).kg!, 60, accuracy: 0.01)
+        XCTAssertEqual(set.edited(weight: "62,5", reps: "5", rir: "1", unit: .kg).kg, 62.5, "a comma-decimal keypad")
         XCTAssertEqual(TrainingSet.display(kg: 60, unit: .lb), "132.28")
         XCTAssertEqual(TrainingSet.display(kg: 62.5, unit: .kg), "62.5")
         XCTAssertEqual(TrainingSet.display(kg: 60, unit: .kg), "60")
@@ -83,14 +84,24 @@ final class WorkoutTests: XCTestCase {
         XCTAssertNil(exercise.nextSide)
     }
 
-    func testTheSplitFollowsTheWorkoutsShapeNotItsNumbers() throws {
+    func testTheSplitTakesTheWorkoutsShapeOnlyWhenFinished() throws {
         var training = Training()
         training.splits = [split()]
         try training.start(split())
         training.updateActive(exercise: "row") { $0.sets.append(TrainingSet(kg: 40, reps: 10, rir: 1, done: true)) }
-        training.syncRoutine()
+        training.discard()
+        XCTAssertEqual(training.splits[0], split(), "a discarded workout leaves the split alone")
+        try training.start(split())
+        training.updateActive(exercise: "row") { $0.sets.append(TrainingSet(kg: 40, reps: 10, rir: 1, done: true)) }
+        try training.finish()
         XCTAssertEqual(training.splits[0].exercises[1].sets.count, 2)
-        XCTAssertNil(training.splits[0].exercises[1].sets[1].kg)
+        XCTAssertNil(training.splits[0].exercises[1].sets[1].kg, "the shape, not the numbers")
+        XCTAssertEqual(training.splits[0].exercises[0].sets.count, 2, "sets left undone stay in the split")
+        // Repeating an old workout (only its done sets) and discarding it changes nothing.
+        let before = training.splits[0]
+        try training.start(Split(id: "upper", name: "Upper", exercises: training.sessions[0].exercises), carryOver: false)
+        training.discard()
+        XCTAssertEqual(training.splits[0], before)
     }
 
     func testTemplatesGiveThreeEmptySetsPerExercise() {

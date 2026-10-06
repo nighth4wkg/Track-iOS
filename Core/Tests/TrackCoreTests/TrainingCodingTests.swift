@@ -58,4 +58,32 @@ final class TrainingCodingTests: XCTestCase {
         XCTAssertEqual(id, id.lowercased())
         XCTAssertEqual(id.count, 36)
     }
+
+    func testBackupChecksMatchTheWebsites() throws {
+        XCTAssertTrue(try TrainingFile.decode(fixture()).isValid, "the website's own data passes")
+        var bad = try TrainingFile.decode(fixture())
+        bad.settings.bodyweight = -70
+        XCTAssertFalse(bad.isValid)
+        bad = try TrainingFile.decode(fixture())
+        bad.settings.restSeconds = 0
+        XCTAssertFalse(bad.isValid)
+        bad = try TrainingFile.decode(fixture())
+        bad.splits.append(bad.splits[0])
+        XCTAssertFalse(bad.isValid, "duplicate ids")
+        bad = try TrainingFile.decode(fixture())
+        bad.sessions[0].exercises[0].sets[0].kg = nil
+        XCTAssertFalse(bad.isValid, "a done set without a weight")
+    }
+
+    func testAnUnreadableFileIsSetAsideNotDestroyed() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(newID())
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = TrainingFile(url: folder.appendingPathComponent("training.v1.json"))
+        try Data("{".utf8).write(to: file.url)
+        XCTAssertThrowsError(try file.load())
+        try file.setAside(now: 5)
+        XCTAssertEqual(try Data(contentsOf: folder.appendingPathComponent("training.v1.unreadable-5.json")), Data("{".utf8))
+        try file.save(Training())
+        XCTAssertEqual(try file.load(), Training())
+    }
 }

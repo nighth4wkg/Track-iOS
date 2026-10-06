@@ -14,16 +14,17 @@ struct WelcomeView: View {
                     Text("Your training space").font(.body).foregroundStyle(Palette.muted)
                     Text("Welcome to Track").font(.largeTitle.weight(.bold)).foregroundStyle(Palette.text)
                 }
+                Text("A simple gym tracker for your splits, sets and progress.").font(.body).foregroundStyle(Palette.text)
                 Text("Choose where your workouts live.").font(.body).foregroundStyle(Palette.muted).padding(.bottom, 8)
                 ChoiceCard(icon: "iphone", title: "Keep it on this iPhone",
                            detail: "No account. Everything stays on this device.", accent: true) {
                     withAnimation(.smooth) { model.choose(.local) }
                 }
                 ChoiceCard(icon: "arrow.triangle.2.circlepath.icloud", title: "Sync across devices",
-                           detail: "Sign up or log in. Your workouts on iPhone, iPad and the web.", badge: "Soon") {
+                           detail: "Your workouts on iPhone, iPad and the web.", badge: "Soon") {
                     syncSoon = true
                 }
-                Text("You can turn on sync later in Settings.")
+                Text("Sync with the website is coming. You can turn it on in Settings when it arrives.")
                     .font(.footnote).foregroundStyle(Palette.muted)
                     .frame(maxWidth: .infinity).padding(.top, 8)
             }

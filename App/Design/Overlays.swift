@@ -35,23 +35,32 @@ enum DialogWindow {
 }
 
 /// The dim and the one dialog showing: a question (Cancel beside the action, green or red), or a name to type.
-/// It fades and scales in smoothly; tapping the dim cancels.
+/// It fades and scales in smoothly; tapping around it cancels. A card taller than the space left (a small iPhone,
+/// large text, the keyboard up) scrolls.
 private struct DialogLayer: View {
     @Environment(AppModel.self) private var model
+    @State private var height: CGFloat = 0
 
     var body: some View {
+        let open = model.confirm != nil || model.naming != nil
+        let cancel = { model.confirm = nil; model.naming = nil }
         ZStack {
-            if model.confirm != nil || model.naming != nil {
-                Color.black.opacity(0.5).ignoresSafeArea()
-                    .onTapGesture { model.confirm = nil; model.naming = nil }
-                    .transition(.opacity)
+            if open { Color.black.opacity(0.5).ignoresSafeArea().transition(.opacity) }
+            ScrollView {
+                Group {
+                    if let confirm = model.confirm {
+                        ConfirmCard(confirm: confirm).id(confirm.id).dialogCard()
+                            .sensoryFeedback(confirm.destructive ? .warning : .impact(weight: .light), trigger: confirm.id)
+                    } else if let naming = model.naming {
+                        NameCard(naming: naming).id(naming.id).dialogCard()
+                    }
+                }
+                .accessibilityAction(.escape, cancel)
+                .frame(maxWidth: .infinity, minHeight: height)
+                .background { if open { Color.clear.contentShape(Rectangle()).onTapGesture(perform: cancel) } }
             }
-            if let confirm = model.confirm {
-                ConfirmCard(confirm: confirm).id(confirm.id).dialogCard()
-                    .sensoryFeedback(confirm.destructive ? .warning : .impact(weight: .light), trigger: confirm.id)
-            } else if let naming = model.naming {
-                NameCard(naming: naming).id(naming.id).dialogCard()
-            }
+            .scrollBounceBehavior(.basedOnSize)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }
         .animation(.smooth(duration: 0.25), value: model.confirm?.id)
         .animation(.smooth(duration: 0.25), value: model.naming?.id)
@@ -79,10 +88,7 @@ private struct ConfirmCard: View {
         }
     }
 
-    private func resolve() {
-        model.confirm = nil
-        confirm.action()
-    }
+    private func resolve() { model.confirm = nil; confirm.action() }
 }
 
 /// Naming a split or workout: "Give your routine a name that makes sense to you.", the field, Cancel and the action.
@@ -128,6 +134,7 @@ private extension View {
         padding(24)
             .frame(maxWidth: 420)
             .glass(radius: 28, fill: Palette.dialog)
+            .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal)
             .padding(20)
             .transition(.scale(scale: 0.94).combined(with: .opacity))
     }
@@ -139,26 +146,30 @@ private extension View {
 struct ToastOverlay: View {
     @Environment(AppModel.self) private var model
     @State private var host = UUID()
+    /// While typing, the toast shows at the top instead, off the rows being filled in.
+    @State private var keyboard = false
 
     var body: some View {
         VStack {
-            Spacer()
+            if !keyboard { Spacer() }
             if let toast = model.toast, model.toastHosts.last == host {
                 HStack(spacing: 12) {
-                    Text(toast.text).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
+                    Text(toast.text).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true).padding(.vertical, 8)
                     Spacer(minLength: 8)
                     if let undo = toast.undo {
                         Button("Undo") { undo(); withAnimation(.smooth) { model.toast = nil } }
                             .font(.subheadline.weight(.bold)).foregroundStyle(Palette.accent)
+                            .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                     }
                 }
                 .accessibilityElement(children: .contain)
                 .padding(.horizontal, 18).frame(minHeight: 52)
                 .background(Capsule().fill(.ultraThinMaterial))
                 .glass(radius: 26, fill: .clear)
-                .padding(.horizontal, 16).padding(.bottom, 92)
+                .padding(.horizontal, 16).padding(keyboard ? .top : .bottom, keyboard ? 4 : 92)
                 .gesture(DragGesture(minimumDistance: 10).onEnded { if $0.translation.height > 20 { withAnimation(.smooth) { model.toast = nil } } })
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.move(edge: keyboard ? .top : .bottom).combined(with: .opacity))
                 .task(id: toast.id) {
                     try? await Task.sleep(for: .seconds(toast.undo == nil ? 4 : 6)) // a little longer to reach Undo
                     if model.toast?.id == toast.id { withAnimation(.smooth) { model.toast = nil } }
@@ -166,6 +177,8 @@ struct ToastOverlay: View {
             }
         }
         .animation(.smooth(duration: 0.3), value: model.toast)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
         .onAppear { model.toastHosts.append(host) }
         .onDisappear { model.toastHosts.removeAll { $0 == host } }
     }
@@ -183,15 +196,5 @@ private struct Presented: ViewModifier {
     func body(content: Content) -> some View {
         let theme = model.training.settings.theme
         content.overlay { ToastOverlay() }.preferredColorScheme(theme == .light ? .light : theme == .dark ? .dark : nil)
-    }
-}
-
-/// Light, Dark or System for every window at once, sheets included, the moment it changes.
-enum Appearance {
-    static func apply(_ theme: TrackCore.Settings.Theme) {
-        let style: UIUserInterfaceStyle = theme == .light ? .light : theme == .dark ? .dark : .unspecified
-        for scene in UIApplication.shared.connectedScenes {
-            for window in (scene as? UIWindowScene)?.windows ?? [] { window.overrideUserInterfaceStyle = style }
-        }
     }
 }

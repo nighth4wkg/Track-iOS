@@ -23,9 +23,9 @@ struct Page<Content: View>: View {
                 // The website's page: 24pt from the edges, a 32pt semibold title.
                 VStack(alignment: .leading, spacing: spacing) {
                     VStack(alignment: .leading, spacing: 4) {
-                        if let caption { Text(caption).font(.system(size: 16)).foregroundStyle(Palette.muted) }
+                        if let caption { Text(caption).scaledFont(16).foregroundStyle(Palette.muted) }
                         HStack {
-                            Text(title).font(.system(size: 32, weight: .semibold)).foregroundStyle(Palette.text)
+                            Text(title).scaledFont(32, weight: .semibold).foregroundStyle(Palette.text)
                             Spacer()
                             accessory
                         }
@@ -173,7 +173,7 @@ struct GlassCircleButton: View {
         let image = Image(systemName: icon).font(.body.weight(.semibold))
             .foregroundStyle(active ? Palette.accent : Palette.text)
         if #available(iOS 26, *) {
-            Button(action: action) { image.frame(width: 28, height: 28) }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
+            Button(action: action) { image.frame(width: 32, height: 32) }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
         } else {
             Button(action: action) { image.frame(width: 44, height: 44).glass(radius: 22, fill: Palette.control, lifted: false) }
                 .buttonStyle(PressStyle()).accessibilityLabel(label)

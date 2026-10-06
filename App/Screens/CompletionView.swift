@@ -30,7 +30,7 @@ struct CompletionView: View {
                         VStack(spacing: 4) {
                             Text("WORKOUT SAVED").font(.caption.weight(.bold)).tracking(1.2).foregroundStyle(Palette.accent)
                             Text("Nice workout!").font(.largeTitle.weight(.bold)).foregroundStyle(Palette.text)
-                            (Text(recap.session.name).bold().foregroundStyle(Palette.text) + Text(" is safely in your history."))
+                            Text("\(Text(recap.session.name).bold().foregroundStyle(Palette.text)) is safely in your history.")
                                 .font(.subheadline).foregroundStyle(Palette.muted)
                         }
                         .multilineTextAlignment(.center)

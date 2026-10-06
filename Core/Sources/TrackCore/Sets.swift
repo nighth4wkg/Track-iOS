@@ -68,9 +68,9 @@ extension TrainingSet {
         return value == value.rounded() ? String(Int(value)) : String(value)
     }
 
-    /// A typed weight in kg, or nil when it isn't a plain decimal.
+    /// A typed weight in kg, or nil when it isn't a plain decimal ("62,5" counts, as comma-decimal keypads type it).
     public static func kilograms(from text: String, unit: Settings.Unit) -> Double? {
-        let decimal = text.trimmingCharacters(in: .whitespaces)
+        let decimal = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
         guard decimal.range(of: #"^(?:\d+(?:\.\d*)?|\.\d+)$"#, options: .regularExpression) != nil, let value = Double(decimal) else { return nil }
         return value / (unit == .lb ? poundsPerKilogram : 1)
     }
