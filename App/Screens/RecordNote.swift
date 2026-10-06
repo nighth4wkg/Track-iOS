@@ -7,19 +7,25 @@ struct RecordNote: View {
     let text: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "trophy.fill").font(.subheadline.weight(.bold)).foregroundStyle(Palette.record)
-                .frame(width: 32, height: 32).background(Circle().fill(Palette.record.opacity(0.18)))
-            VStack(alignment: .leading, spacing: 1) {
-                Text("New best").font(.subheadline.weight(.bold)).foregroundStyle(Palette.record)
-                Text(text).font(.footnote.weight(.medium)).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
+        HStack(spacing: 12) {
+            Image(systemName: "trophy.fill").font(.title3).foregroundStyle(Palette.record)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Palette.record.opacity(0.16)))
+                .overlay(Circle().strokeBorder(Palette.record.opacity(0.35), lineWidth: 1))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("New best").font(.callout.weight(.bold)).foregroundStyle(Palette.record)
+                Text(text).font(.subheadline.weight(.medium)).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
+        .padding(.leading, 10).padding(.trailing, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.dialog))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(0.45), lineWidth: 1))
+        // Solid, with a faint gold wash from the trophy's side and a soft lift (the website's).
+        .background(LinearGradient(colors: [Palette.record.opacity(0.14), .clear], startPoint: .leading, endPoint: UnitPoint(x: 0.7, y: 0.5)))
+        .background(Palette.dialog)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Palette.record.opacity(0.4), lineWidth: 1))
+        .shadow(color: .black.opacity(0.25), radius: 14, y: 10)
         .allowsHitTesting(false)
         .accessibilityHidden(true) // announced once instead (SetRow)
     }

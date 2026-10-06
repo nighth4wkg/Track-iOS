@@ -22,8 +22,10 @@ struct ExerciseCard: View, Equatable {
     /// The sets' height. A closed card keeps its sets, clipped to nothing, so opening many at once (after a drag)
     /// only animates heights instead of building every row in one frame.
     @State private var setsHeight: CGFloat?
-    /// A set's new best, shown over the header for a moment (each one a new id, so a better one restarts it).
+    /// A set's new best, over the header for a moment with room around it (each one a new id, so a better one
+    /// restarts it). Drawn on the card, sized to the header, since the header's swipe clips anything larger.
     @State private var best: (text: String, id: Int)?
+    @State private var headerHeight: CGFloat = 44
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
@@ -45,15 +47,13 @@ struct ExerciseCard: View, Equatable {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                         .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
                 }
-                .overlay { if let best { RecordNote(text: best.text).transition(.scale(scale: 0.96).combined(with: .opacity)) } }
-                .animation(.smooth(duration: 0.3), value: best?.id)
-                .task(id: best?.id) { if best != nil { try? await Task.sleep(for: .seconds(2.8)); best = nil } }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityValue(open ? "Open" : "Closed")
                 // Moving without the drag, for VoiceOver and Switch Control.
                 .accessibilityAction(named: "Move up") { move(by: -1) }
                 .accessibilityAction(named: "Move down") { move(by: 1) }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
             VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         Text("SET").frame(width: 28)
@@ -100,6 +100,14 @@ struct ExerciseCard: View, Equatable {
             manual = nil
             if now, typingHere(focus.wrappedValue) { focus.wrappedValue = nil }
         }
+        .overlay(alignment: .top) {
+            if let best {
+                RecordNote(text: best.text).frame(height: headerHeight + 12).padding(.horizontal, -6).offset(y: -6)
+                    .transition(.scale(scale: 0.96).combined(with: .opacity))
+            }
+        }
+        .animation(.smooth(duration: 0.3), value: best?.id)
+        .task(id: best?.id) { if best != nil { try? await Task.sleep(for: .seconds(2.8)); best = nil } }
         .padding(16)
         .glass(lifted: false)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
