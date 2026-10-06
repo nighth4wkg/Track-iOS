@@ -151,7 +151,6 @@ struct ToastOverlay: View {
 
     var body: some View {
         VStack {
-            if !keyboard { Spacer() }
             if let toast = model.toast, model.toastHosts.last == host {
                 HStack(spacing: 12) {
                     Text(toast.text).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(3)
@@ -167,7 +166,7 @@ struct ToastOverlay: View {
                 .padding(.horizontal, 18).frame(minHeight: 52)
                 .background(Capsule().fill(.ultraThinMaterial))
                 .glass(radius: 26, fill: .clear)
-                .padding(.horizontal, 16).padding(keyboard ? .top : .bottom, keyboard ? 4 : 92)
+                .padding(.horizontal, 16).padding(keyboard ? .top : .bottom, keyboard ? 52 : 92) // under the navigation bar while typing
                 .gesture(DragGesture(minimumDistance: 10).onEnded { if $0.translation.height > 20 { withAnimation(.smooth) { model.toast = nil } } })
                 .transition(.move(edge: keyboard ? .top : .bottom).combined(with: .opacity))
                 .task(id: toast.id) {
@@ -176,6 +175,7 @@ struct ToastOverlay: View {
                 }
             }
         }
+        .frame(maxHeight: .infinity, alignment: keyboard ? .top : .bottom)
         .animation(.smooth(duration: 0.3), value: model.toast)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
