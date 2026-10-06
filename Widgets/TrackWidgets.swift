@@ -10,7 +10,7 @@ struct TrackWidgets: WidgetBundle {
 /// The rest timer in the Dynamic Island and on the Lock Screen: a ring emptying in Track's mint and the countdown,
 /// both driven by the system from the end time, so they stay smooth with Track closed.
 struct RestLiveActivity: Widget {
-    private static let mint = Color(red: 0x48 / 255, green: 0xE5 / 255, blue: 0x8D / 255)
+    private static let mint = Color(hex: Hex.mint)
     /// A tap opens the workout itself, not Home (TrackApp's onOpenURL).
     private static let workout = URL(string: "track://workout")
 
@@ -28,7 +28,7 @@ struct RestLiveActivity: Widget {
                 if context.state.resting { controls(stale: context.isStale) }
             }
             .padding(16)
-            .activityBackgroundTint(Color(red: 0x12 / 255, green: 0x14 / 255, blue: 0x18 / 255).opacity(0.85))
+            .activityBackgroundTint(Color(hex: Hex.night, opacity: 0.85))
             .activitySystemActionForegroundColor(.white)
             .widgetURL(Self.workout)
         } dynamicIsland: { context in

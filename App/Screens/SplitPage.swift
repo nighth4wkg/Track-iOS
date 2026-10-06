@@ -60,8 +60,8 @@ struct SplitPage: View {
                         .buttonStyle(PressStyle()).padding(.top, 24)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)
-                .frame(maxWidth: 720).frame(maxWidth: .infinity)
-                .animation(.smooth(duration: 0.3), value: split.exercises.map(\.id))
+                .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
+                .animation(.smooth(duration: Motion.standard), value: split.exercises.map(\.id))
                 .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))
             }
             .background(Backdrop())

@@ -54,14 +54,14 @@ struct HistoryView: View {
                     .buttonStyle(SecondaryButtonStyle())
             }
         }
-        .animation(.smooth(duration: 0.3), value: datesOpen)
+        .animation(.smooth(duration: Motion.standard), value: datesOpen)
         .sensoryFeedback(.selection, trigger: day)
         .onChange(of: query) { shownCount = 20 }
     }
 
     private var filterButton: some View {
         GlassCircleButton(icon: "line.3.horizontal.decrease", label: datesOpen ? "Hide date range" : "Filter by date",
-                          active: from != nil || to != nil) { withAnimation(.smooth(duration: 0.3)) { datesOpen.toggle() } }
+                          active: from != nil || to != nil) { withAnimation(.smooth(duration: Motion.standard)) { datesOpen.toggle() } }
     }
 
     private func search(filtering: Bool, label: String) -> some View {

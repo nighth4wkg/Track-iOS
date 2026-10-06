@@ -4,13 +4,13 @@ import TrackCore
 // Track's Sheen theme, from the website's tokens (app/styles/sheen-theme.css, liquid-glass.css, appearance.css):
 // glass surfaces with a light rim, one mint accent used sparingly, and the system font at Dynamic Type sizes.
 enum Palette {
-    static let background = Color(light: 0xEEF1F6, dark: 0x121418)
+    static let background = Color(light: 0xEEF1F6, dark: Hex.night)
     static let text = Color(light: 0x232731, dark: 0xF7F8F6)
     static let muted = Color(light: 0x59616E, dark: 0xC0C7C5)
     static let hairline = Color(light: 0xC8CDD6, dark: 0x6C7779).opacity(0.55)
     /// The one accent: text and small marks. Big green blocks are only the primary button.
-    static let accent = Color(light: 0x0A7A48, dark: 0x48E58D)
-    static let primary = Color(light: 0x3FD583, dark: 0x48E58D)
+    static let accent = Color(light: 0x0A7A48, dark: Hex.mint)
+    static let primary = Color(light: 0x3FD583, dark: Hex.mint)
     static let primaryText = Color(light: 0x0D2A1A, dark: 0x102B1C)
     /// Red fills (delete buttons), and their deeper end; red text is dangerText, lighter in dark mode to stay readable.
     static let danger = Color(hex: 0xE52626)
@@ -27,6 +27,23 @@ enum Palette {
     static let input = Color(light: 0xE7EBF2, dark: 0x000000, lightOpacity: 0.78, darkOpacity: 0.22)
     static let rim = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 1, darkOpacity: 0.24)
     static let shadow = Color(light: 0x2A3A52, dark: 0x000000, lightOpacity: 0.08, darkOpacity: 0.35)
+    /// Behind a dialog.
+    static let dim = Color.black.opacity(0.5)
+    /// The backdrop's blue glow from the top corner.
+    static let glow = Color(hex: 0x2F6F8F, opacity: 0.16)
+}
+
+/// Track's motion timings in seconds (the website's live in CSS: --motion-fast, --motion-standard).
+enum Motion {
+    static let fast = 0.2, quick = 0.25, standard = 0.3, slow = 0.35
+    /// A sheet sliding away: what opening another one from it waits for.
+    static let sheetAway = 0.45
+}
+
+/// Track's sizes: the widest a page's column gets, and a card's corners.
+enum Measure {
+    static let page: CGFloat = 720
+    static let card: CGFloat = 20
 }
 
 /// One of the website's fixed sizes that still grows with the system text size (Dynamic Type).
@@ -43,11 +60,6 @@ extension View {
 }
 
 extension Color {
-    init(hex: UInt32, opacity: Double = 1) {
-        self.init(.sRGB, red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255,
-                  blue: Double(hex & 0xFF) / 255, opacity: opacity)
-    }
-
     /// A colour that follows light and dark mode.
     init(light: UInt32, dark: UInt32, lightOpacity: Double = 1, darkOpacity: Double = 1) {
         self.init(UIColor { traits in
@@ -63,7 +75,7 @@ struct Backdrop: View {
     var body: some View {
         ZStack {
             Palette.background
-            RadialGradient(colors: [Color(hex: 0x2F6F8F, opacity: 0.16), .clear], center: .topLeading, startRadius: 0, endRadius: 520)
+            RadialGradient(colors: [Palette.glow, .clear], center: .topLeading, startRadius: 0, endRadius: 520)
             RadialGradient(colors: [Palette.primary.opacity(0.08), .clear], center: .trailing, startRadius: 0, endRadius: 420)
         }
         .ignoresSafeArea()
@@ -73,7 +85,7 @@ struct Backdrop: View {
 /// A glass surface: a translucent fill, the sheen across its top-left, and a light rim (the website's --glass-face
 /// and --glass-edge).
 struct Glass: ViewModifier {
-    var radius: CGFloat = 20
+    var radius: CGFloat = Measure.card
     var fill: Color = Palette.card
     var lifted = true
 
@@ -92,7 +104,7 @@ struct Glass: ViewModifier {
 }
 
 extension View {
-    func glass(radius: CGFloat = 20, fill: Color = Palette.card, lifted: Bool = true) -> some View {
+    func glass(radius: CGFloat = Measure.card, fill: Color = Palette.card, lifted: Bool = true) -> some View {
         modifier(Glass(radius: radius, fill: fill, lifted: lifted))
     }
 }

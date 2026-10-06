@@ -85,7 +85,7 @@ struct QuestList: View {
                                     Text("\(award == nil ? "Incomplete" : "Completed") · \(quest.difficulty) · Level \(index + 1)")
                                         .font(.caption).foregroundStyle(Palette.muted)
                                     if let award, let session = sessions.first(where: { $0.id == award.sessionId }) {
-                                        Button { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { model.history = session } } label: {
+                                        Button { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { model.history = session } } label: {
                                             Label("View earning workout", systemImage: "arrow.up.right").labelStyle(TrailingIcon())
                                         }
                                         .font(.caption.weight(.semibold)).foregroundStyle(Palette.accent).padding(.top, 2)

@@ -44,7 +44,7 @@ struct RestCapsule: View {
                 }
             }
         }
-        .animation(.smooth(duration: 0.35), value: until)
+        .animation(.smooth(duration: Motion.slow), value: until)
         .sensoryFeedback(.success, trigger: ended)
     }
 

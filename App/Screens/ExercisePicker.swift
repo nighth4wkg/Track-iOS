@@ -45,7 +45,7 @@ struct ExercisePicker: View {
             sessions.reduce(into: [String: Int]()) { usage, session in for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
         }
         let results = Catalog.search(query, usage: usage)
-        let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(100))
+        let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
         let custom = !typed.isEmpty && !results.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
         return NavigationStack {
             ScrollView {
@@ -112,7 +112,7 @@ struct ExercisePicker: View {
     }
 
     private func pick(_ name: String) {
-        onPick(String(name.prefix(100)))
+        onPick(String(name.prefix(Limits.name)))
         dismiss()
     }
 }

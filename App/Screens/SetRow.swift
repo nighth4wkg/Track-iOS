@@ -53,12 +53,12 @@ struct SetRow: View {
         .gesture(HorizontalPan(onChange: { x in
             arm = max(0, min(1, (armed ? 1 : 0) - x / 72))
         }, onEnd: { _, velocity in
-            let arming = abs(velocity) > 300 ? velocity < 0 : arm > 0.5
-            withAnimation(.smooth(duration: 0.2)) { arm = arming ? 1 : 0 }
+            let arming = abs(velocity) > HorizontalPan.flick ? velocity < 0 : arm > 0.5
+            withAnimation(.smooth(duration: Motion.fast)) { arm = arming ? 1 : 0 }
             armed = arming
         }))
-        .animation(.smooth(duration: 0.25), value: shown.done)
-        .animation(.smooth(duration: 0.3), value: hint)
+        .animation(.smooth(duration: Motion.quick), value: shown.done)
+        .animation(.smooth(duration: Motion.standard), value: hint)
         .onAppear { load(unit); celebrated = signature(record, shown) }
         .onDisappear(perform: flush)
         // Leaving the app saves a number still waiting on its pause.
@@ -66,7 +66,7 @@ struct SetRow: View {
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
         .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
-        .onChange(of: rir) { _, value in if let n = Int(value), n > 10 { rir = "10" } } // RIR goes up to 10
+        .onChange(of: rir) { _, value in if let n = Int(value), n > Limits.rir { rir = String(Limits.rir) } } // RIR goes up to Limits.rir
         .onChange(of: focus.wrappedValue) { old, id in
             // Leaving the row saves it straight away.
             if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
@@ -137,22 +137,22 @@ struct SetRow: View {
         celebrated = now
         if let text { onRecord(text); AccessibilityNotification.Announcement("New best. " + text).post() }
         burst += 1
-        withAnimation(.smooth(duration: 0.3)) { hint = true }
+        withAnimation(.smooth(duration: Motion.standard)) { hint = true }
         let mine = burst
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { if burst == mine { withAnimation(.smooth) { hint = false } } }
+        DispatchQueue.main.asyncAfter(deadline: .now() + RecordNote.seconds) { if burst == mine { withAnimation(.smooth) { hint = false } } }
     }
 
     private func inputError(_ unit: TrackCore.Settings.Unit) -> String? {
-        if !weight.isEmpty, TrainingSet.kilograms(from: weight, unit: unit).map({ $0 <= 5000 }) != true { return "Enter a weight from 0 to \(unit == .kg ? "5,000 kg" : "11,023 lb")." }
-        if !reps.isEmpty, TrainingSet.wholeNumber(reps).map({ (1...1000).contains($0) }) != true { return "Reps must be a whole number from 1 to 1,000." }
-        if !rir.isEmpty, TrainingSet.wholeNumber(rir).map({ (0...10).contains($0) }) != true { return "RIR must be a whole number from 0 to 10." }
+        if !weight.isEmpty, TrainingSet.kilograms(from: weight, unit: unit).map({ $0 <= Limits.kg }) != true { return "Enter a weight from \(Limits.wholeRange(0...Limits.kg, unit))." }
+        if !reps.isEmpty, TrainingSet.wholeNumber(reps).map({ (1...Limits.reps).contains($0) }) != true { return "Reps must be a whole number from 1 to \(Limits.grouped(Limits.reps))." }
+        if !rir.isEmpty, TrainingSet.wholeNumber(rir).map({ (0...Limits.rir).contains($0) }) != true { return "RIR must be a whole number from 0 to \(Limits.rir)." }
         return nil
     }
 
     private func delete() {
-        withAnimation(.smooth(duration: 0.2)) { arm = 0 }
+        withAnimation(.smooth(duration: Motion.fast)) { arm = 0 }
         armed = false
-        withAnimation(.smooth(duration: 0.25)) { model.removeSet(set.id, in: exercise.id) }
+        withAnimation(.smooth(duration: Motion.quick)) { model.removeSet(set.id, in: exercise.id) }
     }
 
     /// Shows the set's numbers, unless they already read the same (so typing "62." isn't rewritten to "62").

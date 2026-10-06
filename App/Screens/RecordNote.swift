@@ -4,6 +4,8 @@ import TrackCore
 /// "New best" over what it beat: for a moment it takes the exercise header's place (the website's too), so it
 /// covers nothing half-way and never the numbers being typed. It never takes taps.
 struct RecordNote: View {
+    /// How long it shows; the set's glow lasts as long (SetRow).
+    static let seconds = 2.8
     let text: String
 
     var body: some View {

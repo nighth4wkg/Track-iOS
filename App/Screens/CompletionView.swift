@@ -61,7 +61,7 @@ struct CompletionView: View {
                     VStack(spacing: 2) {
                         Button("Continue") { model.finished = nil }.buttonStyle(PrimaryButtonStyle())
                         Button { let session = recap.session; model.finished = nil; model.tab = .history
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { model.history = session }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { model.history = session }
                         } label: { Label("View workout", systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
                     }
@@ -85,7 +85,7 @@ struct CompletionView: View {
             .sensoryFeedback(.success, trigger: shown) { _, now in now }
             .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: landed) { _, now in now && celebrate }
             .onAppear {
-                withAnimation(.smooth(duration: 0.35)) { shown = true }
+                withAnimation(.smooth(duration: Motion.slow)) { shown = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { landed = true }
             }
         }
@@ -164,7 +164,7 @@ struct CompletionView: View {
 private extension View {
     /// Rises 8pt and fades in, `delay` seconds after the card.
     func rise(_ shown: Bool, _ delay: Double) -> some View {
-        opacity(shown ? 1 : 0).offset(y: shown ? 0 : 8).animation(.smooth(duration: 0.35).delay(delay), value: shown)
+        opacity(shown ? 1 : 0).offset(y: shown ? 0 : 8).animation(.smooth(duration: Motion.slow).delay(delay), value: shown)
     }
 }
 

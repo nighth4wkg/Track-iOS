@@ -74,7 +74,7 @@ struct HistoryCalendar: View {
     static func monthStart(_ date: Date) -> Date { Calendars.local.dateInterval(of: .month, for: date)!.start }
 
     private func step(_ months: Int) {
-        withAnimation(.smooth(duration: 0.25)) {
+        withAnimation(.smooth(duration: Motion.quick)) {
             month = Calendars.local.date(byAdding: .month, value: months, to: month)!
             day = nil
         }

@@ -34,7 +34,7 @@ struct Page<Content: View>: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
-                .frame(maxWidth: 720)
+                .frame(maxWidth: Measure.page)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
                 .opacity(1 - Double(abs(shift)) / 12)
@@ -43,9 +43,8 @@ struct Page<Content: View>: View {
             .onAppear(perform: arrive)
             .scrollDismissesKeyboard(.interactively)
             .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
-                // The website's rule: 64pt, or a flick.
-                guard abs(x) > 64 || abs(velocity) > 600, let index = AppTab.allCases.firstIndex(of: model.tab) else { return }
-                let next = index + (x < 0 ? 1 : -1)
+                guard let step = HorizontalPan.tabStep(x, velocity), let index = AppTab.allCases.firstIndex(of: model.tab) else { return }
+                let next = index + step
                 if AppTab.allCases.indices.contains(next) { model.tab = AppTab.allCases[next] }
             }))
             .background(Backdrop())
@@ -83,7 +82,7 @@ struct Page<Content: View>: View {
         model.arrivedTab = model.tab
         position.scrollTo(edge: .top)
         shift = 12 * model.tabStep
-        DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.2)) { shift = 0 } }
+        DispatchQueue.main.async { withAnimation(.easeOut(duration: Motion.fast)) { shift = 0 } }
     }
 }
 
@@ -102,7 +101,7 @@ struct GlassList<Content: View>: View {
             }
         }
         .glass()
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Measure.card, style: .continuous))
     }
 }
 

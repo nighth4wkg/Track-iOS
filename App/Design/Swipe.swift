@@ -6,6 +6,13 @@ import UIKit
 /// tab swipe) runs alongside the scroll, and never starts within 24pt of the screen's sides, on a native list (whose
 /// rows swipe for themselves, see SwipeZones) or on a control such as the segmented tabs.
 struct HorizontalPan: UIGestureRecognizerRepresentable {
+    /// A release this fast (pt/s) decides a row's swipe by its direction, however far it went.
+    static let flick: CGFloat = 300
+
+    /// The tab swipe, the website's rule: past 64pt or a flick past 600pt/s, to the next tab (1) or the one before
+    /// (-1); nil when it's neither.
+    static func tabStep(_ x: CGFloat, _ velocity: CGFloat) -> Int? { abs(x) > 64 || abs(velocity) > 600 ? (x < 0 ? 1 : -1) : nil }
+
     var sharesTouches = false
     var onChange: (CGFloat) -> Void
     var onEnd: (_ translation: CGFloat, _ velocity: CGFloat) -> Void
@@ -98,7 +105,7 @@ struct SwipeToDelete<Content: View>: View {
             offset = max(-width, min(0, start + x))
         }, onEnd: { x, velocity in
             // A flick decides; otherwise any drag left opens and any drag right closes.
-            settle(abs(velocity) > 300 ? velocity < 0 : x < -1 ? true : x > 1 ? false : open)
+            settle(abs(velocity) > HorizontalPan.flick ? velocity < 0 : x < -1 ? true : x > 1 ? false : open)
         }))
         .simultaneousGesture(TapGesture().onEnded { if open { settle(false) } })
         .sensoryFeedback(.impact(weight: .light), trigger: open) { _, now in now }

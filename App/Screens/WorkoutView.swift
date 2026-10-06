@@ -13,7 +13,7 @@ struct WorkoutView: View {
     @State private var box = ReorderBox()
     /// How far the page is pulled right by the edge swipe: live while the finger is down (gone, animated, if the
     /// system cancels the swipe), then the slide away.
-    @GestureState(resetTransaction: Transaction(animation: .smooth(duration: 0.25))) private var drag: CGFloat = 0
+    @GestureState(resetTransaction: Transaction(animation: .smooth(duration: Motion.quick))) private var drag: CGFloat = 0
     @State private var pull: CGFloat = 0
     @State private var width: CGFloat = 400
     @FocusState private var focus: String?
@@ -48,11 +48,11 @@ struct WorkoutView: View {
                             .id("bottom")
                     }
                     .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
-                    .frame(maxWidth: 720).frame(maxWidth: .infinity)
+                    .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
                     // While an exercise is held the cards wait unseen, moved without animating (ReorderList shows the moves).
                     .transaction { if dragging != nil { $0.animation = nil } }
-                    .animation(.smooth(duration: 0.3), value: active.exercises.map(\.id))
-                    .animation(.smooth(duration: 0.3), value: active.exercises.map { $0.sets.allSatisfy(\.done) }) // a card folding moves the rest
+                    .animation(.smooth(duration: Motion.standard), value: active.exercises.map(\.id))
+                    .animation(.smooth(duration: Motion.standard), value: active.exercises.map { $0.sets.allSatisfy(\.done) }) // a card folding moves the rest
                     .opacity(dragging == nil ? 1 : 0).allowsHitTesting(dragging == nil)
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
@@ -60,14 +60,14 @@ struct WorkoutView: View {
                 .scrollDisabled(dragging != nil).onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.viewport = $0 }
                 // A drag the system cancelled leaves the list up: a tap puts the cards back.
                 .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
-                    .onTapGesture { withAnimation(.smooth(duration: 0.3)) { dragging = nil } } } }
+                    .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { dragging = nil } } } }
                 .scrollDismissesKeyboard(.interactively)
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 .safeAreaInset(edge: .bottom) {
-                    VStack(spacing: 0) { RestCapsule(); if focus != nil { keyboardBar(fields) } }.animation(.smooth(duration: 0.25), value: focus == nil)
+                    VStack(spacing: 0) { RestCapsule(); if focus != nil { keyboardBar(fields) } }.animation(.smooth(duration: Motion.quick), value: focus == nil)
                 }
             }
             .onDrop(of: [.text], delegate: drop(active))
@@ -114,7 +114,7 @@ struct WorkoutView: View {
                 .onEnded { drag in
                     guard drag.translation.width > width / 3 || drag.predictedEndTranslation.width > width / 2 else { return }
                     pull = max(0, drag.translation.width)
-                    withAnimation(.smooth(duration: 0.25)) { pull = width } completion: {
+                    withAnimation(.smooth(duration: Motion.quick)) { pull = width } completion: {
                         var instant = Transaction()
                         instant.disablesAnimations = true
                         withTransaction(instant) { model.workoutOpen = false }

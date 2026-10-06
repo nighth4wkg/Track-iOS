@@ -40,7 +40,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
         .contentMargins(.vertical, 0, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
         .frame(height: items.reduce(0) { $0 + (heights[$1.id] ?? 52) + insets.top + insets.bottom })
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Measure.card, style: .continuous))
         .glass()
         // Its area keeps the tab swipe away; set again when it comes back (its frame may not have changed).
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0; SwipeZones.frames[zone] = $0 }

@@ -85,7 +85,7 @@ struct RankPage: View {
     }
 
     private func setup(unit: TrackCore.Settings.Unit) -> some View {
-        let valid = TrainingSet.kilograms(from: bodyweightText, unit: unit).map { $0 >= 20 && $0 <= 400 } == true
+        let valid = TrainingSet.kilograms(from: bodyweightText, unit: unit).map { Limits.bodyweight.contains($0) } == true
         return VStack(spacing: 12) {
             Image(systemName: "medal").font(.system(size: 30, weight: .semibold)).foregroundStyle(Palette.text)
                 .frame(width: 64, height: 64).glass(radius: 18, fill: Palette.control, lifted: false)
@@ -99,7 +99,7 @@ struct RankPage: View {
             }
             .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { typing = false }.fontWeight(.semibold) } }
             if !valid, !bodyweightText.isEmpty {
-                Text("Enter a bodyweight from \(unit == .kg ? "20 to 400 kg" : "44 to 880 lb").").font(.caption).foregroundStyle(Palette.dangerText)
+                Text("Enter a bodyweight from \(Limits.wholeRange(Limits.bodyweight, unit)).").font(.caption).foregroundStyle(Palette.dangerText)
             }
             Button("Save") { save(unit) }.buttonStyle(PrimaryButtonStyle()).disabled(!valid)
         }
@@ -110,8 +110,8 @@ struct RankPage: View {
     private func editBodyweight(_ bodyweight: Double, _ unit: TrackCore.Settings.Unit) {
         model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
                               name: TrainingSet.display(kg: bodyweight, unit: unit), label: "Bodyweight (\(unit.rawValue))", placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true, action: "Save") { text in
-            guard let kg = TrainingSet.kilograms(from: text, unit: unit), kg >= 20, kg <= 400 else {
-                model.show("Enter a bodyweight from \(unit == .kg ? "20 to 400 kg" : "44 to 880 lb").")
+            guard let kg = TrainingSet.kilograms(from: text, unit: unit), Limits.bodyweight.contains(kg) else {
+                model.show("Enter a bodyweight from \(Limits.wholeRange(Limits.bodyweight, unit)).")
                 return
             }
             withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
@@ -119,7 +119,7 @@ struct RankPage: View {
     }
 
     private func save(_ unit: TrackCore.Settings.Unit) {
-        guard let kg = TrainingSet.kilograms(from: bodyweightText, unit: unit), kg >= 20, kg <= 400 else { return }
+        guard let kg = TrainingSet.kilograms(from: bodyweightText, unit: unit), Limits.bodyweight.contains(kg) else { return }
         typing = false
         withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
     }
@@ -168,7 +168,7 @@ private struct MuscleRow: View {
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
-        .onTapGesture { withAnimation(.smooth(duration: 0.3)) { open.toggle() } }
+        .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } }
         .accessibilityAddTraits(.isButton).accessibilityValue(open ? "Open" : "Closed")
         .sensoryFeedback(.selection, trigger: open)
     }

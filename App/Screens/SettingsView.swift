@@ -14,7 +14,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     // iOS's own segmented control: Liquid Glass, and its selection can be dragged along.
-                    Picker("Section", selection: $tab.animation(.smooth(duration: 0.3))) {
+                    Picker("Section", selection: $tab.animation(.smooth(duration: Motion.standard))) {
                         ForEach(Tab.allCases, id: \.self) { Text($0.rawValue) }
                     }
                     .pickerStyle(.segmented)
@@ -32,9 +32,9 @@ struct SettingsView: View {
             .scrollDismissesKeyboard(.interactively)
             .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
                 // Swipe to the next or previous tab, as on the website.
-                guard abs(x) > 64 || abs(velocity) > 600, let index = Tab.allCases.firstIndex(of: tab) else { return }
-                let next = index + (x < 0 ? 1 : -1)
-                if Tab.allCases.indices.contains(next) { withAnimation(.smooth(duration: 0.3)) { tab = Tab.allCases[next] } }
+                guard let step = HorizontalPan.tabStep(x, velocity), let index = Tab.allCases.firstIndex(of: tab) else { return }
+                let next = index + step
+                if Tab.allCases.indices.contains(next) { withAnimation(.smooth(duration: Motion.standard)) { tab = Tab.allCases[next] } }
             }))
             .background(Backdrop())
             .navigationTitle("Settings")
@@ -73,7 +73,7 @@ struct SettingRow<Control: View>: View {
 private struct TrainingSettings: View {
     @Environment(AppModel.self) private var model
     private static let rests = [30, 60, 90, 120, 180, 300]
-    /// A rest that isn't one of the presets is typed in seconds (15–600), as on the website.
+    /// A rest that isn't one of the presets is typed in seconds (Limits.restSeconds), as on the website.
     @State private var custom = false
     @State private var draft = ""
     @State private var error: String?
@@ -82,7 +82,10 @@ private struct TrainingSettings: View {
     @State private var alertsOff = false
 
     private func saveCustom() {
-        guard let seconds = Int(draft), (15...600).contains(seconds) else { error = "Enter 15–600 seconds."; return }
+        guard let seconds = Int(draft), Limits.restSeconds.contains(seconds) else {
+            error = "Enter \(Limits.restSeconds.lowerBound)–\(Limits.restSeconds.upperBound) seconds."
+            return
+        }
         error = nil
         model.update { $0.settings.restSeconds = seconds }
     }
@@ -95,7 +98,7 @@ private struct TrainingSettings: View {
                 GlassMenu(selection: settings.unit, options: [(.kg, "kg"), (.lb, "lb")]) { value in model.update { $0.settings.unit = value } }
             }
             SettingRow(icon: "target", label: "Weekly goal") {
-                GlassMenu(selection: settings.weeklyGoal, options: (1...7).map { ($0, count($0, "day")) }) { value in
+                GlassMenu(selection: settings.weeklyGoal, options: Limits.weeklyGoal.map { ($0, count($0, "day")) }) { value in
                     model.update { $0.settings.weeklyGoal = value }
                 }
             }
@@ -140,7 +143,7 @@ private struct TrainingSettings: View {
         }
         .onAppear { draft = String(settings.restSeconds) }
         .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }
-        .animation(.smooth(duration: 0.3), value: custom)
+        .animation(.smooth(duration: Motion.standard), value: custom)
     }
 }
 

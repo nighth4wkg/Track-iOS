@@ -120,7 +120,7 @@ struct HistoryDetail: View {
         return VStack(alignment: .leading, spacing: 10) {
             Button {
                 if !noteOpen { draft = notes }
-                withAnimation(.smooth(duration: 0.3)) { noteOpen.toggle() }
+                withAnimation(.smooth(duration: Motion.standard)) { noteOpen.toggle() }
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "square.and.pencil").foregroundStyle(Palette.muted)
@@ -138,9 +138,9 @@ struct HistoryDetail: View {
                 TextField("How did this workout feel?", text: $draft, axis: .vertical)
                     .lineLimit(3...6).padding(12)
                     .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
-                    .onChange(of: draft) { _, value in if value.count > 500 { draft = String(value.prefix(500)) } }
+                    .onChange(of: draft) { _, value in if value.count > Limits.notes { draft = String(value.prefix(Limits.notes)) } }
                 HStack {
-                    Text("\(draft.count)/500").font(.caption).foregroundStyle(Palette.muted)
+                    Text("\(draft.count)/\(Limits.notes)").font(.caption).foregroundStyle(Palette.muted)
                     Spacer()
                     Button("Cancel") { withAnimation(.smooth) { noteOpen = false } }.foregroundStyle(Palette.text)
                     Button("Save note") {

@@ -29,7 +29,7 @@ struct ProgressPage: View {
                         .foregroundStyle(Palette.text)
                     }
                     Spacer()
-                    Picker("Volume by", selection: $period.animation(.smooth(duration: 0.35))) {
+                    Picker("Volume by", selection: $period.animation(.smooth(duration: Motion.slow))) {
                         ForEach(Period.allCases, id: \.self) { Text($0.rawValue).accessibilityLabel($0.name) }
                     }
                     .pickerStyle(.segmented).controlSize(.large).fixedSize()
@@ -133,7 +133,7 @@ private struct LevelTile: View {
             earned = fill.to - fill.from
             try? await Task.sleep(for: .milliseconds(350))
             if Self.level(fill.from) < Self.level(fill.to) {
-                withAnimation(.smooth(duration: 0.25)) { shown = 1 }
+                withAnimation(.smooth(duration: Motion.quick)) { shown = 1 }
                 try? await Task.sleep(for: .milliseconds(260))
                 shown = 0
             }

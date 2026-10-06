@@ -89,7 +89,7 @@ struct WeekRing: View {
 
 /// A total weight in the chosen unit, whole numbers with grouping: "10,805".
 func weight(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
-    (kg * (unit == .lb ? 2.2046226218 : 1)).formatted(.number.precision(.fractionLength(0)))
+    (kg * (unit == .lb ? Limits.poundsPerKilogram : 1)).formatted(.number.precision(.fractionLength(0)))
 }
 
 /// "1 exercise", "3 sets".

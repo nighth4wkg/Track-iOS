@@ -45,7 +45,7 @@ private struct DialogLayer: View {
         let open = model.confirm != nil || model.naming != nil
         let cancel = { model.confirm = nil; model.naming = nil }
         ZStack {
-            if open { Color.black.opacity(0.5).ignoresSafeArea().transition(.opacity) }
+            if open { Palette.dim.ignoresSafeArea().transition(.opacity) }
             ScrollView {
                 Group {
                     if let confirm = model.confirm {
@@ -62,8 +62,8 @@ private struct DialogLayer: View {
             .scrollBounceBehavior(.basedOnSize)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }
-        .animation(.smooth(duration: 0.25), value: model.confirm?.id)
-        .animation(.smooth(duration: 0.25), value: model.naming?.id)
+        .animation(.smooth(duration: Motion.quick), value: model.confirm?.id)
+        .animation(.smooth(duration: Motion.quick), value: model.naming?.id)
     }
 }
 
@@ -112,7 +112,7 @@ private struct NameCard: View {
                 .keyboardType(naming.number ? .decimalPad : .default)
                 .font(.body.weight(.semibold)).padding(.horizontal, 14).frame(minHeight: 48)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
-                .onChange(of: name) { _, value in if value.count > 100 { name = String(value.prefix(100)) } }
+                .onChange(of: name) { _, value in if value.count > Limits.name { name = String(value.prefix(Limits.name)) } }
             Button(action: save) { Label(naming.action, systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
                 .buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty).padding(.top, 6)
                 .accessibilityIdentifier("dialog-action")
@@ -176,7 +176,7 @@ struct ToastOverlay: View {
             }
         }
         .frame(maxHeight: .infinity, alignment: keyboard ? .top : .bottom)
-        .animation(.smooth(duration: 0.3), value: model.toast)
+        .animation(.smooth(duration: Motion.standard), value: model.toast)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
         .onAppear { model.toastHosts.append(host) }

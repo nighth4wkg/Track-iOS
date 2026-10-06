@@ -42,7 +42,7 @@ struct ExerciseCard: View, Equatable {
                 }
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
-                .onTapGesture { withAnimation(.smooth(duration: 0.3)) { manual = (!open, finished) } }
+                .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { manual = (!open, finished) } }
                 .reorderHandle(exercise.id, box: box, dragging: $dragging) {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                         .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
@@ -71,7 +71,7 @@ struct ExerciseCard: View, Equatable {
                     }
                     HStack(spacing: 0) {
                         Button { addSet() } label: { Label("Add set", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44) }
-                            .disabled(exercise.sets.count >= 100)
+                            .disabled(exercise.sets.count >= Limits.sets)
                         Rectangle().fill(Palette.hairline).frame(width: 1, height: 20)
                         Button { model.update { $0.updateActive(exercise: exercise.id) { $0 = $0.togglingSides() } } } label: {
                             Label(sidesLabel, systemImage: "arrow.left.arrow.right").frame(maxWidth: .infinity, minHeight: 44)
@@ -91,7 +91,7 @@ struct ExerciseCard: View, Equatable {
         .onChange(of: focus.wrappedValue) { _, id in
             // The keyboard's Next reaching a closed card opens it.
             if let id, !open, exercise.sets.contains(where: { id.hasPrefix($0.id) }) {
-                withAnimation(.smooth(duration: 0.3)) { manual = (true, finished) }
+                withAnimation(.smooth(duration: Motion.standard)) { manual = (true, finished) }
             }
         }
         // Done or not done again: back to folding by itself (one opened by hand and re-ticked folds too). Its last
@@ -106,14 +106,14 @@ struct ExerciseCard: View, Equatable {
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
             }
         }
-        .animation(.smooth(duration: 0.3), value: best?.id)
-        .task(id: best?.id) { if best != nil { try? await Task.sleep(for: .seconds(2.8)); best = nil } }
+        .animation(.smooth(duration: Motion.standard), value: best?.id)
+        .task(id: best?.id) { if best != nil { try? await Task.sleep(for: .seconds(RecordNote.seconds)); best = nil } }
         .padding(16)
         .glass(lifted: false)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Measure.card, style: .continuous))
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.cards[exercise.id] = $0 }
-        .animation(.smooth(duration: 0.3), value: open)
-        .animation(.smooth(duration: 0.25), value: exercise.sets.map(\.id))
+        .animation(.smooth(duration: Motion.standard), value: open)
+        .animation(.smooth(duration: Motion.quick), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
     }
 

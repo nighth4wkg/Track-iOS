@@ -25,7 +25,7 @@ extension View {
     func reorderHandle<Preview: View>(_ id: String, box: ReorderBox, dragging: Binding<String?>, @ViewBuilder preview: () -> Preview) -> some View {
         onDrag({
             box.pickedY = box.cards[id]?.minY
-            withAnimation(.smooth(duration: 0.2)) { dragging.wrappedValue = id }
+            withAnimation(.smooth(duration: Motion.fast)) { dragging.wrappedValue = id }
             return NSItemProvider(object: id as NSString)
         }, preview: preview)
     }
@@ -62,8 +62,8 @@ struct ReorderList: View {
                     Color.clear.frame(height: 0).id("bottom")
                 }
                 .padding(.horizontal, 16).padding(.bottom, 24)
-                .frame(maxWidth: 720).frame(maxWidth: .infinity)
-                .animation(.smooth(duration: 0.25), value: exercises.map(\.id))
+                .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
+                .animation(.smooth(duration: Motion.quick), value: exercises.map(\.id))
             }
             .onAppear {
                 box.scroll = { edge in proxy.scrollTo(edge, anchor: edge == "top" ? .top : .bottom) }
@@ -95,7 +95,7 @@ struct ReorderDrop: DropDelegate {
         if let dragging, let from = ids.firstIndex(of: dragging),
            let to = ids.firstIndex(where: { box.frames[$0].map { $0.minY <= y && y < $0.maxY } ?? false }), to != from,
            let target = box.frames[ids[to]], to > from ? y > target.midY : y < target.midY {
-            withAnimation(.smooth(duration: 0.25)) { move(from, to) }
+            withAnimation(.smooth(duration: Motion.quick)) { move(from, to) }
         }
         return DropProposal(operation: .move)
     }
@@ -104,7 +104,7 @@ struct ReorderDrop: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         box.edge = nil
-        withAnimation(.smooth(duration: 0.3)) { dragging = nil }
+        withAnimation(.smooth(duration: Motion.standard)) { dragging = nil }
         return true
     }
 }

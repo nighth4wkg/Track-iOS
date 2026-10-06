@@ -47,8 +47,8 @@ extension Training {
     /// settings in range, finished workouts with a done set, and an active workout that isn't finished.
     public var isValid: Bool {
         let workouts = sessions + (active.map { [$0] } ?? [])
-        let settingsOK = (1...7).contains(settings.weeklyGoal) && (15...600).contains(settings.restSeconds)
-            && (settings.bodyweight.map { (20...400).contains($0) } ?? true)
+        let settingsOK = Limits.weeklyGoal.contains(settings.weeklyGoal) && Limits.restSeconds.contains(settings.restSeconds)
+            && (settings.bodyweight.map { Limits.bodyweight.contains($0) } ?? true)
         let idsOK = Set(splits.map(\.id)).count == splits.count && Set(workouts.map(\.id)).count == workouts.count
         let sessionsOK = sessions.allSatisfy { ($0.finishedAt ?? .min) >= $0.startedAt && !$0.completedSets.isEmpty }
         let listsOK = (splits.map(\.exercises) + workouts.map(\.exercises)).allSatisfy(Self.validList)
@@ -59,8 +59,8 @@ extension Training {
         let sets = exercises.flatMap(\.sets)
         guard Set(exercises.map(\.id)).count == exercises.count, Set(sets.map(\.id)).count == sets.count else { return false }
         return sets.allSatisfy { set in
-            let numbers = (set.kg.map { (0...5000).contains($0) } ?? true) && (set.reps.map { (0...1000).contains($0) } ?? true)
-            return numbers && (set.rir.map { (0...10).contains($0) } ?? true) && (!set.done || set.isValid)
+            let numbers = (set.kg.map { (0...Limits.kg).contains($0) } ?? true) && (set.reps.map { (0...Limits.reps).contains($0) } ?? true)
+            return numbers && (set.rir.map { (0...Limits.rir).contains($0) } ?? true) && (!set.done || set.isValid)
         }
     }
 }

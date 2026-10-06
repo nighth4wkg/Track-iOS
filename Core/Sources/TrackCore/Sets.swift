@@ -22,7 +22,7 @@ extension TrainingSet {
     /// Weight, positive reps and RIR, all in range: the set can be logged.
     public var isValid: Bool {
         guard let kg, let reps, let rir else { return false }
-        return kg >= 0 && kg <= 5000 && reps > 0 && reps <= 1000 && rir >= 0 && rir <= 10
+        return kg >= 0 && kg <= Limits.kg && reps > 0 && reps <= Limits.reps && rir >= 0 && rir <= Limits.rir
     }
 
     /// Marks the set done, or not. A blank RIR counts as 0 (nothing left in reserve).
@@ -44,15 +44,13 @@ extension TrainingSet {
         let reps = Self.wholeNumber(repsText)
         let rir = Self.wholeNumber(rirText) ?? (logging && rirText.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : nil)
         var next = self
-        next.kg = kg.flatMap { $0.isFinite && $0 >= 0 && $0 <= 5000 ? $0 : nil }
-        next.reps = reps.flatMap { $0 > 0 && $0 <= 1000 ? $0 : nil }
-        next.rir = rir.flatMap { $0 >= 0 && $0 <= 10 ? $0 : nil }
+        next.kg = kg.flatMap { $0.isFinite && $0 >= 0 && $0 <= Limits.kg ? $0 : nil }
+        next.reps = reps.flatMap { $0 > 0 && $0 <= Limits.reps ? $0 : nil }
+        next.rir = rir.flatMap { $0 >= 0 && $0 <= Limits.rir ? $0 : nil }
         next.done = false
         next.done = logging && next.isValid
         return next
     }
-
-    static let poundsPerKilogram = 2.2046226218
 
     /// Digits only, like the website's /^\d+$/ (no signs, decimals or spaces inside).
     public static func wholeNumber(_ text: String) -> Int? {
@@ -64,7 +62,7 @@ extension TrainingSet {
     /// The weight as shown in the chosen unit, up to two decimals, no trailing zeros ("" when empty).
     public static func display(kg: Double?, unit: Settings.Unit) -> String {
         guard let kg else { return "" }
-        let value = ((kg * (unit == .lb ? poundsPerKilogram : 1)) * 100).rounded() / 100
+        let value = ((kg * (unit == .lb ? Limits.poundsPerKilogram : 1)) * 100).rounded() / 100
         return value == value.rounded() ? String(Int(value)) : String(value)
     }
 
@@ -72,7 +70,7 @@ extension TrainingSet {
     public static func kilograms(from text: String, unit: Settings.Unit) -> Double? {
         let decimal = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
         guard decimal.range(of: #"^(?:\d+(?:\.\d*)?|\.\d+)$"#, options: .regularExpression) != nil, let value = Double(decimal) else { return nil }
-        return value / (unit == .lb ? poundsPerKilogram : 1)
+        return value / (unit == .lb ? Limits.poundsPerKilogram : 1)
     }
 }
 
