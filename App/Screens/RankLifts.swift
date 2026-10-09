@@ -42,18 +42,20 @@ struct RankLifts: View {
         if !rows.isEmpty {
             let unknown = rows.filter(\.unknown).count
             GlassList {
-                HStack {
-                    Text("What counts").font(.headline).foregroundStyle(Palette.text)
-                    Spacer()
-                    Text(unknown > 0 ? "\(unknown) not recognised" : count(rows.count, "exercise"))
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted)
-                    Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                        .scaleEffect(y: open ? -1 : 1)
+                Button { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } label: {
+                    HStack {
+                        Text("What counts").font(.headline).foregroundStyle(Palette.text)
+                        Spacer()
+                        Text(unknown > 0 ? "\(unknown) not recognised" : count(rows.count, "exercise"))
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted)
+                        Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
+                            .scaleEffect(y: open ? -1 : 1)
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
                 }
-                .padding(.vertical, 4)
-                .contentShape(Rectangle())
-                .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } }
-                .accessibilityAddTraits(.isButton).accessibilityValue(open ? "Open" : "Closed")
+                .buttonStyle(.plain)
+                .accessibilityValue(open ? "Open" : "Closed")
                 .sensoryFeedback(.selection, trigger: open)
                 if open { ForEach(rows, id: \.key) { row in rowView(row) } }
             }

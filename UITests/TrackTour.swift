@@ -68,7 +68,8 @@ final class TrackTour: XCTestCase {
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bodyweight'")).firstMatch, "bodyweight"); snap("bodyweight", after: 0.8)
         tap(app.buttons["Close"].firstMatch, "close bodyweight")
         app.swipeUp(); snap("rank-scrolled")
-        tap(app.staticTexts["What counts"].firstMatch, "What counts"); snap("rank-what-counts", after: 0.8)
+        app.swipeUp() // the card sits last, under the floating tab bar until scrolled clear
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'What counts'")).firstMatch, "What counts"); snap("rank-what-counts", after: 0.8)
         app.swipeUp(); snap("rank-what-counts-scrolled")
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'counts as'")).firstMatch, "counts as menu"); snap("rank-counts-as-menu", after: 0.8)
         app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap(); app.swipeDown(); app.swipeDown()
