@@ -170,8 +170,9 @@ struct WorkoutView: View {
         }
         .font(.body.weight(.semibold)).buttonStyle(PressStyle())
         .padding(.horizontal, 16).padding(.vertical, 10)
-        // Solid, with a hairline on top: the page doesn't show through and the bar reads as part of the keyboard.
-        .background(Palette.dialog)
+        // Solid, with a hairline on top: the page doesn't show through and the bar reads as part of the keyboard. It
+        // runs on behind the keyboard, so its rounded top corners show the bar, not the card under it.
+        .background { Palette.dialog.ignoresSafeArea(edges: .bottom) }
         .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
         .transition(.opacity)
     }
