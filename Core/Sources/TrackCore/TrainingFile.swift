@@ -49,10 +49,17 @@ extension Training {
         let workouts = sessions + (active.map { [$0] } ?? [])
         let settingsOK = Limits.weeklyGoal.contains(settings.weeklyGoal) && Limits.restSeconds.contains(settings.restSeconds)
             && (settings.bodyweight.map { Limits.bodyweight.contains($0) } ?? true)
+            && (settings.lifts.map(Self.validChoices) ?? true)
         let idsOK = Set(splits.map(\.id)).count == splits.count && Set(workouts.map(\.id)).count == workouts.count
         let sessionsOK = sessions.allSatisfy { ($0.finishedAt ?? .min) >= $0.startedAt && !$0.completedSets.isEmpty }
         let listsOK = (splits.map(\.exercises) + workouts.map(\.exercises)).allSatisfy(Self.validList)
         return version == 1 && settingsOK && idsOK && sessionsOK && listsOK && active?.finishedAt == nil
+    }
+
+    /// The website's limits on "counts as" choices: how many, key length in UTF-16 units, and the id's length.
+    private static func validChoices(_ lifts: [String: String]) -> Bool {
+        lifts.count <= Limits.liftChoices
+            && lifts.allSatisfy { (1...Limits.liftKey).contains($0.key.utf16.count) && (1...Limits.name).contains($0.value.utf16.count) }
     }
 
     private static func validList(_ exercises: [Exercise]) -> Bool {

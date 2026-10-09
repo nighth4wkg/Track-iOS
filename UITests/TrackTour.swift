@@ -67,7 +67,18 @@ final class TrackTour: XCTestCase {
         tap(app.tabBars.buttons["Rank"], "Rank"); snap("rank", after: 0.8)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bodyweight'")).firstMatch, "bodyweight"); snap("bodyweight", after: 0.8)
         tap(app.buttons["Close"].firstMatch, "close bodyweight")
-        app.swipeUp(); snap("rank-scrolled"); app.swipeDown()
+        app.swipeUp(); snap("rank-scrolled")
+        // Open Legs, move its first exercise to Not counted, then back to automatic.
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Legs'")).firstMatch, "Legs"); snap("rank-legs-open", after: 0.8)
+        app.swipeUp()
+        let chip = app.buttons.matching(NSPredicate(format: "label ENDSWITH 'counts for'")).firstMatch
+        let chipLabel = chip.waitForExistence(timeout: 4) ? chip.label : "counts for"
+        tap(chip, "counts-for chip"); snap("rank-counts-for-menu", after: 0.8)
+        tap(app.buttons["Doesn't count"].firstMatch, "Doesn't count"); snap("rank-not-counted", after: 0.8)
+        app.swipeUp()
+        tap(app.buttons[chipLabel].firstMatch, "not-counted chip")
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Automatic'")).firstMatch, "Automatic"); snap("rank-counted-again", after: 0.8)
+        app.swipeDown(); app.swipeDown()
         tap(app.tabBars.buttons["History"], "History"); snap("history", after: 0.8)
         tap(app.buttons["Filter by date"].firstMatch, "date filter"); snap("history-filter", after: 0.8)
         tap(app.buttons["Any"].firstMatch, "From: Any"); snap("history-from-date", after: 0.8)

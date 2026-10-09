@@ -1,0 +1,1106 @@
+# Exercise names → expected rank group (- = recognised, never ranks) → lift id. Checked by tests/lift-detection.test.ts
+# and, word for word, by the iPhone app (Track-iOS Core/Tests/TrackCoreTests/Fixtures/lift-names.txt), so both detect alike.
+## Hand-checked names
+## Chest
+Bench press|Chest|bench-press
+Barbell bench press|Chest|bench-press
+Flat bench|Chest|bench-press
+Flat barbell bench|Chest|bench-press
+Paused bench press|Chest|bench-press
+Spoto press|Chest|bench-press
+Larsen press|Chest|bench-press
+Close-grip bench press|Chest|bench-press
+CGBP|Chest|bench-press
+Wide-grip bench press|Chest|bench-press
+Reverse-grip bench press|Chest|bench-press
+Floor press|Chest|bench-press
+Board press|Chest|bench-press
+Pin press|Chest|bench-press
+Incline bench press|Chest|incline-press
+Incline bench|Chest|incline-press
+Incline dumbbell press|Chest|incline-press
+Incline DB press|Chest|incline-press
+Low incline dumbbell press|Chest|incline-press
+Decline bench press|Chest|bench-press
+Decline bench|Chest|bench-press
+Decline press|Chest|bench-press
+Decline dumbbell press|Chest|dumbbell-bench-press
+Dumbbell bench press|Chest|dumbbell-bench-press
+DB bench|Chest|dumbbell-bench-press
+Dumbbell press|Chest|dumbbell-bench-press
+Flat DB press|Chest|dumbbell-bench-press
+Hex press|Chest|dumbbell-bench-press
+Squeeze press|Chest|dumbbell-bench-press
+Svend press|-|plate-press
+Machine chest press|Chest|chest-press
+Hammer Strength chest press|Chest|chest-press
+Iso-lateral chest press|Chest|chest-press
+Seated chest press|Chest|chest-press
+Smith machine bench press|Chest|bench-press
+Smith incline press|Chest|incline-press
+Cable fly|Chest|chest-fly
+Cable crossover|Chest|chest-fly
+Low-to-high cable fly|Chest|chest-fly
+Pec deck|Chest|chest-fly
+Pec dec|Chest|chest-fly
+Pec fly|Chest|chest-fly
+Butterfly|Chest|chest-fly
+Butterfly machine|Chest|chest-fly
+Dumbbell fly|Chest|chest-fly
+Incline dumbbell fly|Chest|chest-fly
+Chest dip|Chest|dip
+Dips|Chest|dip
+Weighted dips|Chest|dip
+Parallel bar dips|Chest|dip
+Push-up|Chest|push-up
+Push ups|Chest|push-up
+Pushups|Chest|push-up
+Press-up|Chest|push-up
+Weighted push-up|Chest|push-up
+Deficit push-up|Chest|push-up
+Archer push-up|Chest|push-up
+Ring push-up|Chest|push-up
+Guillotine press|Chest|bench-press
+Bench|Chest|bench-press
+BP|Chest|bench-press
+Bench press (paused)|Chest|bench-press
+Benchpress|Chest|bench-press
+bench-press|Chest|bench-press
+BENCH PRESS|Chest|bench-press
+Bench press 5x5|Chest|bench-press
+Dumbell bench press|Chest|dumbbell-bench-press
+Dumbbel press|Chest|dumbbell-bench-press
+Chest press machine|Chest|chest-press
+Plate-loaded chest press|Chest|chest-press
+## Back
+Deadlift|Back|deadlift
+Conventional deadlift|Back|deadlift
+Sumo deadlift|Back|deadlift
+Trap bar deadlift|Back|deadlift
+Hex bar deadlift|Back|deadlift
+Deficit deadlift|Back|deadlift
+Rack pull|Back|rack-pull
+Block pull|Back|rack-pull
+Snatch-grip deadlift|Back|deadlift
+DL|Back|deadlift
+Dumbbell deadlift|Back|deadlift
+Kettlebell deadlift|Back|deadlift
+Good morning|Legs|good-morning
+Back extension|-|back-extension
+Hyperextension|-|back-extension
+45-degree back extension|-|back-extension
+Reverse hyper|-|back-extension
+Pull-up|Back|pull-up
+Pull ups|Back|pull-up
+Pullups|Back|pull-up
+Chin-up|Back|chin-up
+Chinup|Back|chin-up
+Chins|Back|chin-up
+Weighted pull-up|Back|pull-up
+Weighted chin-up|Back|chin-up
+Neutral-grip pull-up|Back|pull-up
+Muscle-up|Back|muscle-up
+Assisted pull-up machine|Back|pull-up
+Inverted row|Back|inverted-row
+Australian pull-up|Back|inverted-row
+Lat pulldown|Back|lat-pulldown
+Lat pull-down|Back|lat-pulldown
+Lat pull|Back|lat-pulldown
+Pulldown|Back|lat-pulldown
+Close-grip lat pulldown|Back|lat-pulldown
+Single-arm lat pulldown|Back|lat-pulldown
+Kneeling cable pulldown|Back|lat-pulldown
+Seated cable row|Back|row
+Cable row|Back|row
+Low row|Back|row
+Machine row|Back|row
+Seated row machine|Back|row
+Chest-supported row|Back|row
+Chest supported T-bar row|Back|barbell-row
+T-bar row|Back|barbell-row
+Seal row|Back|barbell-row
+Pendlay row|Back|barbell-row
+Yates row|Back|barbell-row
+Barbell row|Back|barbell-row
+Bent-over row|Back|barbell-row
+BB row|Back|barbell-row
+Dumbbell row|Back|dumbbell-row
+One-arm dumbbell row|Back|dumbbell-row
+Single arm DB row|Back|dumbbell-row
+1-arm cable row|Back|row
+Kroc row|Back|dumbbell-row
+Meadows row|Back|dumbbell-row
+Helms row|Back|dumbbell-row
+Gorilla row|Back|dumbbell-row
+Renegade row|Back|dumbbell-row
+Kettlebell row|Back|dumbbell-row
+Incline bench row|Back|row
+Incline dumbbell row|Back|dumbbell-row
+Iso-lateral row|Back|row
+Hammer Strength row|Back|row
+High row|Back|row
+Straight-arm pulldown|Back|lat-isolation
+Dumbbell pullover|Back|lat-isolation
+Cable pullover|Back|lat-isolation
+Nautilus pullover|Back|lat-isolation
+Shrug|Back|shrug
+Barbell shrug|Back|shrug
+Dumbbell shrugs|Back|dumbbell-shrug
+Trap bar shrug|Back|shrug
+Kelso shrug|Back|shrug
+## Shoulders
+Overhead press|Shoulders|overhead-press
+OHP|Shoulders|overhead-press
+Military press|Shoulders|overhead-press
+Standing barbell press|Shoulders|overhead-press
+Strict press|Shoulders|overhead-press
+Push press|Shoulders|overhead-press
+Seated dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+DB shoulder press|Shoulders|dumbbell-shoulder-press
+Seated DB press|Shoulders|dumbbell-shoulder-press
+Arnold press|Shoulders|dumbbell-shoulder-press
+Z press|Shoulders|overhead-press
+Behind-the-neck press|Shoulders|overhead-press
+Landmine press|-|landmine-press
+Machine shoulder press|Shoulders|machine-shoulder-press
+Shoulder press machine|Shoulders|machine-shoulder-press
+Smith machine shoulder press|Shoulders|machine-shoulder-press
+Viking press|-|viking-press
+Log press|Shoulders|overhead-press
+Axle press|Shoulders|overhead-press
+Handstand push-up|Shoulders|handstand-push-up
+HSPU|Shoulders|handstand-push-up
+Pike push-up|Shoulders|pike-push-up
+Lateral raise|Shoulders|lateral-raise
+Lat raise|Shoulders|lateral-raise
+Side raise|Shoulders|lateral-raise
+Side lateral raises|Shoulders|lateral-raise
+Cable lateral raise|Shoulders|lateral-raise
+Lean-away lateral raise|Shoulders|lateral-raise
+Machine lateral raise|Shoulders|lateral-raise
+Front raise|Shoulders|front-raise
+Plate front raise|Shoulders|front-raise
+Cable front raise|Shoulders|front-raise
+Y raise|Shoulders|lateral-raise
+Lu raise|Shoulders|lateral-raise
+Rear delt fly|Shoulders|rear-delt
+Rear fly|Shoulders|rear-delt
+Reverse pec deck|Shoulders|rear-delt
+Reverse fly|Shoulders|rear-delt
+Reverse dumbbell fly|Shoulders|rear-delt
+Bent-over dumbbell fly|Shoulders|rear-delt
+Reverse butterfly|Shoulders|rear-delt
+Face pull|Shoulders|face-pull
+Rear delt row|Shoulders|rear-delt
+Upright row|Shoulders|upright-row
+Cuban press|-|shoulder-accessory
+Bradford press|Shoulders|overhead-press
+Bus driver|-|shoulder-accessory
+## Arms
+Barbell curl|Arms|curl
+BB curl|Arms|curl
+EZ bar curl|Arms|curl
+EZ curl|Arms|curl
+Dumbbell curl|Arms|dumbbell-curl
+Hammer curl|Arms|dumbbell-curl
+Rope hammer curl|Arms|curl
+Cable hammer curl|Arms|curl
+Cross-body hammer curl|Arms|dumbbell-curl
+Incline dumbbell curl|Arms|dumbbell-curl
+Preacher curl|Arms|machine-curl
+EZ bar preacher curl|Arms|machine-curl
+Spider curl|Arms|curl
+Bayesian curl|Arms|curl
+Cable curl|Arms|curl
+Concentration curl|Arms|dumbbell-curl
+Drag curl|Arms|curl
+Zottman curl|Arms|dumbbell-curl
+Reverse curl|Arms|reverse-curl
+Machine curl|Arms|machine-curl
+Bicep curl|Arms|curl
+Biceps curls|Arms|curl
+21s|Arms|curl
+Pinwheel curl|Arms|dumbbell-curl
+Waiter curl|Arms|curl
+Cheat curl|Arms|curl
+Triceps pushdown|Arms|triceps-pushdown
+Tricep pushdown|Arms|triceps-pushdown
+Rope pushdown|Arms|triceps-pushdown
+Rope pressdown|Arms|triceps-pushdown
+Cable pushdown|Arms|triceps-pushdown
+Overhead triceps extension|Arms|triceps-extension
+Overhead cable extension|Arms|triceps-extension
+Rope overhead extension|Arms|triceps-extension
+Skull crusher|Arms|triceps-extension
+Skullcrushers|Arms|triceps-extension
+Lying triceps extension|Arms|triceps-extension
+French press|Arms|triceps-extension
+JM press|Arms|triceps-extension
+Tate press|Arms|triceps-extension
+Dumbbell kickback|Arms|triceps-kickback
+Triceps kickback|Arms|triceps-kickback
+Close-grip push-up|Arms|close-grip-push-up
+Diamond push-ups|Arms|close-grip-push-up
+Bench dips|Arms|bench-dip
+Triceps dips|Arms|triceps-dip
+Tricep dip machine|Arms|dip-machine
+Katana extension|Arms|triceps-extension
+## Forearms, grip, neck (should not rank)
+Wrist curl|-|forearms
+Reverse wrist curl|-|forearms
+Forearm curl|-|forearms
+Wrist roller|-|forearms
+Dead hang|-|forearms
+Farmer's walk|-|carry
+Farmers carry|-|carry
+Plate pinch|-|forearms
+Neck curl|-|ignore
+Neck extension|-|ignore
+Jefferson curl|-|ignore
+## Legs
+Squat|Legs|squat
+Back squat|Legs|squat
+Front squat|Legs|squat
+High-bar squat|Legs|squat
+Low-bar squat|Legs|squat
+Squat (low bar)|Legs|squat
+Box squat|Legs|squat
+Pause squat|Legs|squat
+Safety bar squat|Legs|squat
+SSB squat|Legs|squat
+Zercher squat|Legs|squat
+Overhead squat|Legs|squat
+Smith machine squat|Legs|squat
+Landmine squat|Legs|squat
+Sumo squat|Legs|goblet-squat
+Dumbbell squat|Legs|squat
+Hack squat|Legs|hack-squat
+Pendulum squat|Legs|hack-squat
+Belt squat|Legs|hack-squat
+V-squat|Legs|hack-squat
+Goblet squat|Legs|goblet-squat
+Bulgarian split squat|Legs|lunge
+BSS|Legs|lunge
+Split squat|Legs|lunge
+Walking lunges|Legs|lunge
+Reverse lunge|Legs|lunge
+Lunges|Legs|lunge
+Dumbbell lunges|Legs|lunge
+Barbell lunges|Legs|barbell-lunge
+Curtsy lunge|Legs|lunge
+Step-ups|Legs|lunge
+Box step-up|Legs|lunge
+Pistol squat|Legs|pistol-squat
+Sissy squat|-|sissy-squat
+Cossack squat|-|cossack-squat
+Air squat|-|bodyweight-squat
+Squat jumps|-|bodyweight-squat
+Jump squat|-|bodyweight-squat
+Wall sit|-|bodyweight-squat
+Leg press|Legs|leg-press
+45-degree leg press|Legs|leg-press
+Single-leg leg press|Legs|leg-press
+Horizontal leg press|Legs|leg-press
+Leg extension|Legs|leg-extension
+Quad extension|Legs|leg-extension
+Leg curl|Legs|leg-curl
+Lying leg curl|Legs|leg-curl
+Seated leg curl|Legs|leg-curl
+Hamstring curl|Legs|leg-curl
+Nordic curl|-|nordic
+Nordic hamstring curl|-|nordic
+Glute-ham raise|-|nordic
+GHR|-|nordic
+Romanian deadlift|Legs|romanian-deadlift
+RDL|Legs|romanian-deadlift
+Dumbbell RDL|Legs|romanian-deadlift
+Single-leg RDL|Legs|romanian-deadlift
+Stiff-legged deadlift|Legs|romanian-deadlift
+Straight-leg deadlift|Legs|romanian-deadlift
+Hip thrust|Legs|hip-thrust
+Barbell hip thrust|Legs|hip-thrust
+Glute bridge|Legs|hip-thrust
+Single-leg hip thrust|Legs|hip-thrust
+Hip abduction|-|abduction
+Hip adduction|-|adduction
+Abductor machine|-|abduction
+Adductor machine|-|adduction
+Cable kickback|-|glute-kickback
+Glute kickback|-|glute-kickback
+Calf raise|Legs|calf-raise
+Standing calf raise|Legs|calf-raise
+Seated calf raise|Legs|calf-raise
+Donkey calf raise|Legs|calf-raise
+Calf press on leg press|Legs|calf-raise
+Calf stretch|-|ignore
+Tibialis raise|-|tibialis
+Reverse nordic|-|reverse-nordic
+## Olympic, strongman, kettlebell (full body)
+Power clean|Legs|clean
+Clean and jerk|Legs|clean-jerk
+Snatch|Legs|snatch
+Power snatch|Legs|snatch
+Hang clean|Legs|clean
+Clean pull|-|high-pull
+Push jerk|Shoulders|jerk
+Split jerk|Shoulders|jerk
+Thruster|Legs|thruster
+Atlas stone|-|stone
+Yoke walk|-|yoke
+Tire flip|-|tire-flip
+Sandbag carry|-|yoke
+Turkish get-up|-|get-up
+Kettlebell swing|-|swing
+KB swing|-|swing
+Kettlebell snatch|-|dumbbell-olympic
+Kettlebell clean and press|-|dumbbell-olympic
+Man maker|-|man-maker
+Sled push|-|sled
+Prowler push|-|sled
+Sled drag|-|sled
+## Core (should not rank)
+Plank|-|core
+Side plank|-|core
+Crunch|-|core
+Cable crunch|-|core
+Sit-up|-|core
+Decline sit-up|-|core
+Hanging leg raise|-|core
+Hanging knee raise|-|core
+Ab wheel rollout|-|core
+Russian twist|-|core
+Pallof press|-|core
+Dead bug|-|core
+Bird dog|-|core
+Hollow hold|-|core
+L-sit|-|core
+Dragon flag|-|core
+V-up|-|core
+Toes to bar|-|core
+Woodchopper|-|core
+Landmine twist|-|core
+Copenhagen plank|-|adduction
+## Cardio and conditioning (should not rank)
+Rowing machine|-|ignore
+Row erg|-|ignore
+Concept2 row|-|ignore
+Indoor row|-|ignore
+Ski erg|-|ignore
+Assault bike|-|ignore
+Treadmill|-|ignore
+Running|-|ignore
+Stairmaster|-|ignore
+Jump rope|-|ignore
+Battle ropes|-|ignore
+Burpees|-|ignore
+Box jump|-|bodyweight-squat
+Broad jump|-|bodyweight-squat
+Mountain climbers|-|ignore
+Jumping jacks|-|ignore
+Swimming|-|ignore
+Cycling|-|ignore
+Foam rolling|-|ignore
+Stretching|-|ignore
+## Other languages
+สควอท|Legs|squat
+เบนช์เพรส|Chest|bench-press
+เดดลิฟท์|Back|deadlift
+ดึงข้อ|Back|pull-up
+วิดพื้น|Chest|push-up
+Press de banca|Chest|bench-press
+Sentadilla|Legs|squat
+Peso muerto|Back|deadlift
+Dominadas|Back|pull-up
+Remo con barra|Back|barbell-row
+Bankdrücken|Chest|bench-press
+Kniebeuge|Legs|squat
+Kreuzheben|Back|deadlift
+Klimmzüge|Back|pull-up
+Développé couché|Chest|bench-press
+Soulevé de terre|Back|deadlift
+ベンチプレス|Chest|bench-press
+スクワット|Legs|squat
+Supino reto|Chest|bench-press
+Agachamento|Legs|squat
+Rosca direta|Arms|curl
+## The built-in exercise catalog (app/exerciseCatalog), reviewed
+1-arm dumbbell recline curl|Arms|dumbbell-curl
+Alternating dumbbell bench press|Chest|dumbbell-bench-press
+Alternating dumbbell curl|Arms|dumbbell-curl
+Alternating dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+Arnold dumbbell press|Shoulders|dumbbell-shoulder-press
+Assisted Chin-Up|Back|chin-up
+Assisted Dip|Chest|dip
+Assisted Pull-Up|Back|pull-up
+Assisted dip machine|Chest|dip
+Assisted neutral-grip pull-up machine|Back|pull-up
+Ball Slams|-|ignore
+Band External Shoulder Rotation|-|shoulder-accessory
+Band Internal Shoulder Rotation|-|shoulder-accessory
+Band Pull-Apart|-|shoulder-accessory
+Band-Assisted Bench Press|Chest|bench-press
+Banded Face Pull|Shoulders|face-pull
+Banded Hip March|-|core
+Banded Muscle-Up|Back|muscle-up
+Banded Side Kicks|-|abduction
+Bar Dip|Chest|dip
+Bar Hang|-|forearms
+Barbell Front Raise|Shoulders|front-raise
+Barbell Hack Squat|Legs|hack-squat
+Barbell Incline Triceps Extension|Arms|triceps-extension
+Barbell Lunge|Legs|barbell-lunge
+Barbell Lying Triceps Extension|Arms|triceps-extension
+Barbell Preacher Curl|Arms|machine-curl
+Barbell Rear Delt Row|Shoulders|rear-delt
+Barbell Romanian deadlift from deficit|Legs|romanian-deadlift
+Barbell Standing Triceps Extension|Arms|triceps-extension
+Barbell Wrist Curl Behind the Back|-|forearms
+Barbell Wrist Extension|-|forearms
+Barbell clean|Legs|clean
+Barbell clean and press|Shoulders|overhead-press
+Barbell close-grip overhead triceps extension|Arms|triceps-extension
+Barbell complex|-|man-maker
+Barbell deadlift|Back|deadlift
+Barbell decline bench press|Chest|bench-press
+Barbell drag curl|Arms|curl
+Barbell floor press|Chest|bench-press
+Barbell front squat|Legs|squat
+Barbell glute bridge|Legs|hip-thrust
+Barbell high row|Back|barbell-row
+Barbell incline curl|Arms|curl
+Barbell incline row|Back|barbell-row
+Barbell overhead press|Shoulders|overhead-press
+Barbell reverse lunge|Legs|barbell-lunge
+Barbell rolling triceps extension|Arms|triceps-extension
+Barbell seal row|Back|barbell-row
+Barbell seated calf raise|Legs|calf-raise
+Barbell sissy squat|-|sissy-squat
+Barbell snatch|Legs|snatch
+Barbell spider curl|Arms|curl
+Barbell split squat|Legs|barbell-lunge
+Barbell standing calf raise|Legs|calf-raise
+Barbell step-up|Legs|barbell-lunge
+Barbell sumo deadlift|Back|deadlift
+Barbell thruster|Legs|thruster
+Barbell upright row|Shoulders|upright-row
+Barbell walking lunge|Legs|barbell-lunge
+Barbell wide-grip overhead triceps extension|Arms|triceps-extension
+Barbell wrist curl|-|forearms
+Barbell zercher good morning|Legs|good-morning
+Bayesian cable curl|Arms|curl
+Behind the Neck Press|Shoulders|overhead-press
+Belt squat machine|Legs|hack-squat
+Bench Dip|Arms|bench-dip
+Bench Press Against Band|Chest|bench-press
+Bicycle crunch|-|core
+Block Clean|Legs|clean
+Block Snatch|Legs|snatch
+Body Weight Lunge|Legs|lunge
+Bodyweight Curl|Arms|curl
+Bodyweight Leg Curl|Legs|leg-curl
+Burpee|-|ignore
+Cable Chest Press|Chest|chest-press
+Cable Close Grip Seated Row|Back|row
+Cable Crossover Bicep Curl|Arms|curl
+Cable Curl With Bar|Arms|curl
+Cable Curl With Rope|Arms|curl
+Cable External Shoulder Rotation|-|shoulder-accessory
+Cable Glute Kickback|-|glute-kickback
+Cable Internal Shoulder Rotation|-|shoulder-accessory
+Cable Machine Hip Abduction|-|abduction
+Cable Rear Delt Row|Shoulders|rear-delt
+Cable Romanian deadlift|Legs|romanian-deadlift
+Cable Wide Grip Seated Row|Back|row
+Cable Y-raise|Shoulders|lateral-raise
+Cable anti-rotation press|-|core
+Cable bar pullover|Back|lat-isolation
+Cable calf raise|Legs|calf-raise
+Cable chest fly|Chest|chest-fly
+Cable chest-supported row|Back|row
+Cable close-grip chest press|Chest|chest-press
+Cable close-grip lat pulldown|Back|lat-pulldown
+Cable close-grip row|Back|row
+Cable concentration curl|Arms|curl
+Cable cuff Y-raise|Shoulders|lateral-raise
+Cable cuff lateral raise|Shoulders|lateral-raise
+Cable decline chest fly|Chest|chest-fly
+Cable drag curl|Arms|curl
+Cable face pull|Shoulders|face-pull
+Cable good morning|Legs|good-morning
+Cable high row|Back|row
+Cable high-to-low chest fly|Chest|chest-fly
+Cable hip flexion|-|core
+Cable incline chest fly|Chest|chest-fly
+Cable kneeling crunch|-|core
+Cable kneeling straight-arm pulldown|Back|lat-isolation
+Cable lat prayer|Back|lat-isolation
+Cable lat pullover|Back|lat-isolation
+Cable lateral lunge|Legs|lunge
+Cable leg curl|Legs|leg-curl
+Cable leg extension|Legs|leg-extension
+Cable low row|Back|row
+Cable low-to-high chest fly|Chest|chest-fly
+Cable lying triceps extension|Arms|triceps-extension
+Cable neutral-grip chest press|Chest|chest-press
+Cable neutral-grip lat pulldown|Back|lat-pulldown
+Cable neutral-grip row|Back|row
+Cable oblique crunch|-|core
+Cable one-arm chest fly|Chest|chest-fly
+Cable one-arm chest press|Chest|chest-press
+Cable one-arm high row|Back|row
+Cable one-arm low row|Back|row
+Cable one-arm rear delt fly|Shoulders|rear-delt
+Cable one-arm shrug|Back|shrug
+Cable overhead triceps extension|Arms|triceps-extension
+Cable overhead triceps extension with bar|Arms|triceps-extension
+Cable overhead triceps extension with rope|Arms|triceps-extension
+Cable preacher curl|Arms|machine-curl
+Cable pull-through|-|glute-kickback
+Cable rear delt fly|Shoulders|rear-delt
+Cable rear delt fly on incline bench|Shoulders|rear-delt
+Cable rear delt row with rope|Shoulders|rear-delt
+Cable reverse crunch|-|core
+Cable reverse curl|Arms|reverse-curl
+Cable reverse fly|Shoulders|rear-delt
+Cable reverse lunge|Legs|lunge
+Cable reverse-grip pushdown|Arms|triceps-pushdown
+Cable rope pullover|Back|lat-isolation
+Cable scaption|Shoulders|lateral-raise
+Cable seal row|Back|barbell-row
+Cable shrug|Back|shrug
+Cable single-arm pushdown|Arms|triceps-pushdown
+Cable skull crusher|Arms|triceps-extension
+Cable spider curl|Arms|curl
+Cable split squat|Legs|lunge
+Cable squat|Legs|squat
+Cable standing chest press|Chest|chest-press
+Cable triceps kickback|Arms|triceps-kickback
+Cable underhand lat pulldown|Back|lat-pulldown
+Cable wide-grip chest press|Chest|chest-press
+Cable wide-grip lat pulldown|Back|lat-pulldown
+Cable wide-grip row|Back|row
+Cable woodchop|-|core
+Cable wrist cuff lateral raise|Shoulders|lateral-raise
+Calf Raise in Leg Press|Legs|calf-raise
+Calf press|Legs|calf-raise
+Captain's Chair Knee Raise|-|core
+Captain's Chair Leg Raise|-|core
+Chair Squat|Legs|squat
+Chest to Bar|Back|chin-up
+Chest-Supported Dumbbell Row|Back|dumbbell-row
+Chest-supported machine row|Back|row
+Clamshells|-|abduction
+Clap Push-Up|Chest|push-up
+Clean|Legs|clean
+Close-Grip Chin-Up|Back|chin-up
+Close-Grip Feet-Up Bench Press|Chest|bench-press
+Close-grip Pendlay row|Back|barbell-row
+Close-grip Smith machine bench press|Chest|bench-press
+Close-grip Smith machine incline press|Chest|incline-press
+Close-grip Smith machine overhead press|Shoulders|machine-shoulder-press
+Close-grip Smith machine row|Back|row
+Close-grip T-bar row|Back|barbell-row
+Close-grip barbell bench press|Chest|bench-press
+Close-grip barbell curl|Arms|curl
+Close-grip barbell deadlift|Back|deadlift
+Close-grip barbell floor press|Chest|bench-press
+Close-grip barbell high pull|-|high-pull
+Close-grip barbell overhead press|Shoulders|overhead-press
+Close-grip barbell row|Back|barbell-row
+Close-grip barbell shrug|Back|shrug
+Close-grip barbell upright row|Shoulders|upright-row
+Close-grip chest press machine|Chest|chest-press
+Close-grip chest-supported dumbbell row|Back|dumbbell-row
+Close-grip chest-supported machine row|Back|row
+Close-grip decline barbell bench press|Chest|bench-press
+Close-grip dumbbell bench press|Chest|dumbbell-bench-press
+Close-grip dumbbell curl|Arms|dumbbell-curl
+Close-grip dumbbell decline bench press|Chest|dumbbell-bench-press
+Close-grip dumbbell floor press|Chest|dumbbell-bench-press
+Close-grip dumbbell incline row|Back|dumbbell-row
+Close-grip dumbbell overhead triceps extension|Arms|triceps-extension
+Close-grip dumbbell pullover|Back|lat-isolation
+Close-grip dumbbell row|Back|dumbbell-row
+Close-grip dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+Close-grip incline barbell bench press|Chest|incline-press
+Close-grip incline chest press machine|Chest|incline-press
+Close-grip incline dumbbell bench press|Chest|incline-press
+Close-grip lat pulldown machine|Back|lat-pulldown
+Close-grip machine biceps curl|Arms|machine-curl
+Close-grip machine preacher curl|Arms|machine-curl
+Close-grip machine pullover|Back|lat-isolation
+Close-grip machine shoulder press|Shoulders|machine-shoulder-press
+Close-grip machine triceps extension|Arms|triceps-extension
+Close-grip seated dip machine|Arms|dip-machine
+Close-grip seated machine row|Back|row
+Close-stance Smith machine squat|Legs|squat
+Close-stance belt squat machine|Legs|hack-squat
+Close-stance hack squat machine|Legs|hack-squat
+Close-stance pendulum squat machine|Legs|hack-squat
+Cobra Push-Up|Chest|push-up
+Converging chest press machine|Chest|chest-press
+Core Twist|-|core
+Cross-body cable lat pull-around|Back|lat-pulldown
+Crossbody Cable Triceps Extension|Arms|triceps-extension
+Cuffed cable pulldown|Back|lat-pulldown
+Cuffed rear delt fly|Shoulders|rear-delt
+Dead Bug With Dumbbells|-|core
+Death March with Dumbbells|Legs|lunge
+Decline Push-Up|Chest|push-up
+Decline chest press machine|Chest|chest-press
+Deep stretch push-up|Chest|push-up
+Deficit barbell row|Back|barbell-row
+Depth Jump|-|bodyweight-squat
+Devils Press|-|man-maker
+Dip|Chest|dip
+Donkey Kicks|-|glute-kickback
+Double-overhand barbell deadlift|Back|deadlift
+Dual-cable chest press|Chest|chest-press
+Dumbbell Bulgarian split squat|Legs|lunge
+Dumbbell Chest Fly|Chest|chest-fly
+Dumbbell Chest Press|Chest|dumbbell-bench-press
+Dumbbell Cossack squat|-|cossack-squat
+Dumbbell Cuban press|-|shoulder-accessory
+Dumbbell Decline Chest Press|Chest|dumbbell-bench-press
+Dumbbell Frog Pumps|-|glute-kickback
+Dumbbell Horizontal External Shoulder Rotation|-|shoulder-accessory
+Dumbbell Horizontal Internal Shoulder Rotation|-|shoulder-accessory
+Dumbbell Lying Triceps Extension|Arms|triceps-extension
+Dumbbell Preacher Curl|Arms|dumbbell-curl
+Dumbbell Rear Delt Row|Shoulders|rear-delt
+Dumbbell Romanian deadlift|Legs|romanian-deadlift
+Dumbbell Shrug|Back|dumbbell-shrug
+Dumbbell Side Bend|-|core
+Dumbbell Standing Triceps Extension|Arms|triceps-extension
+Dumbbell Tate press|Arms|triceps-extension
+Dumbbell Wrist Curl|-|forearms
+Dumbbell Wrist Extension|-|forearms
+Dumbbell Y-raise|Shoulders|lateral-raise
+Dumbbell Zottman curl|Arms|dumbbell-curl
+Dumbbell alternating hammer curl|Arms|dumbbell-curl
+Dumbbell calf raise|Legs|calf-raise
+Dumbbell chest-supported row|Back|dumbbell-row
+Dumbbell clean|-|dumbbell-olympic
+Dumbbell clean and press|-|dumbbell-olympic
+Dumbbell concentration curl|Arms|dumbbell-curl
+Dumbbell cross-body hammer curl|Arms|dumbbell-curl
+Dumbbell crush press|Chest|dumbbell-bench-press
+Dumbbell curtsy lunge|Legs|lunge
+Dumbbell decline bench press|Chest|dumbbell-bench-press
+Dumbbell floor fly|Chest|chest-fly
+Dumbbell floor press|Chest|dumbbell-bench-press
+Dumbbell front raise|Shoulders|front-raise
+Dumbbell front squat|Legs|squat
+Dumbbell glute bridge|Legs|hip-thrust
+Dumbbell good morning|Legs|good-morning
+Dumbbell hammer curl|Arms|dumbbell-curl
+Dumbbell hex press|Chest|dumbbell-bench-press
+Dumbbell high step-up|Legs|lunge
+Dumbbell hip thrust|Legs|hip-thrust
+Dumbbell incline fly|Chest|chest-fly
+Dumbbell incline hammer curl|Arms|dumbbell-curl
+Dumbbell incline row|Back|dumbbell-row
+Dumbbell incline shoulder press|Shoulders|dumbbell-shoulder-press
+Dumbbell incline squeeze press|Chest|incline-press
+Dumbbell lateral lunge|Legs|lunge
+Dumbbell lateral raise|Shoulders|lateral-raise
+Dumbbell lunge|Legs|lunge
+Dumbbell overhead carry|-|yoke
+Dumbbell overhead triceps extension|Arms|triceps-extension
+Dumbbell pullover and press|Back|lat-isolation
+Dumbbell rear delt fly|Shoulders|rear-delt
+Dumbbell reverse fly|Shoulders|rear-delt
+Dumbbell reverse fly on incline bench|Shoulders|rear-delt
+Dumbbell reverse lunge|Legs|lunge
+Dumbbell reverse-grip curl|Arms|reverse-curl
+Dumbbell rolling triceps extension|Arms|triceps-extension
+Dumbbell scaption|Shoulders|lateral-raise
+Dumbbell seal row|Back|dumbbell-row
+Dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+Dumbbell skull crusher|Arms|triceps-extension
+Dumbbell snatch|-|dumbbell-olympic
+Dumbbell spider curl|Arms|dumbbell-curl
+Dumbbell split squat|Legs|lunge
+Dumbbell squeeze press|Chest|dumbbell-bench-press
+Dumbbell step-up|Legs|lunge
+Dumbbell suitcase carry|-|carry
+Dumbbell sumo deadlift|Back|deadlift
+Dumbbell sumo squat|Legs|goblet-squat
+Dumbbell swing|-|swing
+Dumbbell thruster|-|dumbbell-olympic
+Dumbbell upright row|Shoulders|upright-row
+Dumbbell walking lunge|Legs|lunge
+Dynamic Side Plank|-|core
+EZ Bar Lying Triceps Extension|Arms|triceps-extension
+EZ-bar Bayesian curl|Arms|curl
+Eccentric Heel Drop|Legs|calf-raise
+Elliptical|-|ignore
+Farmer carry|-|carry
+Farmers Walk|-|carry
+Farmer’s carry|-|carry
+Fat Bar Deadlift|Back|deadlift
+Feet-Up Bench Press|Chest|bench-press
+Fire Hydrants|-|abduction
+Flat bench press|Chest|bench-press
+Floor Back Extension|-|back-extension
+Frog Pumps|-|glute-kickback
+Front Hold|-|shoulder-accessory
+Front rack dumbbell carry|-|yoke
+Frontal-plane Keenan flap|Back|keenan-flap
+Glute Ham Raise|-|nordic
+Glute drive machine|Legs|hip-thrust
+Gripper|-|forearms
+Ground to Overhead|-|man-maker
+Hack squat machine|Legs|hack-squat
+Half Air Squat|-|bodyweight-squat
+Hang Power Clean|Legs|clean
+Hang Power Snatch|Legs|snatch
+Hang Snatch|Legs|snatch
+Hanging Sit-Up|-|core
+Hanging Windshield Wiper|-|core
+Heel Raise|Legs|calf-raise
+Heel Walk|-|ignore
+High pull|-|high-pull
+High row machine|Back|row
+High to Low Wood Chop with Band|-|core
+High to Low Wood Chop with Cable|-|core
+High-foot hack squat machine|Legs|hack-squat
+High-foot leg press machine|Legs|leg-press
+High-foot pendulum squat machine|Legs|hack-squat
+Hip Adduction Against Band|-|adduction
+Hip Thrust With Band Around Knees|Legs|hip-thrust
+Hip abduction machine|-|abduction
+Hip adduction machine|-|adduction
+Hip thrust machine|Legs|hip-thrust
+Hollow Body Crunch|-|core
+Horizontal Wood Chop with Band|-|core
+Horizontal Wood Chop with Cable|-|core
+Horizontal chest press machine|Chest|chest-press
+Iliac lat pulldown|Back|lat-pulldown
+Incline Push-Up|Chest|incline-push-up
+Incline barbell bench press|Chest|incline-press
+Incline cable chest press|Chest|incline-press
+Incline cable curl|Arms|curl
+Incline cable fly|Chest|chest-fly
+Incline chest press machine|Chest|incline-press
+Incline dumbbell bench press|Chest|incline-press
+Inverted Row with Underhand Grip|Back|inverted-row
+Iso-lateral chest press machine|Chest|chest-press
+Iso-lateral lat pulldown machine|Back|lat-pulldown
+Iso-lateral row machine|Back|row
+Jackknife Sit-Up|-|core
+Jerk|Shoulders|jerk
+Jumping Lunge|Legs|lunge
+Katana triceps extension|Arms|triceps-extension
+Keenan flap|Back|keenan-flap
+Kettlebell Clean & Jerk|-|dumbbell-olympic
+Kettlebell Clean & Press|-|dumbbell-olympic
+Kettlebell Curl|Arms|dumbbell-curl
+Kettlebell Floor Press|Chest|dumbbell-bench-press
+Kettlebell Front Squat|Legs|squat
+Kettlebell Halo|-|shoulder-accessory
+Kettlebell Plank Pull Through|-|core
+Kettlebell Press|Shoulders|dumbbell-shoulder-press
+Kettlebell Push Press|Shoulders|dumbbell-shoulder-press
+Kettlebell Thrusters|-|dumbbell-olympic
+Kettlebell Tibialis Raise|-|tibialis
+Kettlebell Windmill|-|core
+Kettlebell clean|-|dumbbell-olympic
+Kneeling Ab Wheel Roll-Out|-|core
+Kneeling Incline Push-Up|Chest|incline-push-up
+Kneeling Plank|-|core
+Kneeling Push-Up|Chest|incline-push-up
+Kneeling Side Plank|-|core
+Kneeling lat pulldown|Back|lat-pulldown
+Landmine Hack Squat|Legs|hack-squat
+Landmine Rotation|-|core
+Landmine row|Back|barbell-row
+Lat Pulldown With Neutral Grip|Back|lat-pulldown
+Lat Pulldown With Pronated Grip|Back|lat-pulldown
+Lat Pulldown With Supinated Grip|Back|lat-pulldown
+Lat pulldown machine|Back|lat-pulldown
+Lateral Bound|-|bodyweight-squat
+Lateral Walk With Band|-|abduction
+Lateral lunge|Legs|lunge
+Leg Curl On Ball|Legs|leg-curl
+Leg curl machine|Legs|leg-curl
+Leg press machine|Legs|leg-press
+Lengthened-partial cable lateral raise|Shoulders|lateral-raise
+Lengthened-partial leg extension|Legs|leg-extension
+Lengthened-partial preacher curl|Arms|machine-curl
+Lengthened-partial pull-up|Back|pull-up
+Long-length partial calf raise|Legs|calf-raise
+Long-length partial leg curl|Legs|leg-curl
+Low row machine|Back|row
+Low to High Wood Chop with Band|-|core
+Low to High Wood Chop with Cable|-|core
+Low-foot hack squat machine|Legs|hack-squat
+Low-foot leg press machine|Legs|leg-press
+Low-foot pendulum squat machine|Legs|hack-squat
+Lying Bicep Cable Curl on Bench|Arms|curl
+Lying Bicep Cable Curl on Floor|Arms|curl
+Lying Dumbbell External Shoulder Rotation|-|shoulder-accessory
+Lying Dumbbell Internal Shoulder Rotation|-|shoulder-accessory
+Lying Leg Raise|-|core
+Lying Neck Curl|-|ignore
+Lying Neck Extension|-|ignore
+Lying Windshield Wiper|-|core
+Lying Windshield Wiper with Bent Knees|-|core
+Machine Bicep Curl|Arms|machine-curl
+Machine Crunch|-|core
+Machine Glute Kickbacks|-|glute-kickback
+Machine Lat Pulldown|Back|lat-pulldown
+Machine Overhead Triceps Extension|Arms|triceps-extension
+Machine abdominal crunch|-|core
+Machine back extension|-|back-extension
+Machine chest fly|Chest|chest-fly
+Machine front raise|Shoulders|front-raise
+Machine glute bridge|Legs|hip-thrust
+Machine hammer curl|Arms|machine-curl
+Machine hip abduction|-|abduction
+Machine hip adduction|-|adduction
+Machine hip thrust|Legs|hip-thrust
+Machine leg extension|Legs|leg-extension
+Machine lying leg curl|Legs|leg-curl
+Machine pec deck|Chest|chest-fly
+Machine preacher curl|Arms|machine-curl
+Machine pullover|Back|lat-isolation
+Machine rear delt fly|Shoulders|rear-delt
+Machine rotary torso|-|core
+Machine seated calf raise|Legs|calf-raise
+Machine seated leg curl|Legs|leg-curl
+Machine standing calf raise|Legs|calf-raise
+Machine tibialis raise|-|tibialis
+Machine triceps dip|Arms|dip-machine
+Machine triceps pushdown|Arms|triceps-pushdown
+Meadows press|-|landmine-press
+Medicine Ball Chest Pass|-|ignore
+Mixed-grip barbell deadlift|Back|deadlift
+Monkey Row|Back|row
+Muscle-Up (Bar)|Back|muscle-up
+Muscle-Up (Rings)|Back|muscle-up
+Narrow-stance horizontal leg press|Legs|leg-press
+Narrow-stance leg press machine|Legs|leg-press
+Narrow-stance vertical leg press|Legs|leg-press
+Neutral Close-Grip Lat Pulldown|Back|lat-pulldown
+Neutral-grip barbell row|Back|barbell-row
+Neutral-grip chest press machine|Chest|chest-press
+Neutral-grip chest-supported dumbbell row|Back|dumbbell-row
+Neutral-grip chest-supported machine row|Back|row
+Neutral-grip dumbbell bench press|Chest|dumbbell-bench-press
+Neutral-grip dumbbell curl|Arms|dumbbell-curl
+Neutral-grip dumbbell decline bench press|Chest|dumbbell-bench-press
+Neutral-grip dumbbell floor press|Chest|dumbbell-bench-press
+Neutral-grip dumbbell incline row|Back|dumbbell-row
+Neutral-grip dumbbell overhead triceps extension|Arms|triceps-extension
+Neutral-grip dumbbell pullover|Back|lat-isolation
+Neutral-grip dumbbell row|Back|dumbbell-row
+Neutral-grip dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+Neutral-grip incline chest press machine|Chest|incline-press
+Neutral-grip incline dumbbell bench press|Chest|incline-press
+Neutral-grip lat pulldown machine|Back|lat-pulldown
+Neutral-grip machine biceps curl|Arms|machine-curl
+Neutral-grip machine preacher curl|Arms|machine-curl
+Neutral-grip machine pullover|Back|lat-isolation
+Neutral-grip machine shoulder press|Shoulders|machine-shoulder-press
+Neutral-grip machine triceps extension|Arms|triceps-extension
+Neutral-grip seated dip machine|Arms|dip-machine
+Neutral-grip seated machine row|Back|row
+Nordic Hamstring Eccentric|-|nordic
+Oblique Crunch|-|core
+Oblique Sit-Up|-|core
+Omni-directional lateral raise|Shoulders|lateral-raise
+One-Arm Landmine Press|-|landmine-press
+One-Handed Bar Hang|-|forearms
+One-Handed Cable Row|Back|row
+One-Handed Kettlebell Swing|-|swing
+One-Handed Lat Pulldown|Back|lat-pulldown
+One-Legged Glute Bridge|Legs|hip-thrust
+One-Legged Hip Thrust|Legs|hip-thrust
+One-Legged Leg Curl|Legs|leg-curl
+One-Legged Leg Extension|Legs|leg-extension
+One-Legged Lying Leg Curl|Legs|leg-curl
+One-Legged Seated Leg Curl|Legs|leg-curl
+Overhand-grip barbell row|Back|barbell-row
+Overhand-grip lat pulldown machine|Back|lat-pulldown
+Overhead Cable Triceps Extension (Lower Position)|Arms|triceps-extension
+Overhead Cable Triceps Extension (Upper Position)|Arms|triceps-extension
+Overhead cable curl|Arms|curl
+Pause Deadlift|Back|deadlift
+Pause bench press|Chest|bench-press
+Paused deadlift|Back|deadlift
+Pendlay deadlift|Back|deadlift
+Pendulum squat machine|Legs|hack-squat
+Pin Squat|Legs|squat
+Plank to Push-Up|-|core
+Plank with Leg Lifts|-|core
+Plank with Shoulder Taps|-|core
+Plate Wrist Curl|-|forearms
+Plate-loaded chest press machine|Chest|chest-press
+Plate-loaded row machine|Back|row
+Poliquin Raise|Shoulders|lateral-raise
+Poliquin Step-Up|Legs|lunge
+Power Jerk|Shoulders|jerk
+Preacher curl machine|Arms|machine-curl
+Prisoner Get Up|-|get-up
+Pronated-grip dumbbell curl|Arms|reverse-curl
+Prone Neck Bridge|-|ignore
+Pull-Up With a Neutral Grip|Back|pull-up
+Push-Up Against Wall|Chest|incline-push-up
+Push-Ups With Feet in Rings|Chest|push-up
+Rear delt machine|Shoulders|rear-delt
+Recline curl|Arms|curl
+Resistance Band Chest Fly|Chest|chest-fly
+Resistance Band Curl|Arms|curl
+Resistance Band Lateral Raise|Shoulders|lateral-raise
+Reverse Barbell Curl|Arms|reverse-curl
+Reverse Barbell Lunge|Legs|barbell-lunge
+Reverse Body Weight Lunge|Legs|lunge
+Reverse Cable Flyes|Shoulders|rear-delt
+Reverse Dumbbell Curl|Arms|reverse-curl
+Reverse Dumbbell Flyes|Shoulders|rear-delt
+Reverse Dumbbell Flyes on Incline Bench|Shoulders|rear-delt
+Reverse Dumbbell Lunge|Legs|lunge
+Reverse Hyperextension|-|back-extension
+Reverse Machine Fly|Shoulders|rear-delt
+Reverse Nordic curl|-|reverse-nordic
+Reverse fly machine|Shoulders|rear-delt
+Reverse-grip barbell bench press|Chest|bench-press
+Reverse-grip barbell row|Back|barbell-row
+Ring Dip|Chest|dip
+Ring Pull-Up|Back|pull-up
+Ring Row|Back|inverted-row
+Sagittal-plane Keenan flap|Back|keenan-flap
+Scap Pull-Up|-|shoulder-accessory
+Seated Barbell Overhead Press|Shoulders|overhead-press
+Seated Cable Chest Fly|Chest|chest-fly
+Seated Kettlebell Press|Shoulders|dumbbell-shoulder-press
+Seated Machine Row|Back|row
+Seated Smith Machine Shoulder Press|Shoulders|machine-shoulder-press
+Seated cable fly|Chest|chest-fly
+Seated dip machine|Arms|dip-machine
+Seated good morning|Legs|good-morning
+Seated leg press|Legs|leg-press
+Shallow Body Weight Lunge|Legs|lunge
+Side Lunges (Bodyweight)|Legs|lunge
+Single Leg Deadlift with Kettlebell|Legs|romanian-deadlift
+Single-arm cable pulldown|Back|lat-pulldown
+Single-arm cable rear delt fly|Shoulders|rear-delt
+Single-arm cable row|Back|row
+Single-arm dumbbell bench press|Chest|dumbbell-bench-press
+Single-arm dumbbell floor press|Chest|dumbbell-bench-press
+Single-arm dumbbell row|Back|dumbbell-row
+Single-arm dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+Single-arm lat prayer|Back|lat-isolation
+Single-leg Romanian deadlift|Legs|romanian-deadlift
+Single-leg leg extension machine|Legs|leg-extension
+Single-leg lying leg curl machine|Legs|leg-curl
+Single-leg seated leg curl machine|Legs|leg-curl
+Smith Machine Bulgarian Split Squat|Legs|barbell-lunge
+Smith Machine Front Squat|Legs|squat
+Smith Machine Hip Thrust|Legs|hip-thrust
+Smith Machine Incline Bench Press|Chest|incline-press
+Smith Machine Landmine Press|-|landmine-press
+Smith Machine One-Handed Row|Back|row
+Smith Machine Reverse Grip Bench Press|Chest|bench-press
+Smith Machine Skull Crushers|Arms|triceps-extension
+Smith machine JM press|Arms|triceps-extension
+Smith machine Romanian deadlift|Legs|romanian-deadlift
+Smith machine calf raise|Legs|calf-raise
+Smith machine deadlift|Back|deadlift
+Smith machine incline press|Chest|incline-press
+Smith machine lunge|Legs|barbell-lunge
+Smith machine overhead press|Shoulders|machine-shoulder-press
+Smith machine reverse lunge|Legs|barbell-lunge
+Snatch Grip Behind the Neck Press|Shoulders|overhead-press
+Snatch Grip Deadlift|Back|deadlift
+Squat Jerk|Shoulders|jerk
+Standing Cable Chest Fly|Chest|chest-fly
+Standing Cable Leg Extension|Legs|leg-extension
+Standing Glute Kickback in Machine|-|glute-kickback
+Standing Glute Push Down|-|glute-kickback
+Standing Hip Abduction Against Band|-|abduction
+Standing Hip Flexor Raise|-|core
+Standing Leg Curl|Legs|leg-curl
+Standing Resistance Band Chest Fly|Chest|chest-fly
+Standing calf machine|Legs|calf-raise
+Standing leg curl machine|Legs|leg-curl
+Stationary Bike|-|ignore
+Step Up|Legs|lunge
+Stiff-leg deadlift|Legs|romanian-deadlift
+Straight Arm Lat Pulldown|Back|lat-isolation
+Stretch-mediated calf raise|Legs|calf-raise
+Suitcase carry|-|carry
+Superman Raise|-|back-extension
+Supinated-grip dumbbell curl|Arms|dumbbell-curl
+Supine Neck Bridge|-|ignore
+Supported recline curl|Arms|curl
+T-bar row machine|Back|barbell-row
+Tibialis Band Pull|-|tibialis
+Toe touch|-|core
+Towel Pull-Up|Back|pull-up
+Towel Row|Back|row
+Trap Bar Deadlift With High Handles|Back|deadlift
+Trap Bar Deadlift With Low Handles|Back|deadlift
+Trap-bar deadlift|Back|deadlift
+Tricep Bodyweight Extension|Arms|triceps-extension
+Tricep Pushdown With Bar|Arms|triceps-pushdown
+Tricep Pushdown With Rope|Arms|triceps-pushdown
+Triceps dip|Arms|triceps-dip
+Underhand-grip barbell row|Back|barbell-row
+Underhand-grip lat pulldown machine|Back|lat-pulldown
+Upper-back-biased cable row|Back|row
+Upper-back-biased chest-supported row|Back|row
+V-squat machine|Legs|hack-squat
+Vertical leg press|Legs|leg-press
+Waiter carry|-|yoke
+Walking|-|ignore
+Walking lunge|Legs|lunge
+Wall Walk|-|shoulder-accessory
+Weighted Plank|-|core
+Wide-grip Pendlay row|Back|barbell-row
+Wide-grip Smith machine bench press|Chest|bench-press
+Wide-grip Smith machine incline press|Chest|incline-press
+Wide-grip Smith machine overhead press|Shoulders|machine-shoulder-press
+Wide-grip Smith machine row|Back|row
+Wide-grip T-bar row|Back|barbell-row
+Wide-grip barbell bench press|Chest|bench-press
+Wide-grip barbell curl|Arms|curl
+Wide-grip barbell deadlift|Back|deadlift
+Wide-grip barbell floor press|Chest|bench-press
+Wide-grip barbell high pull|-|high-pull
+Wide-grip barbell overhead press|Shoulders|overhead-press
+Wide-grip barbell row|Back|barbell-row
+Wide-grip barbell shrug|Back|shrug
+Wide-grip barbell upright row|Shoulders|upright-row
+Wide-grip chest press machine|Chest|chest-press
+Wide-grip chest-supported dumbbell row|Back|dumbbell-row
+Wide-grip chest-supported machine row|Back|row
+Wide-grip decline barbell bench press|Chest|bench-press
+Wide-grip dumbbell bench press|Chest|dumbbell-bench-press
+Wide-grip dumbbell curl|Arms|dumbbell-curl
+Wide-grip dumbbell incline row|Back|dumbbell-row
+Wide-grip dumbbell overhead triceps extension|Arms|triceps-extension
+Wide-grip dumbbell pullover|Back|lat-isolation
+Wide-grip dumbbell row|Back|dumbbell-row
+Wide-grip dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
+Wide-grip incline barbell bench press|Chest|incline-press
+Wide-grip incline chest press machine|Chest|incline-press
+Wide-grip incline dumbbell bench press|Chest|incline-press
+Wide-grip lat pulldown machine|Back|lat-pulldown
+Wide-grip machine biceps curl|Arms|machine-curl
+Wide-grip machine preacher curl|Arms|machine-curl
+Wide-grip machine pullover|Back|lat-isolation
+Wide-grip machine shoulder press|Shoulders|machine-shoulder-press
+Wide-grip machine triceps extension|Arms|triceps-extension
+Wide-grip pulldown|Back|lat-pulldown
+Wide-grip seated dip machine|Arms|dip-machine
+Wide-grip seated machine row|Back|row
+Wide-stance Smith machine squat|Legs|squat
+Wide-stance belt squat machine|Legs|hack-squat
+Wide-stance hack squat machine|Legs|hack-squat
+Wide-stance horizontal leg press|Legs|leg-press
+Wide-stance leg press machine|Legs|leg-press
+Wide-stance pendulum squat machine|Legs|hack-squat
+Wide-stance vertical leg press|Legs|leg-press
+Zombie Squat|Legs|squat

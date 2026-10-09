@@ -106,6 +106,9 @@ public struct Settings: Codable, Equatable, Sendable {
     public var bodyweight: Double?
     /// Absent means auto.
     public var logSets: LogSets?
+    /// What an exercise name counts as on Rank, keyed by LiftTable.nameKey: a lift id, or "none". Ids this version
+    /// doesn't know (from a newer one) are kept and ignored.
+    public var lifts: [String: String]?
 
     public init() {}
 }

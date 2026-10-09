@@ -23,7 +23,9 @@ struct RankPage: View {
         let unit = training.settings.unit
         Page(title: "Rank", settingsOpen: $settingsOpen) {
             if let bodyweight = training.settings.bodyweight {
-                let ranks = model.derived("ranks \(bodyweight)") { $0.muscleRanks(bodyweight: bodyweight) }
+                let choices = training.settings.lifts ?? [:]
+                let signature = choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")
+                let ranks = model.derived("ranks \(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
                 let ranked = ranks.filter { $0.best != nil }
                 let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + Double($1.rank) + $1.progress } / Double(ranked.count)
                 let overall = min(Ranks.names.count - 1, Int(score))
@@ -34,12 +36,22 @@ struct RankPage: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Nearest rank up").font(.subheadline).foregroundStyle(Palette.muted)
                         Text("\(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])").font(.headline).foregroundStyle(Palette.rankText[closest.rank + 1])
-                        Text("Lift \(loadable(next.kg, unit)) × \(next.reps) on \(best.exercise)")
+                        Text("Lift \(liftWeight(next.kg, best.kind, unit, target: true)) × \(next.reps) on \(best.exercise)")
                             .font(.subheadline).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
                 }
-                GlassList { ForEach(ranks, id: \.muscle) { MuscleRow(rank: $0, unit: unit) } }
+                let counted = model.derived("counted \(signature)") { $0.countedNames(choices: choices) }
+                GlassList {
+                    ForEach(ranks, id: \.muscle) { rank in
+                        MuscleRow(rank: rank, unit: unit, names: counted.filter { $0.groups.contains(rank.muscle.rawValue) })
+                    }
+                }
+                // Apart only when it needs you: names it doesn't know, and ones you chose not to count.
+                let uncounted = counted.filter { $0.groups.isEmpty && (!$0.known || $0.chosen) }
+                if !uncounted.isEmpty {
+                    RankCounts(label: "Not counted", rows: uncounted).frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
+                }
             } else {
                 setup(unit: unit)
             }
@@ -125,53 +137,20 @@ struct RankPage: View {
     }
 }
 
-/// A target as weight you can load on a bar: up to the next 2.5 kg or 5 lb ("175 lb", not "174.17 lb").
-private func loadable(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
+/// A set's weight as it reads for its lift (the website's rank-format.ts): "80 kg", or on bodyweight lifts "Bodyweight",
+/// "BW + 20 kg", "BW − 20 kg". A target is weight you can load: to the next 2.5 kg or 5 lb ("175 lb", not "174.17 lb"),
+/// never short of the goal (assistance rounds down).
+func liftWeight(_ kg: Double, _ kind: LoadKind, _ unit: TrackCore.Settings.Unit, target: Bool = false) -> String {
     let step = TrainingSet.kilograms(from: unit == .kg ? "2.5" : "5", unit: unit) ?? 2.5
-    return "\(TrainingSet.display(kg: (kg / step - 1e-9).rounded(.up) * step, unit: unit)) \(unit.rawValue)"
+    let shown = !target ? kg : kind == .assisted ? (kg / step + 1e-9).rounded(.down) * step : (kg / step - 1e-9).rounded(.up) * step
+    let value = "\(TrainingSet.display(kg: shown, unit: unit)) \(unit.rawValue)"
+    if kind == .weight { return value }
+    return shown <= 0 ? "Bodyweight" : "BW \(kind == .assisted ? "−" : "+") \(value)"
 }
 
 /// "5% left to Strong", or the top.
 func toGo(_ rank: Int, _ progress: Double) -> String {
     rank >= Ranks.names.count - 1 ? "Top rank" : "\(max(1, Int(((1 - progress) * 100).rounded(.up))))% left to \(Ranks.names[rank + 1])"
-}
-
-/// A muscle: its rank, a bar toward the next, and (tapped open) the lift it's ranked on and what reaches the next.
-private struct MuscleRow: View {
-    let rank: MuscleRank
-    let unit: TrackCore.Settings.Unit
-    @State private var open = false
-
-    var body: some View {
-        let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
-        let text = rank.best == nil ? Palette.muted : Palette.rankText[rank.rank]
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(rank.muscle.rawValue).font(.headline).foregroundStyle(Palette.text)
-                Spacer()
-                Text(rank.best == nil ? "Unranked" : rank.name).font(.subheadline.weight(.bold)).foregroundStyle(text)
-                Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                    .scaleEffect(y: open ? -1 : 1)
-            }
-            RankBar(progress: rank.progress, color: color)
-            Text(rank.best == nil ? "Log a \(rank.muscle.rawValue.lowercased()) lift to rank it" : toGo(rank.rank, rank.progress))
-                .font(.subheadline).foregroundStyle(Palette.muted)
-            if open, let best = rank.best {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Best: \(best.exercise), \(TrainingSet.display(kg: best.kg, unit: unit)) \(unit.rawValue) × \(best.reps)")
-                    if let next = rank.next { Text("Next: \(loadable(next.kg, unit)) × \(next.reps)") }
-                }
-                .font(.footnote).foregroundStyle(Palette.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } }
-        .accessibilityAddTraits(.isButton).accessibilityValue(open ? "Open" : "Closed")
-        .sensoryFeedback(.selection, trigger: open)
-    }
 }
 
 /// A rank bar: the track with the rank's colour filled to its progress.
