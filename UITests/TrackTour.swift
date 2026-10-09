@@ -72,7 +72,8 @@ final class TrackTour: XCTestCase {
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'What counts'")).firstMatch, "What counts"); snap("rank-what-counts", after: 0.8)
         app.swipeUp(); snap("rank-what-counts-scrolled")
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'counts as'")).firstMatch, "counts as menu"); snap("rank-counts-as-menu", after: 0.8)
-        app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap(); app.swipeDown(); app.swipeDown()
+        // Close the menu by tapping beside it: it hangs from the right-hand picker, so the far left edge is clear.
+        app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.5)).tap(); app.swipeDown(); app.swipeDown()
         tap(app.tabBars.buttons["History"], "History"); snap("history", after: 0.8)
         tap(app.buttons["Filter by date"].firstMatch, "date filter"); snap("history-filter", after: 0.8)
         tap(app.buttons["Any"].firstMatch, "From: Any"); snap("history-from-date", after: 0.8)
