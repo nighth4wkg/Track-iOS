@@ -67,7 +67,7 @@ struct WorkoutView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 .safeAreaInset(edge: .bottom) {
-                    // While typing, one solid bar on the keyboard (the rest's time, Next, Done) instead of the floating capsule.
+                    // While typing, one capsule over the keyboard (the rest's time, Next, Done) instead of the rest capsule.
                     Group { if focus != nil { keyboardBar(fields) } else { RestCapsule() } }.animation(.smooth(duration: Motion.quick), value: focus == nil)
                 }
             }
@@ -155,8 +155,8 @@ struct WorkoutView: View {
         }
     }
 
-    /// While typing: one solid bar on the keyboard with the rest's time on the left, then Next (weight → reps → RIR →
-    /// next set) and Done. It replaces the rest capsule meanwhile, so nothing floats over the sets or stacks up.
+    /// While typing: one capsule just over the keyboard with the rest's time on the left, then Next (weight → reps →
+    /// RIR → next set) and Done. It replaces the rest capsule meanwhile, so the two never stack up.
     private func keyboardBar(_ fields: [String]) -> some View {
         HStack(spacing: 8) {
             RestCapsule(compact: true)
@@ -169,11 +169,11 @@ struct WorkoutView: View {
                 .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.primary, lifted: false)
         }
         .font(.body.weight(.semibold)).buttonStyle(PressStyle())
-        .padding(.horizontal, 16).padding(.vertical, 10)
-        // Solid, with a hairline on top: the page doesn't show through and the bar reads as part of the keyboard. It
-        // runs on behind the keyboard, so its rounded top corners show the bar, not the card under it.
-        .background { Palette.dialog.ignoresSafeArea(edges: .bottom) }
-        .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
+        // A floating glass capsule like the rest's, solid inside so the page doesn't show through; the pills sit 8pt in,
+        // their curves matching its own.
+        .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 8)
+        .glass(radius: 30, fill: Palette.dialog)
+        .padding(.horizontal, 16).padding(.bottom, 8)
         .transition(.opacity)
     }
 }
