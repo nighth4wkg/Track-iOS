@@ -113,7 +113,7 @@ struct RankLifts: View {
     /// A name's choice: a lift id, "none", or nil to go back to what the name says.
     private func choose(_ key: String, _ choice: String?) {
         let lifts = model.training.settings.lifts ?? [:]
-        if let choice, lifts[key] == nil, lifts.count >= Limits.liftChoices {
+        if choice != nil, lifts[key] == nil, lifts.count >= Limits.liftChoices {
             model.show("You can choose for up to \(Limits.grouped(Limits.liftChoices)) exercises.")
             return
         }
