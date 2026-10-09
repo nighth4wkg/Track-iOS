@@ -61,10 +61,10 @@ jobs:
           tag="v$version-$build"
           if gh release view "$tag" > /dev/null 2>&1; then echo "$tag is already released"; exit 0; fi
           # What's new: each commit since the last release (its first line); on the first release, the version's own
-          # commit ("0.18.3 (35): ...").
+          # commit, the one whose first line starts with the version ("0.18.3 (35): ...", not one merely mentioning it).
           last=$(git tag --list 'v*' --sort=-creatordate | head -n 1)
           { if [ -n "$last" ]; then git log --format='- %s' "$last..HEAD"
-            else git log -1 --format='- %s' --fixed-strings --grep="$version ($build)"; fi; } \
+            else git log --format='- %s' | grep -F -m 1 -- "- $version ($build)"; fi; } \
             | grep -v -E '^- [0-9]+\.[0-9]+\.[0-9]+ \([0-9]+\)$' > notes.txt || true
           [ -s notes.txt ] || git log -1 --format='- %s' > notes.txt
           VERSION="$version" BUILD="$build" TAG="$tag" SIZE=$(stat -f%z Track.ipa) python3 - <<'PY'
