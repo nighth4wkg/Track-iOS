@@ -57,6 +57,7 @@ struct WorkoutView: View {
                     .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
                 .scrollEdgeEffectStyle(.hard, for: .top) // the timer stays readable over scrolled sets
+                .scrollEdgeEffectStyle(.soft, for: .bottom) // a fade behind the capsule, never a hard line across the cards
                 .scrollDisabled(dragging != nil).onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.viewport = $0 }
                 // A drag the system cancelled leaves the list up: a tap puts the cards back.
                 .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
@@ -168,9 +169,13 @@ struct WorkoutView: View {
     /// While typing: one capsule just over the keyboard with the rest's time on the left, then Next (weight → reps →
     /// RIR → next set) and Done. It replaces the rest capsule meanwhile, so the two never stack up.
     private func keyboardBar(_ fields: [String]) -> some View {
-        HStack(spacing: 8) {
-            RestCapsule(compact: true)
-            Spacer(minLength: 8)
+        // Without a rest it's just Next and Done, at the right: no empty bar.
+        let resting = model.training.restUntil != nil
+        return HStack(spacing: 8) {
+            if resting {
+                RestCapsule(compact: true)
+                Spacer(minLength: 8)
+            }
             if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
                 Button("Next") { self.focus = fields[index + 1] }.foregroundStyle(Palette.text)
                     .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
@@ -181,8 +186,9 @@ struct WorkoutView: View {
         .font(.body.weight(.semibold)).buttonStyle(PressStyle())
         // A floating glass capsule like the rest's, solid inside so the page doesn't show through; the pills sit 8pt in,
         // their curves matching its own.
-        .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 8)
+        .padding(.leading, resting ? 14 : 8).padding(.trailing, 8).padding(.vertical, 8)
         .glass(radius: 30, fill: Palette.dialog)
+        .frame(maxWidth: .infinity, alignment: .trailing)
         .padding(.horizontal, 16).padding(.bottom, 8)
         .transition(.opacity)
     }

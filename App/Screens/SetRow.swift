@@ -30,6 +30,7 @@ struct SetRow: View {
     /// RIR only carried over, doesn't count.
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
+    @State private var replacing: String? // the field just tapped: its first keystroke replaces it (replaceTyped)
 
     var body: some View {
         let shown = typed
@@ -66,12 +67,12 @@ struct SetRow: View {
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
         .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
-        .onChange(of: rir) { _, value in if let n = Int(value), n > Limits.rir { rir = String(Limits.rir) } } // RIR goes up to Limits.rir
+        .onChange(of: weight) { replaceTyped("kg", $0, $1) }.onChange(of: reps) { replaceTyped("reps", $0, $1) }
+        .onChange(of: rir) { replaceTyped("rir", $0, $1); if let n = Int(rir), n > Limits.rir { rir = String(Limits.rir) } } // up to Limits.rir
         .onChange(of: focus.wrappedValue) { old, id in
-            // Leaving the row saves it straight away.
+            // Leaving the row saves it straight away; tapping a number arms it, so the first keystroke replaces it.
             if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
-            // Tapping a number selects it, so typing replaces it (the website's select-on-focus).
-            if id?.hasPrefix(set.id) == true { DispatchQueue.main.async { UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil) } }
+            if let id, id.hasPrefix("\(set.id).") { replacing = String(id.dropFirst(set.id.count + 1)) }
         }
         // Only keystrokes post this (not focusing, selecting or loading numbers), so it says what was really typed.
         .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)) { _ in
@@ -119,13 +120,21 @@ struct SetRow: View {
             .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
             .focused(focus, equals: "\(set.id).\(id)")
     }
-
     private func typedInto(_ id: String) {
         if id == "rir" { rirTyped = true }
         pending?.cancel()
         pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
     }
-
+    /// The website's select-on-focus without iOS's selection handles: the first keystroke after tapping keeps only what
+    /// it added (what's new between the unchanged start and end); deleting clears the field.
+    private func replaceTyped(_ field: String, _ old: String, _ new: String) {
+        guard replacing == field else { return }
+        replacing = nil
+        let start = zip(new, old).prefix { $0 == $1 }.count
+        let end = zip(new.dropFirst(start).reversed(), old.dropFirst(start).reversed()).prefix { $0 == $1 }.count
+        let typed = new.count > old.count ? String(new.dropFirst(start).dropLast(end)) : ""
+        if field == "kg" { weight = typed } else if field == "reps" { reps = typed } else { rir = typed }
+    }
     private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? {
         record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" }
     }
