@@ -21,13 +21,19 @@ public struct Lift: Decodable, Sendable {
     let pair: Double?
     /// The share of bodyweight moved, plus any added weight (or minus assistance).
     public let bodyweight: Double?
+    /// More parts whose rank groups it counts toward (full-body lifts).
+    public let also: [String]?
 
     public var helps: [String] { helpsList ?? [] }
     /// The rank group it counts toward (Chest, Back, Shoulders, Arms, Legs), or nil (Core).
     public var group: String? { LiftTable.group(of: part) }
+    /// Every rank group it counts toward: its part's, then those of its `also` parts.
+    public var groups: [String] {
+        ([part] + (also ?? [])).compactMap(LiftTable.group(of:)).reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
+    }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, part, helpsList = "helps", match, at, perSide, machine, gear, pair, bodyweight
+        case id, name, part, helpsList = "helps", match, at, perSide, machine, gear, pair, bodyweight, also
     }
 }
 

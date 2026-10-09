@@ -23,12 +23,13 @@ public enum Ranks {
         return Double(at.count)
     }
 
-    /// The lift a name ranks on, with its standard, group and load rules; nil when it never ranks.
-    static func ranked(_ name: String, choices: [String: String]) -> (lift: Lift, at: [Double], group: Muscle, oneSided: Bool, sign: Double, scale: Double)? {
-        guard let lift = LiftTable.lift(for: name, choices: choices).lift, let at = lift.at,
-              let group = lift.group.flatMap(Muscle.init(rawValue:)) else { return nil }
+    /// The lift a name ranks on, with its standard, groups and load rules; nil when it never ranks.
+    static func ranked(_ name: String, choices: [String: String]) -> (lift: Lift, at: [Double], groups: [Muscle], oneSided: Bool, sign: Double, scale: Double)? {
+        guard let lift = LiftTable.lift(for: name, choices: choices).lift, let at = lift.at else { return nil }
+        let groups = lift.groups.compactMap(Muscle.init(rawValue:))
+        guard !groups.isEmpty else { return nil }
         let load = LiftTable.load(for: lift, name: name)
-        return (lift, at, group, load.oneSided, load.sign, load.scale)
+        return (lift, at, groups, load.oneSided, load.sign, load.scale)
     }
 }
 
@@ -58,7 +59,7 @@ extension Array where Element == Session {
                          best: (exercise: String, lift: String, kg: Double, reps: Int, kind: LoadKind))
         var best: [Muscle: Top] = [:]
         // Each name is read once: the same exercise repeats across workouts.
-        var names: [String: (lift: Lift, at: [Double], group: Muscle, oneSided: Bool, sign: Double, scale: Double)?] = [:]
+        var names: [String: (lift: Lift, at: [Double], groups: [Muscle], oneSided: Bool, sign: Double, scale: Double)?] = [:]
         for session in self { for exercise in session.exercises {
             if names[exercise.name] == nil { names[exercise.name] = .some(Ranks.ranked(exercise.name, choices: choices)) }
             guard let found = names[exercise.name] ?? nil else { continue }
@@ -72,9 +73,10 @@ extension Array where Element == Session {
                 let load = (base + found.sign * kg * found.scale) * sides
                 guard load > 0 else { continue }
                 let score = Ranks.ladder(Ranks.oneRepMax(load, reps) / bodyweight, found.at)
-                if score > (best[found.group]?.score ?? -1) {
+                // A full-body lift counts toward each of its groups.
+                for group in found.groups where score > (best[group]?.score ?? -1) {
                     let kind: LoadKind = lift.bodyweight == nil ? .weight : found.sign < 0 ? .assisted : .added
-                    best[found.group] = (score, found.at, base, found.sign, found.scale, sides, (exercise.name, lift.name, kg, reps, kind))
+                    best[group] = (score, found.at, base, found.sign, found.scale, sides, (exercise.name, lift.name, kg, reps, kind))
                 }
             }
         } }

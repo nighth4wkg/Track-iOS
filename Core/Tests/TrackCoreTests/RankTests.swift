@@ -66,10 +66,24 @@ final class RankTests: XCTestCase {
 
     func testTheNextTargetReachesTheNextRank() throws {
         for (name, muscle) in [("Bench Press", Muscle.chest), ("Machine shoulder press", .shoulders), ("One-Legged Leg Extension", .legs),
-                               ("Dumbbell row", .back), ("Incline dumbbell press", .chest), ("Dips", .chest)] {
+                               ("Dumbbell row", .back), ("Incline dumbbell press", .chest), ("Dips", .chest), ("Power clean", .back)] {
             let now = try rank(name, 10, 8, bodyweight: 75, muscle)
             let next = try XCTUnwrap(now.next, name)
             XCTAssertEqual(try rank(name, next.kg, next.reps, bodyweight: 75, muscle).rank, now.rank + 1, name)
+        }
+    }
+
+    func testFullBodyBarbellLiftsCountTowardEachGroupTheyTrain() throws {
+        // 80 kg lifter: power clean 80 (1.0× bodyweight, Solid on 0.45/0.75/1.05/1.5), snatch 60 (0.75×, Solid on 0.36/0.6/0.84/1.2).
+        let ranked = { (name: String, kg: Double) in [self.session([(name, kg, 1)])].muscleRanks(bodyweight: 80).filter { $0.best != nil } }
+        XCTAssertEqual(ranked("Power clean", 80).map { "\($0.muscle) \($0.rank)" }, ["\(Muscle.back) 2", "\(Muscle.legs) 2"])
+        XCTAssertEqual(ranked("Snatch", 60).map { "\($0.muscle) \($0.rank)" }, ["\(Muscle.back) 2", "\(Muscle.shoulders) 2", "\(Muscle.legs) 2"])
+        // Each group keeps its own best: a bigger squat takes Legs, the clean still holds Back.
+        let both = [session([("Power clean", 80, 1), ("Back squat", 160, 1)])].muscleRanks(bodyweight: 80)
+        XCTAssertEqual(both.first { $0.muscle == .legs }?.best?.lift, "Squat")
+        XCTAssertEqual(both.first { $0.muscle == .back }?.best?.lift, "Clean")
+        for name in ["Kettlebell clean", "Dumbbell snatch", "Kettlebell swing", "Clean pull"] {
+            XCTAssertTrue([session([(name, 40, 5)])].muscleRanks(bodyweight: 80).allSatisfy { $0.best == nil }, name)
         }
     }
 

@@ -25,6 +25,10 @@ final class LiftTableTests: XCTestCase {
         for lift in LiftTable.lifts {
             XCTAssertTrue(parts.contains(lift.part) && lift.helps.allSatisfy { parts.contains($0) && $0 != lift.part }, lift.id)
             if let at = lift.at { XCTAssertTrue(at.count == 4 && zip(at, at.dropFirst()).allSatisfy { $0 < $1 } && at[0] > 0, lift.id) }
+            // `also` adds groups a full-body lift ranks too: parts it already helps, from other groups, only on ranked lifts.
+            if let also = lift.also {
+                XCTAssertTrue(lift.at != nil && also.allSatisfy(lift.helps.contains) && lift.groups.count == also.count + 1, lift.id)
+            }
         }
     }
 

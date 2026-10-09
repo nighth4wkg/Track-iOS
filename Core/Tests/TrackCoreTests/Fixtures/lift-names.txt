@@ -336,15 +336,15 @@ Calf stretch|-|ignore
 Tibialis raise|-|tibialis
 Reverse nordic|-|reverse-nordic
 ## Olympic, strongman, kettlebell (full body)
-Power clean|-|clean
-Clean and jerk|-|clean-jerk
-Snatch|-|snatch
-Power snatch|-|snatch
-Hang clean|-|clean
-Clean pull|-|clean
-Push jerk|-|jerk
-Split jerk|-|jerk
-Thruster|-|thruster
+Power clean|Legs|clean
+Clean and jerk|Legs|clean-jerk
+Snatch|Legs|snatch
+Power snatch|Legs|snatch
+Hang clean|Legs|clean
+Clean pull|-|high-pull
+Push jerk|Shoulders|jerk
+Split jerk|Shoulders|jerk
+Thruster|Legs|thruster
 Atlas stone|-|stone
 Yoke walk|-|yoke
 Tire flip|-|tire-flip
@@ -352,8 +352,8 @@ Sandbag carry|-|yoke
 Turkish get-up|-|get-up
 Kettlebell swing|-|swing
 KB swing|-|swing
-Kettlebell snatch|-|snatch
-Kettlebell clean and press|-|clean-jerk
+Kettlebell snatch|-|dumbbell-olympic
+Kettlebell clean and press|-|dumbbell-olympic
 Man maker|-|man-maker
 Sled push|-|sled
 Prowler push|-|sled
@@ -456,8 +456,8 @@ Barbell Romanian deadlift from deficit|Legs|romanian-deadlift
 Barbell Standing Triceps Extension|Arms|triceps-extension
 Barbell Wrist Curl Behind the Back|-|forearms
 Barbell Wrist Extension|-|forearms
-Barbell clean|-|clean
-Barbell clean and press|-|clean-jerk
+Barbell clean|Legs|clean
+Barbell clean and press|Shoulders|overhead-press
 Barbell close-grip overhead triceps extension|Arms|triceps-extension
 Barbell complex|-|man-maker
 Barbell deadlift|Back|deadlift
@@ -475,13 +475,13 @@ Barbell rolling triceps extension|Arms|triceps-extension
 Barbell seal row|Back|barbell-row
 Barbell seated calf raise|Legs|calf-raise
 Barbell sissy squat|-|sissy-squat
-Barbell snatch|-|snatch
+Barbell snatch|Legs|snatch
 Barbell spider curl|Arms|curl
 Barbell split squat|Legs|barbell-lunge
 Barbell standing calf raise|Legs|calf-raise
 Barbell step-up|Legs|barbell-lunge
 Barbell sumo deadlift|Back|deadlift
-Barbell thruster|-|thruster
+Barbell thruster|Legs|thruster
 Barbell upright row|Shoulders|upright-row
 Barbell walking lunge|Legs|barbell-lunge
 Barbell wide-grip overhead triceps extension|Arms|triceps-extension
@@ -493,8 +493,8 @@ Belt squat machine|Legs|hack-squat
 Bench Dip|Arms|bench-dip
 Bench Press Against Band|Chest|bench-press
 Bicycle crunch|-|core
-Block Clean|-|clean
-Block Snatch|-|snatch
+Block Clean|Legs|clean
+Block Snatch|Legs|snatch
 Body Weight Lunge|Legs|lunge
 Bodyweight Curl|Arms|curl
 Bodyweight Leg Curl|Legs|leg-curl
@@ -591,7 +591,7 @@ Chest-Supported Dumbbell Row|Back|dumbbell-row
 Chest-supported machine row|Back|row
 Clamshells|-|abduction
 Clap Push-Up|Chest|push-up
-Clean|-|clean
+Clean|Legs|clean
 Close-Grip Chin-Up|Back|chin-up
 Close-Grip Feet-Up Bench Press|Chest|bench-press
 Close-grip Pendlay row|Back|barbell-row
@@ -680,8 +680,8 @@ Dumbbell Zottman curl|Arms|dumbbell-curl
 Dumbbell alternating hammer curl|Arms|dumbbell-curl
 Dumbbell calf raise|Legs|calf-raise
 Dumbbell chest-supported row|Back|dumbbell-row
-Dumbbell clean|-|clean
-Dumbbell clean and press|-|clean-jerk
+Dumbbell clean|-|dumbbell-olympic
+Dumbbell clean and press|-|dumbbell-olympic
 Dumbbell concentration curl|Arms|dumbbell-curl
 Dumbbell cross-body hammer curl|Arms|dumbbell-curl
 Dumbbell crush press|Chest|dumbbell-bench-press
@@ -718,7 +718,7 @@ Dumbbell scaption|Shoulders|lateral-raise
 Dumbbell seal row|Back|dumbbell-row
 Dumbbell shoulder press|Shoulders|dumbbell-shoulder-press
 Dumbbell skull crusher|Arms|triceps-extension
-Dumbbell snatch|-|snatch
+Dumbbell snatch|-|dumbbell-olympic
 Dumbbell spider curl|Arms|dumbbell-curl
 Dumbbell split squat|Legs|lunge
 Dumbbell squeeze press|Chest|dumbbell-bench-press
@@ -727,7 +727,7 @@ Dumbbell suitcase carry|-|carry
 Dumbbell sumo deadlift|Back|deadlift
 Dumbbell sumo squat|Legs|goblet-squat
 Dumbbell swing|-|swing
-Dumbbell thruster|-|thruster
+Dumbbell thruster|-|dumbbell-olympic
 Dumbbell upright row|Shoulders|upright-row
 Dumbbell walking lunge|Legs|lunge
 Dynamic Side Plank|-|core
@@ -753,9 +753,9 @@ Gripper|-|forearms
 Ground to Overhead|-|man-maker
 Hack squat machine|Legs|hack-squat
 Half Air Squat|-|bodyweight-squat
-Hang Power Clean|-|clean
-Hang Power Snatch|-|snatch
-Hang Snatch|-|snatch
+Hang Power Clean|Legs|clean
+Hang Power Snatch|Legs|snatch
+Hang Snatch|Legs|snatch
 Hanging Sit-Up|-|core
 Hanging Windshield Wiper|-|core
 Heel Raise|Legs|calf-raise
@@ -789,12 +789,12 @@ Iso-lateral chest press machine|Chest|chest-press
 Iso-lateral lat pulldown machine|Back|lat-pulldown
 Iso-lateral row machine|Back|row
 Jackknife Sit-Up|-|core
-Jerk|-|jerk
+Jerk|Shoulders|jerk
 Jumping Lunge|Legs|lunge
 Katana triceps extension|Arms|triceps-extension
 Keenan flap|Back|keenan-flap
-Kettlebell Clean & Jerk|-|clean-jerk
-Kettlebell Clean & Press|-|clean-jerk
+Kettlebell Clean & Jerk|-|dumbbell-olympic
+Kettlebell Clean & Press|-|dumbbell-olympic
 Kettlebell Curl|Arms|dumbbell-curl
 Kettlebell Floor Press|Chest|dumbbell-bench-press
 Kettlebell Front Squat|Legs|squat
@@ -802,10 +802,10 @@ Kettlebell Halo|-|shoulder-accessory
 Kettlebell Plank Pull Through|-|core
 Kettlebell Press|Shoulders|dumbbell-shoulder-press
 Kettlebell Push Press|Shoulders|dumbbell-shoulder-press
-Kettlebell Thrusters|-|thruster
+Kettlebell Thrusters|-|dumbbell-olympic
 Kettlebell Tibialis Raise|-|tibialis
 Kettlebell Windmill|-|core
-Kettlebell clean|-|clean
+Kettlebell clean|-|dumbbell-olympic
 Kneeling Ab Wheel Roll-Out|-|core
 Kneeling Incline Push-Up|Chest|incline-push-up
 Kneeling Plank|-|core
@@ -940,7 +940,7 @@ Plate-loaded chest press machine|Chest|chest-press
 Plate-loaded row machine|Back|row
 Poliquin Raise|Shoulders|lateral-raise
 Poliquin Step-Up|Legs|lunge
-Power Jerk|-|jerk
+Power Jerk|Shoulders|jerk
 Preacher curl machine|Arms|machine-curl
 Prisoner Get Up|-|get-up
 Pronated-grip dumbbell curl|Arms|reverse-curl
@@ -1014,7 +1014,7 @@ Smith machine overhead press|Shoulders|machine-shoulder-press
 Smith machine reverse lunge|Legs|barbell-lunge
 Snatch Grip Behind the Neck Press|Shoulders|overhead-press
 Snatch Grip Deadlift|Back|deadlift
-Squat Jerk|-|jerk
+Squat Jerk|Shoulders|jerk
 Standing Cable Chest Fly|Chest|chest-fly
 Standing Cable Leg Extension|Legs|leg-extension
 Standing Glute Kickback in Machine|-|glute-kickback
