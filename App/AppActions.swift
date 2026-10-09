@@ -53,11 +53,12 @@ extension AppModel {
     func save() {
         let before = Experience.progress(of: training.sessions)
         let bodyweight = training.settings.bodyweight
-        let ranksBefore = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
+        let choices = training.settings.lifts ?? [:]
+        let ranksBefore = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0, choices: choices) } ?? []
         update { try $0.finish(); $0.awardLatestQuests() }
         guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
         let after = Experience.progress(of: training.sessions)
-        let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0) } ?? []
+        let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0, choices: choices) } ?? []
         workoutOpen = false
         tab = .progress
         xpFill = (before.total, after.total)

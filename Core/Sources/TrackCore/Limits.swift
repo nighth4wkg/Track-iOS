@@ -13,6 +13,11 @@ public enum Limits {
     public static let bodyweight = 20.0...400.0
     public static let restSeconds = 15...600
     public static let weeklyGoal = 1...7
+    /// Exercise names given a "counts as" choice on Rank.
+    public static let liftChoices = 500
+    /// A choice's key (LiftTable.nameKey) in UTF-16 units, as the website counts: splitting accents and Hangul apart can
+    /// make it a few times longer than the name itself.
+    public static let liftKey = 1000
     public static let poundsPerKilogram = 2.2046226218
 
     /// A kg range as the whole numbers it allows in the unit, as the website writes it: "0 to 5,000 kg",

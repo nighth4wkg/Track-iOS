@@ -93,7 +93,7 @@ extension Side {
 
 extension Exercise {
     /// Names that already say the lift is done one arm or leg at a time.
-    static let oneSided = try! NSRegularExpression(pattern: #"\b(one|single)[ -](leg(ged)?|arm(ed)?)\b|\bunilateral\b|\bbulgarian\b|\bpistol\b"#)
+    static let oneSided = try! NSRegularExpression(pattern: #"\b(one|single|1)[ -]?(leg(ged)?|arm(ed)?|hand(ed)?)\b|\bunilateral\b|\bbulgarian\b|\bpistol\b"#)
 
     public var usesSides: Bool { sets.contains { $0.side != nil } }
 
