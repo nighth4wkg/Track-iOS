@@ -66,9 +66,14 @@ struct WorkoutView: View {
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
-                .safeAreaInset(edge: .bottom) {
+                // A bar (iOS 26), not an inset: the page blurs and fades behind it as it does under the top bar, so the
+                // cards' edges don't frame the capsule.
+                .safeAreaBar(edge: .bottom) {
                     // While typing, one capsule over the keyboard (the rest's time, Next, Done) instead of the rest capsule.
-                    Group { if focus != nil { keyboardBar(fields) } else { RestCapsule() } }.animation(.smooth(duration: Motion.quick), value: focus == nil)
+                    // Without the keyboard the capsule dips into the home indicator's strip, 16pt from the screen's edge,
+                    // as iOS's own floating bars do (a phone with a home button has no strip, so it stays put).
+                    Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().padding(.bottom, -max(0, homeIndicator - 8)) } }
+                        .animation(.smooth(duration: Motion.quick), value: focus == nil)
                 }
             }
             .onDrop(of: [.text], delegate: drop(active))
@@ -92,6 +97,11 @@ struct WorkoutView: View {
             }
             .sheet(isPresented: $options) { WorkoutOptions().trackOverlays() }
         }
+    }
+
+    /// The home indicator's strip at the bottom of the screen (0 on a phone with a home button), never the keyboard.
+    private var homeIndicator: CGFloat {
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
     }
 
     private func drop(_ active: Session) -> ReorderDrop {
