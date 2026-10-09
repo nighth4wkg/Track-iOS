@@ -40,20 +40,38 @@ final class LiftTableTests: XCTestCase {
         XCTAssertEqual(LiftTable.nameKey("B\u{F8}jning"), "b\u{F8}jning")
     }
 
-    func testAChoiceWinsNoneNeverCountsAndARemovedLiftFallsBack() {
-        let key = LiftTable.nameKey("Pec smasher")
-        XCTAssertNil(LiftTable.detect("Pec smasher").lift)
-        XCTAssertEqual(LiftTable.lift(for: "Pec Smasher", choices: [key: "chest-fly"]).lift?.id, "chest-fly")
-        if case .ignore = LiftTable.lift(for: "Bench press", choices: [LiftTable.nameKey("Bench press"): "none"]) {} else { XCTFail("none") }
-        XCTAssertEqual(LiftTable.lift(for: "Bench press", choices: [LiftTable.nameKey("Bench press"): "gone-lift"]).lift?.id, "bench-press")
+    func testAMovedNameCountsForThatGroupOnItsOwnStandardOrTheGroups() {
+        func ranking(_ name: String, _ choice: String? = nil) -> String? {
+            LiftTable.ranking(for: name, choices: choice.map { [LiftTable.nameKey(name): $0] } ?? [:])
+                .map { "\($0.lift.id) \($0.groups.joined(separator: ","))" }
+        }
+        XCTAssertNil(ranking("Pec smasher"))
+        XCTAssertEqual(ranking("Pec Smasher", "Chest"), "bench-press Chest")
+        XCTAssertEqual(ranking("Plank", "Shoulders"), "overhead-press Shoulders")
+        XCTAssertEqual(ranking("Cable SLDL", "Back"), "romanian-deadlift Back")
+        XCTAssertEqual(ranking("Power clean"), "clean Back,Legs")
+        XCTAssertEqual(ranking("Power clean", "Legs"), "clean Legs")
+        XCTAssertNil(ranking("Bench press", "none"))
+        // Anything else saved (an id from an older build, a group that's gone) is automatic.
+        XCTAssertEqual(ranking("Bench press", "chest-fly"), "bench-press Chest")
+        XCTAssertEqual(ranking("Bench press", "Core"), "bench-press Chest")
+        // Names that happen to be object keys on the website are just names here too.
+        XCTAssertNil(ranking("Constructor"))
+    }
+
+    func testEachGroupsMainLiftRanksForThatGroup() {
+        XCTAssertEqual(Set(LiftTable.file.standards.keys), Set(LiftTable.groups))
+        for (group, id) in LiftTable.file.standards {
+            XCTAssertTrue(LiftTable.lifts.contains { $0.id == id && $0.at != nil && $0.groups.contains(group) }, group)
+        }
     }
 
     func testSavedChoicesStayWithinTheWebsitesLimits() {
         var training = Training()
         // A long Korean name's key is over twice its length (Hangul splits apart), and still fits.
-        training.settings.lifts = [LiftTable.nameKey(String(repeating: "\u{BCA4}\u{CE58}\u{D504}\u{B808}\u{C2A4}", count: 20)): "bench-press"]
+        training.settings.lifts = [LiftTable.nameKey(String(repeating: "\u{BCA4}\u{CE58}\u{D504}\u{B808}\u{C2A4}", count: 20)): "Chest"]
         XCTAssertTrue(training.isValid)
-        training.settings.lifts = Dictionary(uniqueKeysWithValues: (0...Limits.liftChoices).map { ("lift \($0)", "squat") })
+        training.settings.lifts = Dictionary(uniqueKeysWithValues: (0...Limits.liftChoices).map { ("lift \($0)", "Legs") })
         XCTAssertFalse(training.isValid)
     }
 }

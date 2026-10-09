@@ -87,11 +87,27 @@ final class RankTests: XCTestCase {
         }
     }
 
-    func testAChoiceRanksAnUnknownNameOrStopsAKnownOneCounting() throws {
+    func testMovingANameToAGroupRanksItThereOrStopsItCounting() throws {
         XCTAssertNil(try rank("Pec smasher", 100, 1, bodyweight: 80, .chest).best)
-        let chosen = try rank("Pec smasher", 100, 1, bodyweight: 80, .chest, choices: [LiftTable.nameKey("Pec smasher"): "bench-press"])
+        let chosen = try rank("Pec smasher", 100, 1, bodyweight: 80, .chest, choices: [LiftTable.nameKey("Pec smasher"): "Chest"])
         XCTAssertEqual(chosen.name, "Strong")
         XCTAssertNil(try rank("Bench press", 100, 1, bodyweight: 80, .chest, choices: [LiftTable.nameKey("Bench press"): "none"]).best)
+        // A known lift keeps its own standard where it's moved, and leaves the group it counted for.
+        let moved = [LiftTable.nameKey("Back squat"): "Back"]
+        XCTAssertEqual(try rank("Back squat", 100, 5, bodyweight: 80, .back, choices: moved).best?.lift, "Squat")
+        XCTAssertNil(try rank("Back squat", 100, 5, bodyweight: 80, .legs, choices: moved).best)
+        XCTAssertEqual(score(try rank("Back squat", 100, 5, bodyweight: 80, .back, choices: moved)),
+                       score(try rank("Back squat", 100, 5, bodyweight: 80, .legs)))
+    }
+
+    func testEachLoggedNameOnceWithWhereItCountsNowAndOnItsOwn() {
+        let sessions = [session([("Bench Press", 60, 5), ("bench press", 70, 5), ("Pec smasher", 50, 5), ("Power clean", 60, 3)])]
+        let rows = sessions.countedNames(choices: [LiftTable.nameKey("Power clean"): "Legs"])
+        XCTAssertEqual(rows.map { "\($0.name)|\($0.groups.joined(separator: ","))|\($0.auto.joined(separator: ","))|\($0.chosen)|\($0.known)" }, [
+            "bench press|Chest|Chest|false|true",
+            "Pec smasher|||false|false",
+            "Power clean|Legs|Back,Legs|true|true",
+        ])
     }
 
     func testEliteIsTheTop() throws {

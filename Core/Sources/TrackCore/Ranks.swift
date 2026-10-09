@@ -25,11 +25,35 @@ public enum Ranks {
 
     /// The lift a name ranks on, with its standard, groups and load rules; nil when it never ranks.
     static func ranked(_ name: String, choices: [String: String]) -> (lift: Lift, at: [Double], groups: [Muscle], oneSided: Bool, sign: Double, scale: Double)? {
-        guard let lift = LiftTable.lift(for: name, choices: choices).lift, let at = lift.at else { return nil }
-        let groups = lift.groups.compactMap(Muscle.init(rawValue:))
+        guard let found = LiftTable.ranking(for: name, choices: choices), let at = found.lift.at else { return nil }
+        let groups = found.groups.compactMap(Muscle.init(rawValue:))
         guard !groups.isEmpty else { return nil }
-        let load = LiftTable.load(for: lift, name: name)
-        return (lift, at, groups, load.oneSided, load.sign, load.scale)
+        let load = LiftTable.load(for: found.lift, name: name)
+        return (found.lift, at, groups, load.oneSided, load.sign, load.scale)
+    }
+}
+
+/// An exercise logged (one per name key): the groups it counts toward now and on its own, whether the user moved it,
+/// and whether its name is known (the website's countedNames).
+public struct CountedName: Equatable, Sendable {
+    public let key: String
+    public let name: String
+    public let groups: [String]
+    public let auto: [String]
+    public let chosen: Bool
+    public let known: Bool
+}
+
+extension Array where Element == Session {
+    public func countedNames(choices: [String: String] = [:]) -> [CountedName] {
+        var names: [String: String] = [:]
+        for session in self { for exercise in session.exercises { names[LiftTable.nameKey(exercise.name)] = exercise.name } }
+        return names.map { key, name in
+            CountedName(key: key, name: name, groups: LiftTable.ranking(for: name, choices: choices)?.groups ?? [],
+                               auto: LiftTable.ranking(for: name)?.groups ?? [], chosen: LiftTable.choice(for: name, choices: choices) != nil,
+                               known: LiftTable.detect(name).known)
+        }
+        .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 }
 

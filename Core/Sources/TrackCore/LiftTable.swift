@@ -27,9 +27,10 @@ public struct Lift: Decodable, Sendable {
     public var helps: [String] { helpsList ?? [] }
     /// The rank group it counts toward (Chest, Back, Shoulders, Arms, Legs), or nil (Core).
     public var group: String? { LiftTable.group(of: part) }
-    /// Every rank group it counts toward: its part's, then those of its `also` parts.
+    /// Every rank group it counts toward (its part's and its `also` parts'), in the rank list's order: "Back, Legs".
     public var groups: [String] {
-        ([part] + (also ?? [])).compactMap(LiftTable.group(of:)).reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
+        let mine = ([part] + (also ?? [])).compactMap(LiftTable.group(of:))
+        return LiftTable.groups.filter(mine.contains)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -42,6 +43,7 @@ public enum Detection: Sendable {
     case lift(Lift), ignore, unknown
 
     public var lift: Lift? { if case .lift(let lift) = self { lift } else { nil } }
+    public var known: Bool { if case .unknown = self { false } else { true } }
 }
 
 public enum LiftTable {
@@ -54,6 +56,7 @@ public enum LiftTable {
         let words: [String: String]
         let phrases: [[String]]
         let lifts: [Lift]
+        let standards: [String: String]
     }
 
     // swiftlint:disable:next force_try
@@ -116,11 +119,25 @@ public enum LiftTable {
         return lifts.first { ($0.gear == nil || dumbbell) && matches(patterns[$0.id], key) }.map(Detection.lift) ?? .unknown
     }
 
-    /// What the name counts as: the user's choice if they made one (and it still exists), else what it says.
-    public static func lift(for name: String, choices: [String: String] = [:]) -> Detection {
-        let choice = choices[nameKey(name)]
-        if choice == "none" { return .ignore }
-        return choice.flatMap(lift(id:)).map(Detection.lift) ?? detect(name)
+    /// The choice that stops a name counting; any other choice is a rank group.
+    public static let none = "none"
+    /// Each group's main lift, the standard for exercises moved there that have none of their own.
+    static let standards = file.standards.compactMapValues(lift(id:))
+
+    /// The user's choice for a name, if it still means something: a rank group or "none" (anything else is automatic).
+    public static func choice(for name: String, choices: [String: String]) -> String? {
+        guard let chosen = choices[nameKey(name)] else { return nil }
+        return chosen == none || standards[chosen] != nil ? chosen : nil
+    }
+
+    /// The lift a name is measured on and the groups it counts toward; nil when it doesn't count. Moved to a group by the
+    /// user, it keeps its own lift's standard, or takes that group's main lift's when it has none.
+    public static func ranking(for name: String, choices: [String: String] = [:]) -> (lift: Lift, groups: [String])? {
+        let chosen = choice(for: name, choices: choices)
+        if chosen == none { return nil }
+        let own = detect(name).lift.flatMap { $0.at != nil && !$0.groups.isEmpty ? $0 : nil }
+        guard let chosen else { return own.map { ($0, $0.groups) } }
+        return (own ?? standards[chosen]).map { ($0, [chosen]) }
     }
 
     /// How the logged weight turns into load on the lift's standard, from the equipment the name says.
