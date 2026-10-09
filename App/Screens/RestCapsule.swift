@@ -2,9 +2,11 @@ import SwiftUI
 import TrackCore
 
 /// Rest, as the website's capsule floating at the bottom: a ring running down, the time left, +30s and Skip. When it
-/// runs out it says "Go · Ready for your next set" with Done, and buzzes; it rises in and sinks out.
+/// runs out it says "Go · Ready for your next set" with Done, and buzzes; it rises in and sinks out. `compact` is just
+/// the ring and the time, for the keyboard's bar while typing.
 struct RestCapsule: View {
     @Environment(AppModel.self) private var model
+    var compact = false
     @State private var ended = 0
 
     var body: some View {
@@ -14,26 +16,28 @@ struct RestCapsule: View {
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().stroke(Palette.input, lineWidth: 5)
-                            Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                                .rotationEffect(.degrees(-90)).animation(.linear(duration: 0.5), value: left)
+                    if compact { small(left, total) } else {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().stroke(Palette.input, lineWidth: 5)
+                                Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                                    .rotationEffect(.degrees(-90)).animation(.linear(duration: 0.5), value: left)
+                            }
+                            .frame(width: 40, height: 40)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(left > 0 ? clock(left) : "Go")
+                                    .font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
+                                Text(left > 0 ? "Rest" : "Ready for your next set").font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
+                            }
+                            Spacer(minLength: 4)
+                            if left > 0 { pill("+30s") { model.changeRest(by: 30) }.accessibilityLabel("Add 30 seconds") }
+                            pill(left > 0 ? "Skip" : "Done") { model.changeRest(by: 0) }
                         }
-                        .frame(width: 40, height: 40)
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(left > 0 ? String(format: "%d:%02d", Int(left.rounded(.up)) / 60, Int(left.rounded(.up)) % 60) : "Go")
-                                .font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
-                            Text(left > 0 ? "Rest" : "Ready for your next set").font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
-                        }
-                        Spacer(minLength: 4)
-                        if left > 0 { pill("+30s") { model.changeRest(by: 30) }.accessibilityLabel("Add 30 seconds") }
-                        pill(left > 0 ? "Skip" : "Done") { model.changeRest(by: 0) }
+                        .padding(.leading, 14).padding(.trailing, 10).padding(.vertical, 10)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .glass(radius: 32, fill: .clear)
+                        .padding(.horizontal, 16).padding(.bottom, 8)
                     }
-                    .padding(.leading, 14).padding(.trailing, 10).padding(.vertical, 10)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .glass(radius: 32, fill: .clear)
-                    .padding(.horizontal, 16).padding(.bottom, 8)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .task(id: until) {
@@ -47,6 +51,23 @@ struct RestCapsule: View {
         .animation(.smooth(duration: Motion.slow), value: until)
         .sensoryFeedback(.success, trigger: ended)
     }
+
+    /// The ring and the time left ("Go" once it's over), with no controls.
+    private func small(_ left: Double, _ total: Double) -> some View {
+        HStack(spacing: 8) {
+            ZStack {
+                Circle().stroke(Palette.input, lineWidth: 4)
+                Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(-90)).animation(.linear(duration: 0.5), value: left)
+            }
+            .frame(width: 26, height: 26)
+            Text(left > 0 ? clock(left) : "Go").font(.headline).monospacedDigit().foregroundStyle(left > 0 ? Palette.text : Palette.accent)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(left > 0 ? "Rest, \(clock(left)) left" : "Rest over")
+    }
+
+    private func clock(_ left: Double) -> String { String(format: "%d:%02d", Int(left.rounded(.up)) / 60, Int(left.rounded(.up)) % 60) }
 
     private func pill(_ title: String, action: @escaping () -> Void) -> some View {
         Button(title, action: action)

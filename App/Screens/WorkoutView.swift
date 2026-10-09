@@ -67,7 +67,8 @@ struct WorkoutView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 .safeAreaInset(edge: .bottom) {
-                    VStack(spacing: 0) { RestCapsule(); if focus != nil { keyboardBar(fields) } }.animation(.smooth(duration: Motion.quick), value: focus == nil)
+                    // While typing, one solid bar on the keyboard (the rest's time, Next, Done) instead of the floating capsule.
+                    Group { if focus != nil { keyboardBar(fields) } else { RestCapsule() } }.animation(.smooth(duration: Motion.quick), value: focus == nil)
                 }
             }
             .onDrop(of: [.text], delegate: drop(active))
@@ -154,20 +155,24 @@ struct WorkoutView: View {
         }
     }
 
-    /// While typing: Next (weight → reps → RIR → next set) and Done, in Track's pills a little above the keyboard
-    /// (the system's keyboard bar sat right on it, over the rest timer).
+    /// While typing: one solid bar on the keyboard with the rest's time on the left, then Next (weight → reps → RIR →
+    /// next set) and Done. It replaces the rest capsule meanwhile, so nothing floats over the sets or stacks up.
     private func keyboardBar(_ fields: [String]) -> some View {
         HStack(spacing: 8) {
-            Spacer()
+            RestCapsule(compact: true)
+            Spacer(minLength: 8)
             if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
-                Button("Next") { self.focus = fields[index + 1] }.foregroundStyle(Palette.accent)
-                    .padding(.horizontal, 18).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
+                Button("Next") { self.focus = fields[index + 1] }.foregroundStyle(Palette.text)
+                    .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
             }
             Button("Done") { focus = nil }.foregroundStyle(Palette.primaryText)
-                .padding(.horizontal, 18).frame(minHeight: 44).glass(radius: 22, fill: Palette.primary, lifted: false)
+                .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.primary, lifted: false)
         }
-        .font(.subheadline.weight(.semibold)).buttonStyle(PressStyle())
-        .padding(.horizontal, 16).padding(.bottom, 10)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .font(.body.weight(.semibold)).buttonStyle(PressStyle())
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        // Solid, with a hairline on top: the page doesn't show through and the bar reads as part of the keyboard.
+        .background(Palette.dialog)
+        .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
+        .transition(.opacity)
     }
 }
