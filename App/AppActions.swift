@@ -44,7 +44,7 @@ extension AppModel {
     /// belongs to as well. When that split has it, this asks first; from a workout the split changes now, so discarding
     /// the workout doesn't undo the swap (as on the website).
     func swap(_ exercise: Exercise, for name: String, inWorkout: Bool, splitId: String?) {
-        let change = { [weak self] in
+        let change: () -> Void = { [weak self] in
             self?.update { training in
                 if inWorkout { training.updateActive(exercise: exercise.id) { $0.name = name } }
                 guard let splitId else { return }
@@ -54,7 +54,7 @@ extension AppModel {
             }
         }
         guard let split = training.splits.first(where: { $0.id == splitId }), split.exercises.contains(where: { $0.id == exercise.id })
-        else { return change() }
+        else { change(); return }
         confirm = Confirm(title: "Use \(name) instead?",
                           message: inWorkout ? "It replaces \(exercise.name) here and in \(split.name), even if you discard this workout."
                                              : "It replaces \(exercise.name) in \(split.name). Past workouts stay as they are.",
