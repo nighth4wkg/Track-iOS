@@ -34,13 +34,20 @@ struct ExerciseCard: View, Equatable {
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
         let open = (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
         VStack(spacing: 0) {
-            SwipeToDelete(onDelete: { model.removeExercise(exercise) }, onEdit: { replacing = true }) {
+            SwipeToDelete(onDelete: { model.removeExercise(exercise) }, onEdit: { replacing = true }) { reveal, room in
                 HStack(spacing: 8) {
-                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
+                    // Swiped open, the name stays and ends (…) before Edit and Delete; the count and chevron fade under them.
+                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(room > 0 ? 1 : 2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
-                    Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
-                        .rotationEffect(.degrees(open ? 180 : 0))
+                    ZStack(alignment: .trailing) {
+                        Color.clear.frame(width: room, height: 0)
+                        HStack(spacing: 8) {
+                            Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
+                            Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
+                                .rotationEffect(.degrees(open ? 180 : 0))
+                        }
+                        .opacity(1 - reveal)
+                    }
                 }
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())

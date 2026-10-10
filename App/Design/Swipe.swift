@@ -67,15 +67,17 @@ enum SwipeZones {
     nonisolated(unsafe) static var frames: [String: CGRect] = [:]
 }
 
-/// The website's swipe to delete (components/gesture-item): the row slides left under the finger inside its rounded
-/// card while a rounded red Delete slides in from the right edge. Any visible reveal opens it, a flick or any drag back
+/// The website's swipe to delete on a workout's exercise (components/gesture-item, workout.css): the row stays put,
+/// so its name still says what Delete removes, while a rounded red Delete slides in from the right edge under the
+/// finger. The row gets how far the actions are revealed (0 to 1, to fade what they cover) and, once open, the room
+/// they take (to end its text before them). Any visible reveal opens it, a flick or any drag back
 /// closes it; a tap on Delete deletes. Opening ticks; Delete warns. With `onEdit`, Edit shows beside Delete and the
 /// row opens twice as far.
 struct SwipeToDelete<Content: View>: View {
     var label = "Delete"
     let onDelete: () -> Void
     var onEdit: (() -> Void)? = nil
-    @ViewBuilder let content: Content
+    @ViewBuilder let content: (_ reveal: CGFloat, _ room: CGFloat) -> Content
     @State private var offset: CGFloat = 0
     @State private var open = false
     @State private var start: CGFloat = 0
@@ -85,13 +87,14 @@ struct SwipeToDelete<Content: View>: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            content
-                .offset(x: offset)
+            content(-offset / width, open ? width : 0)
                 .allowsHitTesting(!open)
             HStack(spacing: 8) {
                 if let onEdit {
                     Button { settle(false); onEdit() } label: {
                         tile("Edit", "pencil").foregroundStyle(Palette.text).glass(radius: 14, fill: Palette.control, lifted: false)
+                            // On a solid face, so the name it slides over doesn't show through.
+                            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.dialog))
                     }
                     .buttonStyle(PressStyle())
                 }
@@ -130,8 +133,7 @@ struct SwipeToDelete<Content: View>: View {
     }
 
     private func settle(_ opening: Bool) {
-        withAnimation(.smooth(duration: 0.24)) { offset = opening ? -width : 0 }
-        open = opening
+        withAnimation(.smooth(duration: 0.24)) { offset = opening ? -width : 0; open = opening }
         start = offset
     }
 }
