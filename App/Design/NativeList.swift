@@ -8,6 +8,8 @@ struct NativeList<Item: Identifiable, Row: View>: View {
     var deleteLabel = "Delete"
     var onDelete: ((Item) -> Void)?
     var onMove: ((Int, Int) -> Void)?
+    /// A new value rebuilds the rows, closing a swipe left open (iOS keeps it open even once its actions are gone).
+    var resetKey: AnyHashable = 0
     var insets = EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16)
     @ViewBuilder let row: (Item) -> Row
     @State private var heights: [Item.ID: CGFloat] = [:]
@@ -34,6 +36,7 @@ struct NativeList<Item: Identifiable, Row: View>: View {
             }
             .onMove(perform: onMove == nil ? nil : moved)
         }
+        .id(resetKey)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollDisabled(true)

@@ -49,9 +49,10 @@ struct SplitPage: View {
                         Button { model.start(split) } label: { Label("Start workout", systemImage: "play") }
                             .buttonStyle(PrimaryButtonStyle()).disabled(model.training.active != nil)
                         SmallHeader(title: "Your exercises")
-                        // While editing, ✕ removes, so the swipe is off (an open one would show a second Delete).
+                        // While editing, ✕ removes, so the swipe is off, and one left open closes (or it shows a second Delete).
                         NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: live || editing ? nil : { remove($0, from: split) },
-                                   onMove: live ? nil : { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } }) { exercise in
+                                   onMove: live ? nil : { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } },
+                                   resetKey: editing) { exercise in
                             HStack(spacing: 8) {
                                 Text(exercise.name).foregroundStyle(Palette.text)
                                 Spacer()
