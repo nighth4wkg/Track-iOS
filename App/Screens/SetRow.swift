@@ -16,6 +16,9 @@ struct SetRow: View {
     let bests: RecordBests
     let earlier: [TrainingSet]
     var focus: FocusState<String?>.Binding
+    /// The field being typed in when it's in this row ("kg", "reps", "rir"): read instead of the focus, so moving the
+    /// keyboard redraws only the rows it leaves and enters.
+    let focused: String?
     /// A best to show in the card's header, as what it beat.
     var onRecord: (String) -> Void = { _ in }
     @State private var weight = ""
@@ -71,14 +74,14 @@ struct SetRow: View {
         .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
         .onChange(of: weight) { replaceTyped("kg", $0, $1) }.onChange(of: reps) { replaceTyped("reps", $0, $1) }
         .onChange(of: rir) { replaceTyped("rir", $0, $1); if let n = Int(rir), n > Limits.rir { rir = String(Limits.rir) } } // up to Limits.rir
-        .onChange(of: focus.wrappedValue) { old, id in
+        .onChange(of: focused) { old, now in
             // Leaving the row saves it straight away; tapping a number arms it, so the first keystroke replaces it.
-            if old?.hasPrefix(set.id) == true, id?.hasPrefix(set.id) != true { flush() }
-            if let id, id.hasPrefix("\(set.id).") { replacing = String(id.dropFirst(set.id.count + 1)) }
+            if old != nil, now == nil { flush() }
+            if let now { replacing = now }
         }
         // Only keystrokes post this (not focusing, selecting or loading numbers), so it says what was really typed.
         .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)) { _ in
-            if let id = focus.wrappedValue, id.hasPrefix("\(set.id).") { typedInto(String(id.dropFirst(set.id.count + 1))) }
+            if let focused { typedInto(focused) }
         }
         .sensoryFeedback(.success, trigger: burst)
     }
@@ -120,7 +123,7 @@ struct SetRow: View {
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(glow ? Palette.record.opacity(0.8) : bad ? Palette.dangerText
-                : focus.wrappedValue == "\(set.id).\(id)" ? Palette.accent : .clear, lineWidth: 1.5))
+                : focused == id ? Palette.accent : .clear, lineWidth: 1.5))
             .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
             .focused(focus, equals: "\(set.id).\(id)")
     }

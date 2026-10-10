@@ -69,6 +69,7 @@ struct ExerciseCard: View, Equatable {
                     ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
                         SetRow(exercise: exercise, set: set, number: index + 1, unit: unit, autoLog: autoLog, bests: bests,
                                earlier: Array(exercise.sets.prefix(index)), focus: focus,
+                               focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil },
                                onRecord: { best = ($0, (best?.id ?? 0) + 1) })
                             .transition(.opacity)
                     }
@@ -91,9 +92,10 @@ struct ExerciseCard: View, Equatable {
             .allowsHitTesting(open)
             .accessibilityHidden(!open)
         }
-        .onChange(of: focus.wrappedValue) { _, id in
+        // focusHere, not the focus itself: reading that would redraw every card (and row) on each move of the keyboard.
+        .onChange(of: focusHere) { _, id in
             // The keyboard's Next reaching a closed card opens it.
-            if let id, !open, exercise.sets.contains(where: { id.hasPrefix($0.id) }) {
+            if id != nil, !open {
                 withAnimation(.smooth(duration: Motion.standard)) { manual = (true, finished) }
             }
         }
@@ -101,7 +103,7 @@ struct ExerciseCard: View, Equatable {
         // set logged while typing in it: the card folds, so the keyboard goes too.
         .onChange(of: finished) { _, now in
             manual = nil
-            if now, typingHere(focus.wrappedValue) { focus.wrappedValue = nil }
+            if now, focusHere != nil { focus.wrappedValue = nil }
         }
         .overlay(alignment: .top) {
             if let best {
@@ -132,11 +134,6 @@ struct ExerciseCard: View, Equatable {
     static func == (a: Self, b: Self) -> Bool {
         a.exercise == b.exercise && a.unit == b.unit && a.autoLog == b.autoLog && a.bests.id == b.bests.id
             && a.focusHere == b.focusHere
-    }
-
-    private func typingHere(_ id: String?) -> Bool {
-        guard let id else { return false }
-        return exercise.sets.contains { id.hasPrefix($0.id) }
     }
 
     private var sidesLabel: String {

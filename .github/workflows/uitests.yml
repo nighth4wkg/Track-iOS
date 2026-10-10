@@ -3,6 +3,10 @@
 name: UI tests
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: 'Run just these tests (e.g. TrackUITests/PerfTour)'
+        default: ''
   push:
     branches: [main]
     paths: ['App/**', 'Widgets/**', 'UITests/**', 'Core/Sources/**', 'project.yml', '.github/workflows/uitests.yml']
@@ -45,7 +49,7 @@ jobs:
           export TEST_RUNNER_TRACK_SEED="$(python3 tools/demo-data.py)"
           set +e
           xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build \
-            -resultBundlePath out/results.xcresult CODE_SIGNING_ALLOWED=NO test-without-building > test.log 2>&1
+            -resultBundlePath out/results.xcresult CODE_SIGNING_ALLOWED=NO ${{ inputs.only && format('-only-testing:{0}', inputs.only) || '' }} test-without-building > test.log 2>&1
           status=$?
           kill -INT $rec; wait $rec
           grep -E "Test Case|error:|XCTAssert|failed|passed|TOUR|Hitch|hitch|values:" test.log | tail -n 120
