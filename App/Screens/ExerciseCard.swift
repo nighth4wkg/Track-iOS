@@ -28,6 +28,7 @@ struct ExerciseCard: View, Equatable {
     @State private var headerHeight: CGFloat = 44
     /// Edit (on the header's swipe) opens the picker; what's picked takes this exercise's place, sets and all.
     @State private var replacing = false
+    @State private var picked: String?
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
@@ -117,10 +118,13 @@ struct ExerciseCard: View, Equatable {
         .animation(.smooth(duration: Motion.standard), value: open)
         .animation(.smooth(duration: Motion.quick), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
-        .sheet(isPresented: $replacing) {
-            ExercisePicker(replacing: exercise.name) { name in
-                model.update { $0.updateActive(exercise: exercise.id) { $0.name = name } }
-            }
+        // The swap asks first once the picker has gone (its split changes too).
+        .sheet(isPresented: $replacing, onDismiss: {
+            guard let name = picked else { return }
+            picked = nil
+            model.swap(exercise, for: name, inWorkout: true, splitId: model.training.active?.splitId)
+        }) {
+            ExercisePicker(replacing: exercise.name) { picked = $0 }
         }
     }
 

@@ -56,7 +56,8 @@ final class TrackTour: XCTestCase {
         let names = ["Bench Press", "Lat pulldown", "Overhead Press", "Barbell curl", "Back squat"].map { "Use " + $0 }
         let use = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use ' AND NOT (label IN %@)", names)).firstMatch
         let picked = use.waitForExistence(timeout: 3) ? String(use.label.dropFirst(4)) : ""
-        tap(use, "Use another exercise"); snap("exercise-replaced", after: 1)
+        tap(use, "Use another exercise"); snap("swap-confirm", after: 1)
+        tap(app.buttons["dialog-action"], "confirm swap"); snap("exercise-replaced", after: 1)
         print("TOUR replaced: \(picked) shown \(app.staticTexts[picked].exists) bench gone \(!app.staticTexts["Bench Press"].exists)")
         let lat = app.descendants(matching: .any)["Lat pulldown"].firstMatch, press = app.descendants(matching: .any)["Overhead Press"].firstMatch
         if lat.waitForExistence(timeout: 3), press.exists {
@@ -113,6 +114,12 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("library", after: 1)
         tap(app.textFields["Search exercises…"], "search"); app.typeText("squat"); snap("library-search", after: 0.6)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add '")).firstMatch, "add an exercise"); snap("split-with-exercise", after: 0.8)
+        // Editing it: Rename, ✎ and ✕ slide in; ✎ swaps the exercise, asking first.
+        tap(app.buttons["Edit split"].firstMatch, "Edit split"); snap("split-editing-0.1s", after: 0.1); snap("split-editing", after: 0.8)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Swap '")).firstMatch, "Swap exercise"); snap("split-swap-picker", after: 0.8)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use '")).firstMatch, "Use another"); snap("split-swap-confirm", after: 1)
+        tap(app.buttons["dialog-action"], "confirm split swap"); snap("split-swapped", after: 0.8)
+        tap(app.buttons["Done editing"].firstMatch, "Done editing"); snap("split-edit-done-0.1s", after: 0.1); snap("split-edit-done", after: 0.8)
         tap(app.navigationBars.buttons.firstMatch, "back"); snap("home-new-split", after: 0.8)
         let row = app.cells.containing(.staticText, identifier: "Legs").firstMatch
         if row.waitForExistence(timeout: 3) { row.swipeLeft(); snap("split-swiped", after: 0.5) }

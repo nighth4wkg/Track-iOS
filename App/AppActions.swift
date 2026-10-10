@@ -40,6 +40,27 @@ extension AppModel {
         }
     }
 
+    /// Swaps an exercise for another, same place and sets, in the workout (`inWorkout`) or the split, and in the split it
+    /// belongs to as well. When that split has it, this asks first; from a workout the split changes now, so discarding
+    /// the workout doesn't undo the swap (as on the website).
+    func swap(_ exercise: Exercise, for name: String, inWorkout: Bool, splitId: String?) {
+        let change: () -> Void = { [weak self] in
+            self?.update { training in
+                if inWorkout { training.updateActive(exercise: exercise.id) { $0.name = name } }
+                guard let splitId else { return }
+                training.edit(splitId) { split in
+                    if let at = split.exercises.firstIndex(where: { $0.id == exercise.id }) { split.exercises[at].name = name }
+                }
+            }
+        }
+        guard let split = training.splits.first(where: { $0.id == splitId }), split.exercises.contains(where: { $0.id == exercise.id })
+        else { change(); return }
+        confirm = Confirm(title: "Use \(name) instead?",
+                          message: inWorkout ? "It replaces \(exercise.name) here and in \(split.name), even if you discard this workout."
+                                             : "It replaces \(exercise.name) in \(split.name). Past workouts stay as they are.",
+                          label: "Swap", action: change)
+    }
+
     /// Asks first, as the website does: what will be saved, and that unmarked sets are left out.
     func finish() {
         guard let active = training.active else { return }
