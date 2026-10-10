@@ -3,7 +3,7 @@ import TrackCore
 
 /// A split, as the website's split page: its name over its size, Start workout, "Your exercises" (swipe one left to
 /// remove it, hold and drag to move it), Add exercise, Resume while a workout is on, and Delete split. The pen turns
-/// editing on: Rename under the name, and ✎ (swap, asking first) and ✕ (remove) sliding in on each exercise.
+/// editing on: Rename under the name, and ✎ (swap, asking first) and ✕ (remove) in place of each exercise's set count.
 struct SplitPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -49,18 +49,24 @@ struct SplitPage: View {
                         Button { model.start(split) } label: { Label("Start workout", systemImage: "play") }
                             .buttonStyle(PrimaryButtonStyle()).disabled(model.training.active != nil)
                         SmallHeader(title: "Your exercises")
-                        NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: live ? nil : { remove($0, from: split) },
+                        // While editing, ✕ removes, so the swipe is off (an open one would show a second Delete).
+                        NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: live || editing ? nil : { remove($0, from: split) },
                                    onMove: live ? nil : { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } }) { exercise in
                             HStack(spacing: 8) {
                                 Text(exercise.name).foregroundStyle(Palette.text)
                                 Spacer()
-                                Text(count(exercise.sets.count, "set")).font(.subheadline).foregroundStyle(Palette.muted)
-                                if editing {
-                                    HStack(spacing: 4) {
-                                        rowButton("pencil", "Swap \(exercise.name)", Palette.muted) { swapping = exercise }
-                                        rowButton("xmark", "Remove \(exercise.name)", Palette.dangerText) { remove(exercise, from: split) }
+                                // ✎ ✕ take the set count's place, in a slot as wide in both modes: names keep their lines,
+                                // so rows never change height (the list re-measuring every row is what stuttered).
+                                ZStack(alignment: .trailing) {
+                                    Text(count(exercise.sets.count, "set")).font(.subheadline).foregroundStyle(Palette.muted)
+                                        .opacity(editing ? 0 : 1).accessibilityHidden(editing)
+                                    if !live {
+                                        HStack(spacing: 4) {
+                                            rowButton("pencil", "Swap \(exercise.name)", Palette.muted) { swapping = exercise }
+                                            rowButton("xmark", "Remove \(exercise.name)", Palette.dangerText) { remove(exercise, from: split) }
+                                        }
+                                        .opacity(editing ? 1 : 0).allowsHitTesting(editing).accessibilityHidden(!editing)
                                     }
-                                    .transition(.opacity.combined(with: .offset(x: 12)))
                                 }
                             }
                             .frame(minHeight: 28)
