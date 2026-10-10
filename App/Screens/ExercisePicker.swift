@@ -32,12 +32,14 @@ enum Catalog {
 }
 
 /// Adding an exercise, as the website's picker: "Add an exercise", a search, the library or the matches (with how
-/// many), a + on each, more on request, and your own name when it isn't in the library.
+/// many), a + on each, more on request, and your own name when it isn't in the library. Given `replacing`, it's
+/// "Edit an exercise": what's picked takes that exercise's place and keeps its sets.
 struct ExercisePicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var shown = 50
+    var replacing: String? = nil
     let onPick: (String) -> Void
 
     var body: some View {
@@ -50,7 +52,7 @@ struct ExercisePicker: View {
         return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Find a movement or add your own.").font(.subheadline).foregroundStyle(Palette.muted)
+                    Text(replacing.map { "Pick what replaces \($0). Its sets stay as they are." } ?? "Find a movement or add your own.").font(.subheadline).foregroundStyle(Palette.muted)
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
                         TextField("Search exercises…", text: $query).submitLabel(.done)
@@ -84,7 +86,7 @@ struct ExercisePicker: View {
                                     .padding(.vertical, -6) // a 44pt tap area, into the row's padding, at the same look
                                 }
                                 .buttonStyle(PressStyle())
-                                .accessibilityLabel("Add \(name)")
+                                .accessibilityLabel("\(verb) \(name)")
                             }
                         }
                         if results.count > shown {
@@ -92,7 +94,7 @@ struct ExercisePicker: View {
                         }
                     }
                     if custom {
-                        Button { pick(typed) } label: { Label("Add “\(typed.prefix(50))” as your own", systemImage: "plus") }
+                        Button { pick(typed) } label: { Label("\(verb) “\(typed.prefix(50))” as your own", systemImage: "plus") }
                             .buttonStyle(SecondaryButtonStyle())
                     }
                 }
@@ -100,7 +102,7 @@ struct ExercisePicker: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Backdrop())
-            .navigationTitle("Add an exercise")
+            .navigationTitle(replacing == nil ? "Add an exercise" : "Edit an exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -110,6 +112,8 @@ struct ExercisePicker: View {
             .onChange(of: query) { shown = 50 }
         }
     }
+
+    private var verb: String { replacing == nil ? "Add" : "Use" }
 
     private func pick(_ name: String) {
         onPick(String(name.prefix(Limits.name)))
