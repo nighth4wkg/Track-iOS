@@ -114,8 +114,14 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("library", after: 1)
         tap(app.textFields["Search exercises…"], "search"); app.typeText("squat"); snap("library-search", after: 0.6)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add '")).firstMatch, "add an exercise"); snap("split-with-exercise", after: 0.8)
-        // Editing it: Rename, ✎ and ✕ slide in; ✎ swaps the exercise, asking first.
+        // Editing it: Rename, ✎ and ✕ in place of the set count; ✎ swaps the exercise, asking first. Started with the
+        // row swiped open: its Delete must go (✕ removes now), and the row keeps its height.
+        let exerciseRow = app.cells.firstMatch, height = exerciseRow.frame.height
+        exerciseRow.swipeLeft(); snap("split-row-swiped", after: 0.5)
         tap(app.buttons["Edit split"].firstMatch, "Edit split"); snap("split-editing-0.1s", after: 0.1); snap("split-editing", after: 0.8)
+        XCTAssertFalse(app.buttons["Remove"].exists, "the swipe's Delete stays beside ✕")
+        print("TOUR row height \(height) → \(exerciseRow.frame.height)")
+        XCTAssertEqual(exerciseRow.frame.height, height, accuracy: 0.5)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Swap '")).firstMatch, "Swap exercise"); snap("split-swap-picker", after: 0.8)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use '")).firstMatch, "Use another"); snap("split-swap-confirm", after: 1)
         tap(app.buttons["dialog-action"], "confirm split swap"); snap("split-swapped", after: 0.8)
