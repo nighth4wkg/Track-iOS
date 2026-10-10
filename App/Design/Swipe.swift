@@ -67,73 +67,39 @@ enum SwipeZones {
     nonisolated(unsafe) static var frames: [String: CGRect] = [:]
 }
 
-/// The website's swipe to delete on a workout's exercise (components/gesture-item, workout.css): the row stays put,
-/// so its name still says what Delete removes, while a rounded red Delete slides in from the right edge under the
-/// finger. The row gets how far the actions are revealed (0 to 1, to fade what they cover) and, once open, the room
-/// they take (to end its text before them). Any visible reveal opens it, a flick or any drag back
-/// closes it; a tap on Delete deletes. Opening ticks; Delete warns. With `onEdit`, Edit shows beside Delete and the
-/// row opens twice as far.
-struct SwipeToDelete<Content: View>: View {
-    var label = "Delete"
+/// One row with iOS's own swipe, as Home's workout card: swipe it left for Edit and Delete, round icons that follow
+/// the finger on the system's physics (a tap on either closes it). A one-row list, exactly as tall as its row, that
+/// keeps the tab swipe away from itself (SwipeZones).
+struct SwipeRow<Content: View>: View {
+    let onEdit: () -> Void
     let onDelete: () -> Void
-    var onEdit: (() -> Void)? = nil
-    @ViewBuilder let content: (_ reveal: CGFloat, _ room: CGFloat) -> Content
-    @State private var offset: CGFloat = 0
-    @State private var open = false
-    @State private var start: CGFloat = 0
-    /// One action's width; the row opens as wide as its actions.
-    private let action: CGFloat = 88
-    private var width: CGFloat { action * (onEdit == nil ? 1 : 2) }
+    @ViewBuilder let content: Content
+    @State private var height: CGFloat = 44
+    @State private var zone = UUID().uuidString
+    @State private var frame: CGRect?
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            content(-offset / width, open ? width : 0)
-                .allowsHitTesting(!open)
-            HStack(spacing: 8) {
-                if let onEdit {
-                    Button { settle(false); onEdit() } label: {
-                        tile("Edit", "pencil").foregroundStyle(Palette.text).glass(radius: 14, fill: Palette.control, lifted: false)
-                            // On a solid face, so the name it slides over doesn't show through.
-                            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.dialog))
-                    }
-                    .buttonStyle(PressStyle())
+        List {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                // The first is nearest the edge: Delete, then Edit.
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(action: onDelete) { Label("Delete", systemImage: "trash").labelStyle(.iconOnly) }.tint(Palette.danger)
+                    Button(action: onEdit) { Label("Edit", systemImage: "pencil").labelStyle(.iconOnly) }.tint(Palette.action)
                 }
-                Button(role: .destructive) { onDelete() } label: {
-                    tile(label, "trash").foregroundStyle(.white)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(LinearGradient(colors: [Palette.danger, Palette.dangerDeep], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                }
-                .buttonStyle(PressStyle())
-            }
-            .offset(x: width + offset)
-            .opacity(offset < 0 ? 1 : 0)
-            .accessibilityHidden(!open)
         }
-        .contentShape(Rectangle())
-        .clipped()
-        .gesture(HorizontalPan(onChange: { x in
-            offset = max(-width, min(0, start + x))
-        }, onEnd: { x, velocity in
-            // A flick decides; otherwise any drag left opens and any drag right closes.
-            settle(abs(velocity) > HorizontalPan.flick ? velocity < 0 : x < -1 ? true : x > 1 ? false : open)
-        }))
-        .simultaneousGesture(TapGesture().onEnded { if open { settle(false) } })
-        .sensoryFeedback(.impact(weight: .light), trigger: open) { _, now in now }
-        .accessibilityAction(named: label) { onDelete() }
-        .accessibilityActions { if let onEdit { Button("Edit", action: onEdit) } }
-    }
-
-    /// An action's face: its icon over its name, the tile's size.
-    private func tile(_ name: String, _ icon: String) -> some View {
-        VStack(spacing: 2) {
-            Image(systemName: icon).font(.body.weight(.semibold))
-            Text(name).font(.caption.weight(.semibold))
-        }
-        .frame(width: action - 8, height: 52)
-    }
-
-    private func settle(_ opening: Bool) {
-        withAnimation(.smooth(duration: 0.24)) { offset = opening ? -width : 0; open = opening }
-        start = offset
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .scrollDisabled(true)
+        .contentMargins(.vertical, 0, for: .scrollContent)
+        .environment(\.defaultMinListRowHeight, 0)
+        .frame(height: height)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0; SwipeZones.frames[zone] = $0 }
+        .onAppear { if let frame { SwipeZones.frames[zone] = frame } }
+        .onDisappear { SwipeZones.frames[zone] = nil }
     }
 }

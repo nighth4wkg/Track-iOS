@@ -1,8 +1,8 @@
 import SwiftUI
 import TrackCore
 
-/// One exercise, as the website's card: a header that opens and closes it (swipe the header left to swap or remove
-/// the exercise), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
+/// One exercise, as the website's card: a header that opens and closes it (swipe it left for Edit and Delete, on iOS's
+/// own swipe), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
 /// until every set is done (taking the keyboard with it); one opened or closed by hand stays that way until its sets
 /// change between all done and not. Hold the
 /// name and drag to move the exercise (see ReorderList).
@@ -34,20 +34,13 @@ struct ExerciseCard: View, Equatable {
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
         let open = (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
         VStack(spacing: 0) {
-            SwipeToDelete(onDelete: { model.removeExercise(exercise) }, onEdit: { replacing = true }) { reveal, room in
+            SwipeRow(onEdit: { replacing = true }, onDelete: { model.removeExercise(exercise) }) {
                 HStack(spacing: 8) {
-                    // Swiped open, the name stays and ends (…) before Edit and Delete; the count and chevron fade under them.
-                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(room > 0 ? 1 : 2)
+                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    ZStack(alignment: .trailing) {
-                        Color.clear.frame(width: room, height: 0)
-                        HStack(spacing: 8) {
-                            Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
-                            Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
-                                .rotationEffect(.degrees(open ? 180 : 0))
-                        }
-                        .opacity(1 - reveal)
-                    }
+                    Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
+                    Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
+                        .rotationEffect(.degrees(open ? 180 : 0))
                 }
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
