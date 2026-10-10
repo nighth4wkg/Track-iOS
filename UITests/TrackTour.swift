@@ -48,20 +48,22 @@ final class TrackTour: XCTestCase {
         snap("workout-options", after: 0.8); tap(app.buttons["Close"].firstMatch, "close options"); snap("options-closed", after: 0.8)
 
         app.swipeDown(); app.swipeDown(); snap("workout-top")
+        // Swipe Bench Press for Edit, pick another exercise: it takes Bench Press's place with the same sets.
+        let bench = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press' AND NOT label CONTAINS 'set'")).firstMatch
+        if bench.waitForExistence(timeout: 3) { bench.swipeLeft(); snap("exercise-swiped", after: 0.5) }
+        tap(app.buttons["Edit"].firstMatch, "Edit exercise"); snap("edit-picker", after: 0.8)
+        // One not already in the workout, so the drag below still finds its two exercises by name.
+        let names = ["Bench Press", "Lat pulldown", "Overhead Press", "Barbell curl", "Back squat"].map { "Use " + $0 }
+        let use = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use ' AND NOT (label IN %@)", names)).firstMatch
+        let picked = use.waitForExistence(timeout: 3) ? String(use.label.dropFirst(4)) : ""
+        tap(use, "Use another exercise"); snap("exercise-replaced", after: 1)
+        print("TOUR replaced: \(picked) shown \(app.staticTexts[picked].exists) bench gone \(!app.staticTexts["Bench Press"].exists)")
         let lat = app.descendants(matching: .any)["Lat pulldown"].firstMatch, press = app.descendants(matching: .any)["Overhead Press"].firstMatch
         if lat.waitForExistence(timeout: 3), press.exists {
             lat.press(forDuration: 1.2, thenDragTo: press, withVelocity: .slow, thenHoldForDuration: 0.8)
             snap("dropped-0.1s", after: 0.1); snap("dropped-settled", after: 1)
             print("TOUR order: \(app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Lat pulldown", "Overhead Press"])).allElementsBoundByIndex.map { "\($0.label)@\(Int($0.frame.minY))" })")
         } else { missing.append("drag"); print("TOUR missing: drag") }
-        // Swipe Bench Press for Edit, pick another exercise: it takes Bench Press's place with the same sets.
-        let bench = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press' AND NOT label CONTAINS 'set'")).firstMatch
-        if bench.waitForExistence(timeout: 3) { bench.swipeLeft(); snap("exercise-swiped", after: 0.5) }
-        tap(app.buttons["Edit"].firstMatch, "Edit exercise"); snap("edit-picker", after: 0.8)
-        let use = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use '")).element(boundBy: 1)
-        let picked = use.waitForExistence(timeout: 3) ? String(use.label.dropFirst(4)) : ""
-        tap(use, "Use another exercise"); snap("exercise-replaced", after: 1)
-        print("TOUR replaced: \(picked) shown \(app.staticTexts[picked].exists) bench gone \(!app.staticTexts["Bench Press"].exists)")
         tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Resume workout'")).firstMatch, "Resume"); snap("resumed", after: 1)
         tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
