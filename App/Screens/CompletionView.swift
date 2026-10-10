@@ -153,7 +153,7 @@ struct CompletionView: View {
 
     private func chip(_ text: String, icon: String?, accent: Bool = false, muted: Bool = false) -> some View {
         HStack(spacing: 6) {
-            if let icon { Image(systemName: icon).foregroundStyle(Palette.accent) }
+            if let icon { Image(systemName: icon).foregroundStyle(Palette.accent).accessibilityHidden(true) }
             Text(text).foregroundStyle(accent ? Palette.accent : muted ? Palette.muted : Palette.text)
         }
         .font(.footnote.weight(.semibold))

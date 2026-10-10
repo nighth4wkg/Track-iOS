@@ -34,9 +34,9 @@ struct WorkoutOptions: View {
         }
         .padding(24) }
         .scrollBounceBehavior(.basedOnSize)
+        .background(Backdrop()) // the app's own backdrop, as Settings and every other sheet (not a plain grey material)
         .presentationDetents([.height(360), .large])
         .presentationDragIndicator(.visible)
-        .presentationBackground(.ultraThinMaterial)
     }
 
     private func option(_ title: String, _ icon: String, danger: Bool = false, action: @escaping () -> Void) -> some View {

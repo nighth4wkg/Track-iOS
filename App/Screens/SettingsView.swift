@@ -58,7 +58,7 @@ struct SettingRow<Control: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if let icon { Image(systemName: icon).font(.body).foregroundStyle(Palette.muted).frame(width: 22) }
+            if let icon { Image(systemName: icon).font(.body).foregroundStyle(Palette.muted).frame(width: 22).accessibilityHidden(true) } // decorative: VoiceOver read "Scale For Weighing Mass"
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.body).foregroundStyle(Palette.text)
                 if let detail { Text(detail).font(.caption).foregroundStyle(Palette.muted) }

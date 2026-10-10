@@ -39,15 +39,18 @@ struct HistoryDetail: View {
                     .padding(16)
                 }
                 .background(Palette.background.opacity(0.32))
+                .scrollEdgeEffectStyle(.soft, for: .bottom) // a fade behind the buttons, never a band across the cards
             }
             .background(Backdrop())
-            .safeAreaInset(edge: .bottom) {
+            // A bar, not an inset with a fill: the sets fade under the buttons, as in a workout. No full-width strip.
+            .safeAreaBar(edge: .bottom) {
                 HStack(spacing: 16) {
+                    // Red text, no fill: Repeat is the point here, as on the website.
                     Button { model.deleteWorkout(current) } label: {
-                        Label("Delete", systemImage: "trash").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                            .padding(.horizontal, 16).frame(minHeight: 44).background(Capsule().fill(Palette.danger))
+                        Label("Delete", systemImage: "trash").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.dangerText)
+                            .padding(.horizontal, 16).frame(minHeight: 44).contentShape(Capsule())
                     }
-                    .buttonStyle(PressStyle())
+                    .buttonStyle(PressStyle()).accessibilityLabel("Delete workout")
                     Spacer()
                     // While another workout is on, it says why instead of doing nothing.
                     Button { model.training.active == nil ? model.repeatWorkout(current) : model.show("Finish or discard your current workout first.") } label: {
@@ -57,8 +60,6 @@ struct HistoryDetail: View {
                     .buttonStyle(PressStyle()).opacity(model.training.active != nil ? 0.45 : 1)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(.bar)
-                .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 1) }
             }
             .toolbar(.hidden, for: .navigationBar)
         }

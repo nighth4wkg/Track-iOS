@@ -60,7 +60,7 @@ private struct ChoiceCard: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(accent ? Palette.accent : Palette.text)
                     .frame(width: 48, height: 48)
-                    .glass(radius: 14, fill: Palette.control, lifted: false)
+                    .glass(radius: 14, fill: Palette.control, lifted: false).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text(title).font(.headline).foregroundStyle(Palette.text)

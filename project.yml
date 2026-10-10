@@ -12,8 +12,8 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.18.9"
-    CURRENT_PROJECT_VERSION: "41"
+    MARKETING_VERSION: "0.18.10"
+    CURRENT_PROJECT_VERSION: "42"
 targets:
   Track:
     type: application

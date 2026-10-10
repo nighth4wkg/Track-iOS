@@ -48,11 +48,11 @@ struct Page<Content: View>: View {
                 if AppTab.allCases.indices.contains(next) { model.tab = AppTab.allCases[next] }
             }))
             .background(Backdrop())
-            .navigationTitle(title)
+            // No navigation title: the page shows its own, and a hidden one was read by VoiceOver (and named the
+            // back button of the pages pushed from here, "Ready to train" instead of Back).
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 let streak = model.derived("streak \(dayKey(nowMillis()))") { $0.weeklyStreak(at: nowMillis()) }
-                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
                 // The brand sits on the bar itself, as on the website: no glass bubble behind it.
                 ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
                 // The streak shows once there is one: a 0 on day one reads as broken.

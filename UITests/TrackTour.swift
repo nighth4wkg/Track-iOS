@@ -117,11 +117,14 @@ final class TrackTour: XCTestCase {
         // Editing it: Rename, ✎ and ✕ in place of the set count; ✎ swaps the exercise, asking first. Started with the
         // row swiped open: its Delete must go (✕ removes now), and the row keeps its height.
         let exerciseRow = app.cells.firstMatch, height = exerciseRow.frame.height
+        let start = app.buttons["Start workout"].firstMatch, startY = start.frame.minY
         exerciseRow.swipeLeft(); snap("split-row-swiped", after: 0.5)
         tap(app.buttons["Edit split"].firstMatch, "Edit split"); snap("split-editing-0.1s", after: 0.1); snap("split-editing", after: 0.8)
         XCTAssertFalse(app.buttons["Remove"].exists, "the swipe's Delete stays beside ✕")
-        print("TOUR row height \(height) → \(exerciseRow.frame.height)")
+        print("TOUR row height \(height) → \(exerciseRow.frame.height); Start workout y \(startY) → \(start.frame.minY)")
         XCTAssertEqual(exerciseRow.frame.height, height, accuracy: 0.5)
+        XCTAssertEqual(start.frame.minY, startY, accuracy: 0.5, "Rename takes the size line's place: nothing moves")
+        XCTAssertTrue(app.buttons["Rename"].isHittable)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Swap '")).firstMatch, "Swap exercise"); snap("split-swap-picker", after: 0.8)
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use '")).firstMatch, "Use another"); snap("split-swap-confirm", after: 1)
         tap(app.buttons["dialog-action"], "confirm split swap"); snap("split-swapped", after: 0.8)

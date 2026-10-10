@@ -107,8 +107,8 @@ private struct NameCard: View {
                 GlassCircleButton(icon: "xmark", label: "Close") { model.naming = nil }.padding(.top, -6).padding(.trailing, -6)
             }
             Text(naming.message).font(.subheadline).foregroundStyle(Palette.muted)
-            Text(naming.label).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).padding(.top, 6)
-            TextField(naming.placeholder, text: $name).focused($focused).submitLabel(.done).onSubmit(save)
+            Text(naming.label).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).padding(.top, 6).accessibilityHidden(true) // read as the field's own name (a filled field had none)
+            TextField(naming.placeholder, text: $name).focused($focused).submitLabel(.done).onSubmit(save).accessibilityLabel(naming.label)
                 .keyboardType(naming.number ? .decimalPad : .default)
                 .font(.body.weight(.semibold)).padding(.horizontal, 14).frame(minHeight: 48)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))

@@ -17,6 +17,7 @@ struct ListRow<Trailing: View>: View {
             }
             .foregroundStyle(tint)
             .frame(width: 44, height: 44).glass(radius: 12, fill: Palette.control, lifted: false)
+            .accessibilityHidden(true) // decorative: the title says it
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline).foregroundStyle(Palette.text).lineLimit(2)
                 Text(detail).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1)
@@ -50,7 +51,7 @@ struct EmptyCard: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon).font(.title2).foregroundStyle(Palette.muted)
-                .frame(width: 56, height: 56).glass(radius: 16, fill: Palette.control, lifted: false)
+                .frame(width: 56, height: 56).glass(radius: 16, fill: Palette.control, lifted: false).accessibilityHidden(true)
             Text(title).font(.headline).foregroundStyle(Palette.text)
             Text(detail).font(.subheadline).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
         }

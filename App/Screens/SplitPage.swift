@@ -3,7 +3,7 @@ import TrackCore
 
 /// A split, as the website's split page: its name over its size, Start workout, "Your exercises" (swipe one left to
 /// remove it, hold and drag to move it), Add exercise, Resume while a workout is on, and Delete split. The pen turns
-/// editing on: Rename under the name, and ✎ (swap, asking first) and ✕ (remove) in place of each exercise's set count.
+/// editing on: Rename in place of its size, and ✎ (swap, asking first) and ✕ (remove) in place of each exercise’s set count.
 struct SplitPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -23,17 +23,27 @@ struct SplitPage: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(split.name).scaledFont(34, weight: .bold).foregroundStyle(Palette.text)
-                            if split.exercises.isEmpty && !live {
-                                Button("Tap to add exercises") { picking = true }.font(.body).foregroundStyle(Palette.accent)
-                            } else {
-                                Text(split.summary).font(.body).foregroundStyle(Palette.muted)
-                            }
-                            if editing {
-                                Button {
-                                    model.naming = Naming(title: "Rename split", name: split.name, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
-                                } label: { Label("Rename", systemImage: "pencil").frame(minHeight: 44) }
-                                .buttonStyle(PressStyle()).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted)
-                                .transition(.opacity.combined(with: .offset(y: -8)))
+                            // Rename takes the size line's place while editing (the slot as tall either way), so the
+                            // page below never moves.
+                            ZStack(alignment: .leading) {
+                                Group {
+                                    if split.exercises.isEmpty && !live {
+                                        Button("Tap to add exercises") { picking = true }.font(.body).foregroundStyle(Palette.accent)
+                                    } else {
+                                        Text(split.summary).font(.body).foregroundStyle(Palette.muted)
+                                    }
+                                }
+                                .opacity(editing ? 0 : 1).allowsHitTesting(!editing).accessibilityHidden(editing)
+                                if !live {
+                                    Button {
+                                        model.naming = Naming(title: "Rename split", name: split.name, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
+                                    } label: {
+                                        // The line's height, with a 44pt tap area reaching into the space around it.
+                                        Label("Rename", systemImage: "pencil").frame(minHeight: 44).contentShape(Rectangle()).padding(.vertical, -11)
+                                    }
+                                    .buttonStyle(PressStyle()).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted)
+                                    .opacity(editing ? 1 : 0).allowsHitTesting(editing).accessibilityHidden(!editing)
+                                }
                             }
                         }
                         Spacer()
@@ -93,9 +103,7 @@ struct SplitPage: View {
                 .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))
             }
             .background(Backdrop())
-            .navigationTitle(split.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) } }
+            .navigationBarTitleDisplayMode(.inline) // no title in the bar: the page shows the name itself
             .sheet(isPresented: $picking) {
                 ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }
             }

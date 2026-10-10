@@ -126,7 +126,7 @@ struct HistoryView: View {
     }
 }
 
-/// A workout in the list: a date tile (day and weekday), its name over sets · time · volume, a PR chip.
+/// A workout in the list: a date tile (day and weekday), its name (and a PR chip) over sets · time · volume.
 private struct HistoryRow: View {
     let session: Session
     let unit: TrackCore.Settings.Unit
@@ -141,16 +141,20 @@ private struct HistoryRow: View {
             }
             .foregroundStyle(Palette.text).frame(width: 44, height: 44).glass(radius: 12, fill: Palette.control, lifted: false)
             VStack(alignment: .leading, spacing: 2) {
-                Text(session.name).font(.headline).foregroundStyle(Palette.text).lineLimit(1)
+                // A PR sits beside the name, so the line under it keeps its width for sets, time and volume.
+                HStack(spacing: 8) {
+                    Text(session.name).font(.headline).foregroundStyle(Palette.text).lineLimit(1)
+                    if record {
+                        HStack(spacing: 3) { Image(systemName: "trophy"); Text("PR") }
+                            .font(.caption.weight(.bold)).foregroundStyle(Palette.record).fixedSize()
+                            .padding(.horizontal, 8).padding(.vertical, 4).glass(radius: 12, fill: Palette.control, lifted: false)
+                            .padding(.vertical, -2) // drawn as before, but no taller than the name's line: rows stay even
+                    }
+                }
                 Text("\(count(session.completedSets.count, "set")) · \(trainingDuration(session.minutes)) · \(weight(session.volume, unit)) \(unit.rawValue)")
                     .font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.85)
             }
             Spacer(minLength: 4)
-            if record {
-                HStack(spacing: 3) { Image(systemName: "trophy"); Text("PR") }
-                    .font(.caption.weight(.bold)).foregroundStyle(Palette.record).fixedSize()
-                    .padding(.horizontal, 8).padding(.vertical, 4).glass(radius: 12, fill: Palette.control, lifted: false)
-            }
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
         }
     }

@@ -31,25 +31,27 @@ struct SetRow: View {
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
     @State private var replacing: String? // the field just tapped: its first keystroke replaces it (replaceTyped)
+    @State private var shownError: String? // set inside an animation, so the rows below glide as it opens and closes
 
     var body: some View {
         let shown = typed
         let record = bests.record(for: exercise.name, shown, earlierToday: earlier)
         let carried = !shown.done && shown.kg != nil && shown.reps != nil
-        let error = inputError(unit)
+        let error = TrainingSet.inputError(weight: weight, reps: reps, rir: rir, unit: unit)
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Text(set.side.map { $0 == .left ? "L" : "R" } ?? "\(number)")
                     .font(.body.weight(.bold)).monospacedDigit()
                     .foregroundStyle(record != nil ? Palette.record : shown.done ? Palette.accent : Palette.muted)
                     .frame(width: 28)
-                field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, placeholder: "—", glow: record != nil, done: shown.done)
-                field($reps, id: "reps", label: "reps", keyboard: .numberPad, placeholder: "—", glow: record != nil, done: shown.done)
-                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, placeholder: "—", glow: record != nil, done: shown.done)
+                field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("kg") == true)
+                field($reps, id: "reps", label: "reps", keyboard: .numberPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("reps") == true)
+                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("rir") == true)
                 check(done: shown.done, carried: carried, record: record != nil)
             }
-            if let error { Text(error).font(.caption).foregroundStyle(Palette.dangerText) }
+            if let shownError { Text(shownError).font(.caption).foregroundStyle(Palette.dangerText) }
         }
+        .onChange(of: error?.message) { _, now in withAnimation(.smooth(duration: Motion.standard)) { shownError = now } }
         .contentShape(Rectangle())
         .gesture(HorizontalPan(onChange: { x in
             arm = max(0, min(1, (armed ? 1 : 0) - x / 72))
@@ -106,9 +108,10 @@ struct SetRow: View {
         .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
     }
 
-    /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps".
-    private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, placeholder: String, glow: Bool, done: Bool) -> some View {
-        TextField(placeholder, text: text)
+    /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps". Its edge: gold for a best, red out
+    /// of range, the accent while typing in it (iOS shows no caret until the first digit).
+    private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, glow: Bool, done: Bool, bad: Bool) -> some View {
+        TextField("—", text: text)
             .accessibilityLabel("\(exercise.name) set \(number) \(label)")
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
@@ -116,7 +119,8 @@ struct SetRow: View {
             .foregroundStyle(glow ? Palette.record : done ? Palette.accent : Palette.text)
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.record.opacity(glow ? 0.8 : 0), lineWidth: 1.5))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(glow ? Palette.record.opacity(0.8) : bad ? Palette.dangerText
+                : focus.wrappedValue == "\(set.id).\(id)" ? Palette.accent : .clear, lineWidth: 1.5))
             .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
             .focused(focus, equals: "\(set.id).\(id)")
     }
@@ -149,13 +153,6 @@ struct SetRow: View {
         withAnimation(.smooth(duration: Motion.standard)) { hint = true }
         let mine = burst
         DispatchQueue.main.asyncAfter(deadline: .now() + RecordNote.seconds) { if burst == mine { withAnimation(.smooth) { hint = false } } }
-    }
-
-    private func inputError(_ unit: TrackCore.Settings.Unit) -> String? {
-        if !weight.isEmpty, TrainingSet.kilograms(from: weight, unit: unit).map({ $0 <= Limits.kg }) != true { return "Enter a weight from \(Limits.wholeRange(0...Limits.kg, unit))." }
-        if !reps.isEmpty, TrainingSet.wholeNumber(reps).map({ (1...Limits.reps).contains($0) }) != true { return "Reps must be a whole number from 1 to \(Limits.grouped(Limits.reps))." }
-        if !rir.isEmpty, TrainingSet.wholeNumber(rir).map({ (0...Limits.rir).contains($0) }) != true { return "RIR must be a whole number from 0 to \(Limits.rir)." }
-        return nil
     }
 
     private func delete() {

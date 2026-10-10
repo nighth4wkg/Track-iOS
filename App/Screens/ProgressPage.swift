@@ -87,7 +87,7 @@ struct ProgressPage: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Image(systemName: icon).foregroundStyle(icon == "flame" ? Palette.streak : Palette.muted)
+                    Image(systemName: icon).foregroundStyle(icon == "flame" ? Palette.streak : Palette.muted).accessibilityHidden(true)
                     Text(value).monospacedDigit().foregroundStyle(Palette.text)
                 }
                 .scaledFont(20, weight: .bold).lineLimit(1).minimumScaleFactor(0.7)
@@ -176,7 +176,7 @@ private struct VolumeBars: View {
         HStack(alignment: .bottom, spacing: 8) {
             ForEach(Array(volumes.enumerated()), id: \.offset) { index, volume in
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(index == volumes.count - 1 ? Palette.primary : Palette.control)
+                    .fill(index == volumes.count - 1 ? Palette.primary : Palette.bar)
                     .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.rim.opacity(0.4), lineWidth: 1))
                     .frame(height: 112 * (grown ? max(0.04, volume / top) : 0.04))
                     .frame(maxWidth: 64)

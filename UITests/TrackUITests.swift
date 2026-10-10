@@ -64,7 +64,7 @@ final class TrackUITests: XCTestCase {
     /// Create a split, add an exercise from the library, go back Home, swipe the split away and confirm.
     func testCreateAndDeleteASplit() {
         app.buttons["Create split"].firstMatch.tapWhenReady()
-        let name = app.textFields["e.g. Upper body"]
+        let name = app.textFields["Split name"]
         XCTAssertTrue(name.waitForExistence(timeout: 3))
         dismissKeyboardTip()
         name.tap()
