@@ -16,6 +16,8 @@ enum Palette {
     static let danger = Color(hex: 0xE52626)
     static let dangerDeep = Color(hex: 0xBD1616)
     static let dangerText = Color(light: 0xC82F48, dark: 0xFF9EAA)
+    /// A swipe action that isn't destructive (Edit beside Delete): a quiet grey under a white icon.
+    static let action = Color(light: 0x7D8590, dark: 0x4F5762)
     /// Personal bests (app/styles/rewards.css).
     static let record = Color(light: 0xA06A00, dark: 0xF2C14E)
     /// The streak flame (components/header-streak).
