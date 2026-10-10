@@ -169,7 +169,7 @@ struct GlassCircleButton: View {
     let action: () -> Void
 
     var body: some View {
-        let image = Image(systemName: icon).font(.body.weight(.semibold))
+        let image = Image(systemName: icon).font(.body.weight(.semibold)).contentTransition(.symbolEffect(.replace))
             .foregroundStyle(active ? Palette.accent : Palette.text)
         if #available(iOS 26, *) {
             Button(action: action) { image.frame(width: 32, height: 32) }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
