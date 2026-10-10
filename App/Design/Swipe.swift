@@ -69,32 +69,39 @@ enum SwipeZones {
 
 /// The website's swipe to delete (components/gesture-item): the row slides left under the finger inside its rounded
 /// card while a rounded red Delete slides in from the right edge. Any visible reveal opens it, a flick or any drag back
-/// closes it; a tap on Delete deletes. Opening ticks; Delete warns.
+/// closes it; a tap on Delete deletes. Opening ticks; Delete warns. With `onEdit`, Edit shows beside Delete and the
+/// row opens twice as far.
 struct SwipeToDelete<Content: View>: View {
     var label = "Delete"
     let onDelete: () -> Void
+    var onEdit: (() -> Void)? = nil
     @ViewBuilder let content: Content
     @State private var offset: CGFloat = 0
     @State private var open = false
     @State private var start: CGFloat = 0
-    private let width: CGFloat = 88
+    /// One action's width; the row opens as wide as its actions.
+    private let action: CGFloat = 88
+    private var width: CGFloat { action * (onEdit == nil ? 1 : 2) }
 
     var body: some View {
         ZStack(alignment: .trailing) {
             content
                 .offset(x: offset)
                 .allowsHitTesting(!open)
-            Button(role: .destructive) { onDelete() } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: "trash").font(.body.weight(.semibold))
-                    Text(label).font(.caption.weight(.semibold))
+            HStack(spacing: 8) {
+                if let onEdit {
+                    Button { settle(false); onEdit() } label: {
+                        tile("Edit", "pencil").foregroundStyle(Palette.text).glass(radius: 14, fill: Palette.control, lifted: false)
+                    }
+                    .buttonStyle(PressStyle())
                 }
-                .foregroundStyle(.white)
-                .frame(width: width - 8, height: 52)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(LinearGradient(colors: [Palette.danger, Palette.dangerDeep], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                Button(role: .destructive) { onDelete() } label: {
+                    tile(label, "trash").foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(LinearGradient(colors: [Palette.danger, Palette.dangerDeep], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                }
+                .buttonStyle(PressStyle())
             }
-            .buttonStyle(PressStyle())
             .offset(x: width + offset)
             .opacity(offset < 0 ? 1 : 0)
             .accessibilityHidden(!open)
@@ -110,6 +117,16 @@ struct SwipeToDelete<Content: View>: View {
         .simultaneousGesture(TapGesture().onEnded { if open { settle(false) } })
         .sensoryFeedback(.impact(weight: .light), trigger: open) { _, now in now }
         .accessibilityAction(named: label) { onDelete() }
+        .accessibilityActions { if let onEdit { Button("Edit", action: onEdit) } }
+    }
+
+    /// An action's face: its icon over its name, the tile's size.
+    private func tile(_ name: String, _ icon: String) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: icon).font(.body.weight(.semibold))
+            Text(name).font(.caption.weight(.semibold))
+        }
+        .frame(width: action - 8, height: 52)
     }
 
     private func settle(_ opening: Bool) {

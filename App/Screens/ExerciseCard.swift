@@ -1,8 +1,8 @@
 import SwiftUI
 import TrackCore
 
-/// One exercise, as the website's card: a header that opens and closes it (swipe the header left to remove the
-/// exercise), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
+/// One exercise, as the website's card: a header that opens and closes it (swipe the header left to swap or remove
+/// the exercise), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
 /// until every set is done (taking the keyboard with it); one opened or closed by hand stays that way until its sets
 /// change between all done and not. Hold the
 /// name and drag to move the exercise (see ReorderList).
@@ -26,13 +26,15 @@ struct ExerciseCard: View, Equatable {
     /// restarts it). Drawn on the card, sized to the header, since the header's swipe clips anything larger.
     @State private var best: (text: String, id: Int)?
     @State private var headerHeight: CGFloat = 44
+    /// Edit (on the header's swipe) opens the picker; what's picked takes this exercise's place, sets and all.
+    @State private var replacing = false
 
     var body: some View {
         let done = exercise.sets.filter(\.done).count
         let finished = !exercise.sets.isEmpty && done == exercise.sets.count
         let open = (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
         VStack(spacing: 0) {
-            SwipeToDelete(onDelete: { model.removeExercise(exercise) }) {
+            SwipeToDelete(onDelete: { model.removeExercise(exercise) }, onEdit: { replacing = true }) {
                 HStack(spacing: 8) {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,6 +117,11 @@ struct ExerciseCard: View, Equatable {
         .animation(.smooth(duration: Motion.standard), value: open)
         .animation(.smooth(duration: Motion.quick), value: exercise.sets.map(\.id))
         .sensoryFeedback(.selection, trigger: open)
+        .sheet(isPresented: $replacing) {
+            ExercisePicker(replacing: exercise.name) { name in
+                model.update { $0.updateActive(exercise: exercise.id) { $0.name = name } }
+            }
+        }
     }
 
     /// Saving a set redraws only its card, not every card in the workout (the keyboard focus updates each by itself).
