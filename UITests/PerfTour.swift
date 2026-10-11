@@ -60,6 +60,7 @@ final class PerfTour: XCTestCase {
         let delta = { (key: String) in after[key, default: 0] - before[key, default: 0] }
         print(String(format: "PERF Next x40 (in-app): %.0f frames, jank %.0f (%.0f ms late); all hitches %.0f (%.0f ms late)",
                      delta("frames"), delta("jank"), delta("jankms"), delta("hitches"), delta("late")))
+        print("PERF Next trace (ms from the first Next : ms late): " + app.otherElements["frame-log"].firstMatch.label)
     }
 
     /// Where an element is now, to tap later without looking it up again.
