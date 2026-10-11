@@ -15,7 +15,7 @@ struct SetRow: View {
     let autoLog: Bool
     let bests: RecordBests
     let earlier: [TrainingSet]
-    var focus: FocusState<String?>.Binding
+    var focus: Binding<String?>
     /// The field being typed in when it's in this row ("kg", "reps", "rir"): read instead of the focus, so moving the
     /// keyboard redraws only the rows it leaves and enters.
     let focused: String?
@@ -33,7 +33,7 @@ struct SetRow: View {
     /// RIR only carried over, doesn't count.
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
-    @State private var replacing: String? // the field just tapped: its first keystroke replaces it (replaceTyped)
+    @State private var replacing: String? // the field just tapped: its first keystroke replaces it (key)
     @State private var shownError: String? // set inside an animation, so the rows below glide as it opens and closes
 
     var body: some View {
@@ -47,9 +47,9 @@ struct SetRow: View {
                     .font(.body.weight(.bold)).monospacedDigit()
                     .foregroundStyle(record != nil ? Palette.record : shown.done ? Palette.accent : Palette.muted)
                     .frame(width: 28)
-                field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("kg") == true)
-                field($reps, id: "reps", label: "reps", keyboard: .numberPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("reps") == true)
-                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("rir") == true)
+                field(weight, id: "kg", label: "weight in \(unit.rawValue)", glow: record != nil, done: shown.done, bad: error?.fields.contains("kg") == true)
+                field(reps, id: "reps", label: "reps", glow: record != nil, done: shown.done, bad: error?.fields.contains("reps") == true)
+                field(rir, id: "rir", label: "RIR", glow: record != nil, done: shown.done, bad: error?.fields.contains("rir") == true)
                 check(done: shown.done, carried: carried, record: record != nil)
             }
             if let shownError { Text(shownError).font(.caption).foregroundStyle(Palette.dangerText) }
@@ -72,17 +72,14 @@ struct SetRow: View {
         .onChange(of: set) { load(unit) }
         .onChange(of: unit) { load(unit) }
         .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
-        .onChange(of: weight) { replaceTyped("kg", $0, $1) }.onChange(of: reps) { replaceTyped("reps", $0, $1) }
-        .onChange(of: rir) { replaceTyped("rir", $0, $1); if let n = Int(rir), n > Limits.rir { rir = String(Limits.rir) } } // up to Limits.rir
+        .onChange(of: rir) { if let n = Int(rir), n > Limits.rir { rir = String(Limits.rir) } } // up to Limits.rir
         .onChange(of: focused) { old, now in
             // Leaving the row saves it straight away; tapping a number arms it, so the first keystroke replaces it.
             if old != nil, now == nil { flush() }
             if let now { replacing = now }
         }
-        // Only keystrokes post this (not focusing, selecting or loading numbers), so it says what was really typed.
-        .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)) { _ in
-            if let focused { typedInto(focused) }
-        }
+        // A key on the workout's one keyboard (SetKeyboard), for the field being typed in here.
+        .onReceive(NotificationCenter.default.publisher(for: KeyInput.typed)) { if let focused { key(focused, $0.object as? String) } }
         .sensoryFeedback(.success, trigger: burst)
     }
 
@@ -111,36 +108,39 @@ struct SetRow: View {
         .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
     }
 
-    /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps". Its edge: gold for a best, red out
-    /// of range, the accent while typing in it (iOS shows no caret until the first digit).
-    private func field(_ text: Binding<String>, id: String, label: String, keyboard: UIKeyboardType, glow: Bool, done: Bool, bad: Bool) -> some View {
-        TextField("—", text: text)
-            .accessibilityLabel("\(exercise.name) set \(number) \(label)")
-            .keyboardType(keyboard)
-            .multilineTextAlignment(.center)
+    /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps". Tapping it types into it on the
+    /// workout's one keyboard. Its edge: gold for a best, red out of range, the accent while typing in it.
+    private func field(_ text: String, id: String, label: String, glow: Bool, done: Bool, bad: Bool) -> some View {
+        Text(text.isEmpty ? "—" : text).lineLimit(1).minimumScaleFactor(0.5)
             .font(.body.weight(.bold)).monospacedDigit()
-            .foregroundStyle(glow ? Palette.record : done ? Palette.accent : Palette.text)
+            .foregroundStyle(text.isEmpty ? Palette.muted : glow ? Palette.record : done ? Palette.accent : Palette.text)
+            .padding(.horizontal, 6)
             .frame(maxWidth: .infinity, minHeight: 48)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(glow ? Palette.record.opacity(0.8) : bad ? Palette.dangerText
                 : focused == id ? Palette.accent : .clear, lineWidth: 1.5))
             .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
-            .focused(focus, equals: "\(set.id).\(id)")
+            .contentShape(Rectangle())
+            .onTapGesture { focus.wrappedValue = "\(set.id).\(id)" }
+            .accessibilityLabel("\(exercise.name) set \(number) \(label)").accessibilityValue(text)
+            .accessibilityAddTraits(focused == id ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { focus.wrappedValue = "\(set.id).\(id)" }
     }
     private func typedInto(_ id: String) {
         if id == "rir" { rirTyped = true }
         pending?.cancel()
         pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
     }
-    /// The website's select-on-focus without iOS's selection handles: the first keystroke after tapping keeps only what
-    /// it added (what's new between the unchanged start and end); deleting clears the field.
-    private func replaceTyped(_ field: String, _ old: String, _ new: String) {
-        guard replacing == field else { return }
+    /// A key typed into a field here: a digit (or, in the weight, the decimal point), or nil for delete. As the
+    /// website selects a number on focus, the first key after arriving in a field replaces it (deleting clears it).
+    private func key(_ field: String, _ text: String?) {
+        let allowed = field == "kg" ? "0123456789.," : "0123456789"
+        if let text, text.isEmpty || !text.allSatisfy({ allowed.contains($0) }) { return }
+        var value = replacing == field ? "" : field == "kg" ? weight : field == "reps" ? reps : rir
         replacing = nil
-        let start = zip(new, old).prefix { $0 == $1 }.count
-        let end = zip(new.dropFirst(start).reversed(), old.dropFirst(start).reversed()).prefix { $0 == $1 }.count
-        let typed = new.count > old.count ? String(new.dropFirst(start).dropLast(end)) : ""
-        if field == "kg" { weight = typed } else if field == "reps" { reps = typed } else { rir = typed }
+        if let text { value += text } else { value = String(value.dropLast()) }
+        if field == "kg" { weight = value } else if field == "reps" { reps = value } else { rir = value }
+        typedInto(field)
     }
     private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? {
         record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" }

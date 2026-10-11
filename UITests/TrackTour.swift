@@ -24,12 +24,12 @@ final class TrackTour: XCTestCase {
         // A workout, from the start.
         tap(app.buttons["Start workout"].firstMatch, "Start workout")
         snap("start-0.1s", after: 0.1); snap("start-settled", after: 1)
-        let rir1 = app.textFields["Bench Press set 1 RIR"]
+        let rir1 = app.buttons["Bench Press set 1 RIR"]
         tap(rir1, "set 1 RIR"); snap("rir-tapped-not-logged", after: 1)
-        rir1.typeText("2"); snap("rir-typed", after: 0.1); snap("rir-saved", after: 1)
+        app.typeKeys("2"); snap("rir-typed", after: 0.1); snap("rir-saved", after: 1)
         allowNotificationsIfAsked(); snap("resting")
-        tap(app.textFields["Bench Press set 1 reps"], "set 1 reps")
-        app.typeText("9"); snap("logged-set-edited", after: 1)
+        tap(app.buttons["Bench Press set 1 reps"], "set 1 reps")
+        app.typeKeys("9"); snap("logged-set-edited", after: 1)
         tap(app.buttons["Done"].firstMatch, "keyboard Done"); snap("keyboard-gone")
         for n in 2...3 { tap(check("Bench Press set \(n)"), "✓ set \(n)"); snap("ticked-\(n)", after: 0.15) }
         snap("bench-folded", after: 1)
@@ -38,7 +38,7 @@ final class TrackTour: XCTestCase {
         tap(check("Bench Press set 3"), "untick set 3"); snap("unticked", after: 0.8)
         tap(check("Bench Press set 3"), "retick set 3"); snap("reticked", after: 1)
 
-        let next = app.textFields.matching(NSPredicate(format: "label ENDSWITH 'set 1 RIR' AND NOT label BEGINSWITH 'Bench'")).firstMatch
+        let next = app.buttons.matching(NSPredicate(format: "label ENDSWITH 'set 1 RIR' AND NOT label BEGINSWITH 'Bench'")).firstMatch
         if next.waitForExistence(timeout: 3) {
             next.swipeLeft(); snap("set-delete-armed", after: 0.5); next.swipeRight(); snap("set-delete-disarmed", after: 0.5)
         }
@@ -157,9 +157,9 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Push"].firstMatch, "Push template"); snap("template-added", after: 1)
         tap(app.buttons["Start workout"].firstMatch, "Start"); allowNotificationsIfAsked(); snap("first-workout", after: 1)
         tap(check("Bench Press set 1"), "✓ empty set"); snap("tick-empty-set", after: 0.8)
-        let kg = app.textFields["Bench Press set 1 weight in lb"]
-        tap(kg, "lb field"); app.typeText("135"); app.textFields["Bench Press set 1 reps"].tap(); app.typeText("10")
-        app.textFields["Bench Press set 1 RIR"].tap(); app.typeText("2"); snap("manual-typed-not-logged", after: 1)
+        let kg = app.buttons["Bench Press set 1 weight in lb"]
+        tap(kg, "lb field"); app.typeKeys("135"); app.buttons["Bench Press set 1 reps"].tap(); app.typeKeys("10")
+        app.buttons["Bench Press set 1 RIR"].tap(); app.typeKeys("2"); snap("manual-typed-not-logged", after: 1)
         tap(check("Bench Press set 1"), "✓ set 1"); allowNotificationsIfAsked(); snap("manual-ticked", after: 0.8)
         tap(app.buttons["Done"].firstMatch, "keyboard Done")
         tap(app.buttons["Finish workout"].firstMatch, "Finish"); tap(app.buttons["dialog-action"], "confirm"); snap("first-recap", after: 1.5)

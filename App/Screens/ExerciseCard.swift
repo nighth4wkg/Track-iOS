@@ -13,7 +13,7 @@ struct ExerciseCard: View, Equatable {
     let autoLog: Bool
     let box: ReorderBox
     let bests: RecordBests
-    var focus: FocusState<String?>.Binding
+    var focus: Binding<String?>
     /// The field being typed in, when it's on this card: a card skipped as unchanged doesn't see the focus move, so
     /// this tells it (and its rows) when the keyboard comes or goes here.
     let focusHere: String?
@@ -71,6 +71,7 @@ struct ExerciseCard: View, Equatable {
                                earlier: Array(exercise.sets.prefix(index)), focus: focus,
                                focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil },
                                onRecord: { best = ($0, (best?.id ?? 0) + 1) })
+                            .id(set.id) // what the keyboard scrolls to (SetKeyboard)
                             .transition(.opacity)
                     }
                     HStack(spacing: 0) {

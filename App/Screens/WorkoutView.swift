@@ -16,7 +16,8 @@ struct WorkoutView: View {
     @GestureState(resetTransaction: Transaction(animation: .smooth(duration: Motion.quick))) private var drag: CGFloat = 0
     @State private var pull: CGFloat = 0
     @State private var width: CGFloat = 400
-    @FocusState private var focus: String?
+    /// The set field being typed in ("<set id>.kg", ".reps" or ".rir"), on the workout's one keyboard (SetKeyboard).
+    @State private var focus: String?
 
     var body: some View {
         if let active = model.training.active {
@@ -63,6 +64,7 @@ struct WorkoutView: View {
                 .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
                     .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { dragging = nil } } } }
                 .scrollDismissesKeyboard(.interactively)
+                .setKeyboard($focus)
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
@@ -92,6 +94,7 @@ struct WorkoutView: View {
                 if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if pull == 0, drag == 0 { model.workoutCovers = true } } }
             }
             .task { try? await Task.sleep(for: .seconds(0.6)); model.workoutCovers = true }
+            .task { await FrameLog.driveNext(fields) { focus = $0 } }
             .onDisappear { model.workoutCovers = false }
             .sheet(isPresented: $addingExercise) {
                 ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }

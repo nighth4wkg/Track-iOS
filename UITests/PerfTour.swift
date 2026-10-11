@@ -20,7 +20,7 @@ final class PerfTour: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         let open = at(start)
         measureStep("open workout", settle: 2) { open.tap() }
-        let first = app.textFields["Bench Press set 1 weight in kg"]
+        let first = app.buttons["Bench Press set 1 weight in kg"]
         XCTAssertTrue(first.waitForExistence(timeout: 5))
 
         let header = at(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Bench Press'")).firstMatch)
@@ -45,6 +45,22 @@ final class PerfTour: XCTestCase {
         measureStep("log 3 sets") { ticks.forEach { $0.tap() } }
         measureStep("fold and open a card") { header.tap(); Thread.sleep(forTimeInterval: 0.6); header.tap() }
         measureStep("idle 3s", settle: 3) {}
+    }
+
+    /// Next pressed over and over, by the app itself (-perfNext): 40 fields, 150 ms apart, nothing else touching it.
+    func testNextSpam() {
+        app.terminate(); app.launchArguments.append("-perfNext"); app.launch()
+        let start = app.buttons["Start workout"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.tap()
+        Thread.sleep(forTimeInterval: 2.5)
+        let before = tally()
+        Thread.sleep(forTimeInterval: 11)
+        let after = tally()
+        let delta = { (key: String) in after[key, default: 0] - before[key, default: 0] }
+        print(String(format: "PERF Next x40 (in-app): %.0f frames, jank %.0f (%.0f ms late); all hitches %.0f (%.0f ms late)",
+                     delta("frames"), delta("jank"), delta("jankms"), delta("hitches"), delta("late")))
+        print("PERF Next trace (ms from the first Next : ms late): " + app.otherElements["frame-log"].firstMatch.label)
     }
 
     /// Where an element is now, to tap later without looking it up again.

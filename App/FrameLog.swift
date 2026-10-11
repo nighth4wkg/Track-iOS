@@ -14,6 +14,8 @@ import os
     private var last: CFTimeInterval = 0
     private var frames = 0, hitches = 0, jank = 0
     private var late: Double = 0, jankLate: Double = 0, worst: Double = 0
+    /// Each hitch while -perfNext drives ("ms since it began:ms late"), to see which steps they fall on.
+    private var driveStart: CFTimeInterval?, trace: [String] = []
 
     static func install() {
         guard shared == nil, ProcessInfo.processInfo.arguments.contains("-frameLog"),
@@ -46,11 +48,22 @@ import os
         hitches += 1; late += gap - slot
         logger.log("hitch \(Int((gap - slot) * 1000)) ms late, total \(self.hitches)")
         if gap - slot < 0.25 { jank += 1; jankLate += gap - slot }
+        if let driveStart { trace.append("\(Int((last - driveStart) * 1000)):\(Int((gap - slot) * 1000))") }
+    }
+
+    /// With -perfNext too: once a workout opens, the keyboard moves on through its fields every 150 ms, as when Next
+    /// is pressed over and over, with no test tool touching the app meanwhile (PerfTour reads the tally around it).
+    static func driveNext(_ fields: [String], focus: (String) -> Void) async {
+        guard ProcessInfo.processInfo.arguments.contains("-perfNext") else { return }
+        try? await Task.sleep(for: .seconds(6))
+        shared?.driveStart = CACurrentMediaTime()
+        for field in fields.prefix(40) { focus(field); try? await Task.sleep(for: .milliseconds(150)) }
     }
 
     /// Running totals since launch; a test reads them before and after a step and takes the difference.
     fileprivate var summary: String {
-        String(format: "frames=%d hitches=%d late=%.1f jank=%d jankms=%.1f worst=%.1f", frames, hitches, late * 1000, jank, jankLate * 1000, worst * 1000)
+        String(format: "frames=%d hitches=%d late=%.1f jank=%d jankms=%.1f worst=%.1f trace=%@", frames, hitches, late * 1000, jank, jankLate * 1000,
+               worst * 1000, trace.joined(separator: ","))
     }
 
     private final class Tally: UIView {

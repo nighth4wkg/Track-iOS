@@ -8,5 +8,9 @@ enum TestSeed {
         if let json = ProcessInfo.processInfo.environment["TRACK_SEED"], let seed = try? TrainingFile.decode(Data(json.utf8)) {
             model.restore(seed)
         }
+        // For profiling (.github/workflows/profile.yml): straight into a workout, nothing tapped.
+        if ProcessInfo.processInfo.arguments.contains("-perfOpen"), model.training.active == nil, let split = model.training.splits.first {
+            model.start(split)
+        }
     }
 }
