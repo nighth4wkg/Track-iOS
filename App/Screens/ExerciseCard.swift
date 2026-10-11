@@ -71,7 +71,7 @@ struct ExerciseCard: View, Equatable {
                                earlier: Array(exercise.sets.prefix(index)), focus: focus,
                                focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil },
                                onRecord: { best = ($0, (best?.id ?? 0) + 1) })
-                            .transition(.opacity)
+                            .equatable().transition(.opacity)
                     }
                     HStack(spacing: 0) {
                         Button { addSet() } label: { Label("Add set", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44) }

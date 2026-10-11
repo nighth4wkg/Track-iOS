@@ -17,3 +17,12 @@ extension TrainingSet {
         return bad.first.map { (Set(bad.map(\.field)), $0.message) }
     }
 }
+
+extension SetRow: Equatable {
+    /// A card redrawing (the keyboard moving within it, a set saved) redraws only the rows whose own numbers, place or
+    /// focus changed. onRecord isn't compared: it only writes the card's state, wherever it was made.
+    static func == (a: Self, b: Self) -> Bool {
+        a.set == b.set && a.number == b.number && a.unit == b.unit && a.autoLog == b.autoLog && a.bests.id == b.bests.id
+            && a.earlier == b.earlier && a.focused == b.focused && a.exercise.id == b.exercise.id && a.exercise.name == b.exercise.name
+    }
+}
