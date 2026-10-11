@@ -42,6 +42,8 @@ enum Motion {
     static let fast = 0.2, quick = 0.25, standard = 0.3, slow = 0.35
     /// A sheet sliding away: what opening another one from it waits for.
     static let sheetAway = 0.45
+    /// The workout sliding up over the tabs, or away (as iOS's own full-screen pages).
+    static let screen = 0.45
 }
 
 /// Track's sizes: the widest a page's column gets, and a card's corners.

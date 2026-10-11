@@ -6,29 +6,39 @@ import TrackCore
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @State private var settingsOpen = false
+    @State private var screen: CGFloat = 1000
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
         @Bindable var model = model
-        TabView(selection: $model.tab) {
-            HomeView(settingsOpen: $settingsOpen)
-                .tabItem { Label("Home", systemImage: "house") }.tag(AppTab.home)
-            HistoryView(settingsOpen: $settingsOpen)
-                .tabItem { Label("History", systemImage: "calendar") }.tag(AppTab.history)
-            ProgressPage(settingsOpen: $settingsOpen)
-                .tabItem { Label("Progress", systemImage: "chart.bar") }.tag(AppTab.progress)
-            RankPage(settingsOpen: $settingsOpen)
-                .tabItem { Label("Rank", systemImage: "medal") }.tag(AppTab.rank)
+        ZStack {
+            TabView(selection: $model.tab) {
+                HomeView(settingsOpen: $settingsOpen)
+                    .tabItem { Label("Home", systemImage: "house") }.tag(AppTab.home)
+                HistoryView(settingsOpen: $settingsOpen)
+                    .tabItem { Label("History", systemImage: "calendar") }.tag(AppTab.history)
+                ProgressPage(settingsOpen: $settingsOpen)
+                    .tabItem { Label("Progress", systemImage: "chart.bar") }.tag(AppTab.progress)
+                RankPage(settingsOpen: $settingsOpen)
+                    .tabItem { Label("Rank", systemImage: "medal") }.tag(AppTab.rank)
+            }
+            // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
+            .id(model.day)
+            .onChange(of: phase) { _, now in if now == .active { model.refreshDay() } }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
+            .tint(Palette.accent)
+            .opacity(model.workoutOpen && model.workoutCovers ? 0 : 1)
+            .accessibilityHidden(model.workoutOpen)
+            // The workout over the tabs: slid up by the app rather than presented by iOS, which ignores every tap while
+            // its pages slide, and kept built below the screen while it's left for later, so coming back is instant.
+            WorkoutView()
+                .animation(.smooth(duration: Motion.screen)) { $0.offset(y: model.workoutOpen ? 0 : screen) }
+                .allowsHitTesting(model.workoutOpen)
+                .accessibilityHidden(!model.workoutOpen)
         }
-        // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
-        .id(model.day)
-        .onChange(of: phase) { _, now in if now == .active { model.refreshDay() } }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
-        .tint(Palette.accent)
-        .opacity(model.workoutOpen && model.workoutCovers ? 0 : 1)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screen = $0 }
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
-        .fullScreenCover(isPresented: $model.workoutOpen) { WorkoutView().trackOverlays().presentationBackground(.clear) }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
         .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays().presentationDetents([.fraction(0.75), .large]) }
         .trackOverlays()
