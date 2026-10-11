@@ -7,6 +7,9 @@ struct MainView: View {
     @Environment(AppModel.self) private var model
     @State private var settingsOpen = false
     @State private var screen: CGFloat = 1000
+    /// The workout on screen or sliding; once it's away it's also unseen, as iOS's own top bar inside it would
+    /// otherwise still be read out (VoiceOver) below the screen.
+    @State private var workoutShown = false
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
@@ -34,10 +37,16 @@ struct MainView: View {
             WorkoutView()
                 .offset(y: model.workoutOpen ? 0 : screen)
                 .animation(.smooth(duration: Motion.screen), value: model.workoutOpen)
+                .opacity(model.workoutOpen || workoutShown ? 1 : 0)
                 .allowsHitTesting(model.workoutOpen)
                 .accessibilityHidden(!model.workoutOpen)
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { screen = $0 }
+        .task(id: model.workoutOpen) {
+            if model.workoutOpen { workoutShown = true; return }
+            try? await Task.sleep(for: .seconds(Motion.screen))
+            if !model.workoutOpen, !Task.isCancelled { workoutShown = false }
+        }
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
