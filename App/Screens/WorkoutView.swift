@@ -37,10 +37,10 @@ struct WorkoutView: View {
                                 .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
                         }
                         ForEach(active.exercises) { exercise in
-                            ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
-                                         box: box, bests: bests, focus: $focus,
-                                         focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
-                                         dragging: $dragging).equatable()
+                            CardFocus(focus: $focus, sets: exercise.sets) { focusHere in
+                                ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
+                                             box: box, bests: bests, focus: $focus, focusHere: focusHere, dragging: $dragging).equatable()
+                            }
                         }
                         Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
                             .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
@@ -69,13 +69,7 @@ struct WorkoutView: View {
                 .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
                 // A bar (iOS 26), not an inset: the page blurs and fades behind it as it does under the top bar, so the
                 // cards' edges don't frame the capsule.
-                .safeAreaBar(edge: .bottom) {
-                    // While typing, one capsule over the keyboard (the rest's time, Next, Done) instead of the rest capsule.
-                    // Without the keyboard the capsule dips into the home indicator's strip, 16pt from the screen's edge,
-                    // as iOS's own floating bars do (a phone with a home button has no strip, so it stays put).
-                    Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().padding(.bottom, -max(0, homeIndicator - 8)) } }
-                        .animation(.smooth(duration: Motion.quick), value: focus == nil)
-                }
+                .safeAreaBar(edge: .bottom) { WorkoutBottomBar(focus: $focus, fields: fields) }
             }
             .onDrop(of: [.text], delegate: drop(active))
             // Behind it the whole screen takes the drop too, status bar included: let go anywhere and the drag ends.
@@ -99,11 +93,6 @@ struct WorkoutView: View {
             }
             .sheet(isPresented: $options) { WorkoutOptions().trackOverlays() }
         }
-    }
-
-    /// The home indicator's strip at the bottom of the screen (0 on a phone with a home button), never the keyboard.
-    private var homeIndicator: CGFloat {
-        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
     }
 
     private func drop(_ active: Session) -> ReorderDrop {
@@ -148,7 +137,8 @@ struct WorkoutView: View {
                         Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
                     }
                     .foregroundStyle(Palette.text)
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                    // Ticking from the workout's start (from .now, every redraw of the page restarted it).
+                    TimelineView(.periodic(from: Date(timeIntervalSince1970: Double(active.startedAt) / 1000), by: 1)) { context in
                         Text("\(elapsed(active.startedAt, context.date)) · \(done) of \(count(total, "set"))")
                             .font(.caption).monospacedDigit().foregroundStyle(Palette.muted)
                     }
@@ -165,32 +155,5 @@ struct WorkoutView: View {
                     .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(Palette.primary)
             }
         }
-    }
-
-    /// While typing: one capsule just over the keyboard with the rest's time on the left, then Next (weight → reps →
-    /// RIR → next set) and Done. It replaces the rest capsule meanwhile, so the two never stack up.
-    private func keyboardBar(_ fields: [String]) -> some View {
-        // Without a rest it's just Next and Done, at the right: no empty bar.
-        let resting = model.training.restUntil != nil
-        return HStack(spacing: 8) {
-            if resting {
-                RestCapsule(compact: true)
-                Spacer(minLength: 8)
-            }
-            if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
-                Button("Next") { self.focus = fields[index + 1] }.foregroundStyle(Palette.text)
-                    .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
-            }
-            Button("Done") { focus = nil }.foregroundStyle(Palette.primaryText)
-                .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.primary, lifted: false)
-        }
-        .font(.body.weight(.semibold)).buttonStyle(PressStyle())
-        // A floating glass capsule like the rest's, solid inside so the page doesn't show through; the pills sit 8pt in,
-        // their curves matching its own.
-        .padding(.leading, resting ? 14 : 8).padding(.trailing, 8).padding(.vertical, 8)
-        .glass(radius: 30, fill: Palette.dialog)
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal, 16).padding(.bottom, 8)
-        .transition(.opacity)
     }
 }
