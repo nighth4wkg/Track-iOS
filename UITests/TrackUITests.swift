@@ -132,6 +132,22 @@ final class TrackUITests: XCTestCase {
         if tip.waitForExistence(timeout: 1) { tip.tap() }
     }
 
+    /// A dialog takes the keyboard away: typing in a set, then Discard workout from the options, leaves no keyboard
+    /// under the dialog, and Cancel doesn't bring it back.
+    func testDialogTakesTheKeyboard() {
+        app.buttons["Start workout"].firstMatch.tapWhenReady()
+        app.buttons["Bench Press set 1 reps"].tapWhenReady()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3), "a set's number brings the keyboard")
+        app.buttons.matching(NSPredicate(format: "label ENDSWITH 'workout options'")).firstMatch.tapWhenReady()
+        app.buttons["Discard workout"].tapWhenReady()
+        XCTAssertTrue(app.buttons["dialog-action"].waitForExistence(timeout: 3))
+        Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertFalse(app.keyboards.firstMatch.exists, "no keyboard under the dialog")
+        app.buttons["Cancel"].tapWhenReady()
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertFalse(app.keyboards.firstMatch.exists, "Cancel doesn't bring the keyboard back")
+    }
+
     private func setButton(_ set: String, done: Bool) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", set, done ? "done. Tap to undo" : "")).firstMatch
     }
