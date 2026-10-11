@@ -17,6 +17,8 @@ struct WorkoutView: View {
     @State private var pull: CGFloat = 0
     @State private var width: CGFloat = 400
     @FocusState private var focus: String?
+    /// The bar's clock ticks from when the page opened: from .now, every redraw of the page restarted it.
+    @State private var clockStart = Date.now
 
     var body: some View {
         if let active = model.training.active {
@@ -137,8 +139,7 @@ struct WorkoutView: View {
                         Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
                     }
                     .foregroundStyle(Palette.text)
-                    // Ticking from the workout's start (from .now, every redraw of the page restarted it).
-                    TimelineView(.periodic(from: Date(timeIntervalSince1970: Double(active.startedAt) / 1000), by: 1)) { context in
+                    TimelineView(.periodic(from: clockStart, by: 1)) { context in
                         Text("\(elapsed(active.startedAt, context.date)) · \(done) of \(count(total, "set"))")
                             .font(.caption).monospacedDigit().foregroundStyle(Palette.muted)
                     }

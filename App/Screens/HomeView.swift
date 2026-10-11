@@ -81,6 +81,7 @@ private struct SplitList: View {
 private struct ResumeCard: View {
     @Environment(AppModel.self) private var model
     let active: Session
+    @State private var clockStart = Date.now // from .now, every redraw restarted the clock
 
     var body: some View {
         Button { model.workoutOpen = true } label: {
@@ -93,7 +94,7 @@ private struct ResumeCard: View {
                     Text(active.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1)
                 }
                 HStack(spacing: 0) {
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                    TimelineView(.periodic(from: clockStart, by: 1)) { context in
                         stat(elapsed(active.startedAt, context.date), "Elapsed")
                     }
                     stat("\(active.completedSets.count)", "Sets logged")
