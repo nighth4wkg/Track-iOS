@@ -76,7 +76,6 @@ struct SwipeRow<Content: View>: View {
     @ViewBuilder let content: Content
     @State private var height: CGFloat = 44
     @State private var zone = UUID().uuidString
-    @State private var frame: CGRect?
 
     var body: some View {
         List {
@@ -98,8 +97,7 @@ struct SwipeRow<Content: View>: View {
         .contentMargins(.vertical, 0, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
         .frame(height: height)
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0; SwipeZones.frames[zone] = $0 }
-        .onAppear { if let frame { SwipeZones.frames[zone] = frame } }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { SwipeZones.frames[zone] = $0 } // not state: it changes on every scroll
         .onDisappear { SwipeZones.frames[zone] = nil }
     }
 }
