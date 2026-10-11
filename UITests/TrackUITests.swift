@@ -24,35 +24,35 @@ final class TrackUITests: XCTestCase {
     /// the swipe and bring it back, then finish: the recap, then Progress.
     func testWorkoutFromStartToRecap() {
         app.buttons["Start workout"].firstMatch.tapWhenReady()
-        let weight = app.textFields["Bench Press set 1 weight in kg"]
+        let weight = app.buttons["Bench Press set 1 weight in kg"]
         weight.replaceText("80")
-        app.textFields["Bench Press set 1 reps"].replaceText("8")
+        app.buttons["Bench Press set 1 reps"].replaceText("8")
         XCTAssertFalse(setButton("Bench Press set 1", done: true).exists, "logged before RIR")
-        app.textFields["Bench Press set 1 RIR"].replaceText("1")
+        app.buttons["Bench Press set 1 RIR"].replaceText("1")
         XCTAssertTrue(setButton("Bench Press set 1", done: true).waitForExistence(timeout: 3), "typing RIR logs the set")
         allowNotificationsIfAsked()
-        let rir2 = app.textFields["Bench Press set 2 RIR"]
+        let rir2 = app.buttons["Bench Press set 2 RIR"]
         rir2.tapWhenReady()
-        app.textFields["Bench Press set 2 reps"].tap()
+        app.buttons["Bench Press set 2 reps"].tap()
         XCTAssertFalse(setButton("Bench Press set 2", done: true).waitForExistence(timeout: 1.5), "tapping into RIR doesn't log")
         rir2.tap()
         let same = (rir2.value as? String) ?? ""
         XCTAssertFalse(same.isEmpty || same == rir2.placeholderValue, "set 2 carries last time's RIR")
-        rir2.typeText(same)
+        app.typeKeys(same)
         XCTAssertTrue(setButton("Bench Press set 2", done: true).waitForExistence(timeout: 3), "typing the same RIR logs the set")
 
         app.buttons["Add set"].firstMatch.tapWhenReady()
-        let added = app.textFields["Bench Press set 4 weight in kg"]
+        let added = app.buttons["Bench Press set 4 weight in kg"]
         XCTAssertTrue(added.waitForExistence(timeout: 3))
         XCTAssertEqual(added.value as? String, "77.5", "a new set copies the last weight")
-        XCTAssertEqual(app.textFields["Bench Press set 4 reps"].value as? String, "8")
-        XCTAssertNotEqual(app.textFields["Bench Press set 4 RIR"].value as? String, "2", "RIR is left to fill in")
+        XCTAssertEqual(app.buttons["Bench Press set 4 reps"].value as? String, "8")
+        XCTAssertNotEqual(app.buttons["Bench Press set 4 RIR"].value as? String, "2", "RIR is left to fill in")
 
-        app.textFields["Bench Press set 4 RIR"].swipeLeft()
+        app.buttons["Bench Press set 4 RIR"].swipeLeft()
         app.buttons["Delete Bench Press set 4"].tapWhenReady()
         XCTAssertTrue(app.descendants(matching: .any)["Set removed"].waitForExistence(timeout: 3))
         app.buttons["Undo"].tapWhenReady()
-        XCTAssertTrue(app.textFields["Bench Press set 4 weight in kg"].waitForExistence(timeout: 3), "Undo brings the set back")
+        XCTAssertTrue(app.buttons["Bench Press set 4 weight in kg"].waitForExistence(timeout: 3), "Undo brings the set back")
 
         app.buttons["Finish workout"].firstMatch.tapWhenReady()
         app.buttons["dialog-action"].tapWhenReady()
@@ -143,18 +143,21 @@ func allowNotificationsIfAsked() {
     if allow.waitForExistence(timeout: 3) { allow.tap() }
 }
 
+extension XCUIApplication {
+    /// Types on the keyboard's keys: a set's fields are typed on the workout's one keyboard, not a text field of their own.
+    func typeKeys(_ text: String) { for key in text { keys[String(key)].tap() } }
+}
+
 extension XCUIElement {
     func tapWhenReady(file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(waitForExistence(timeout: 5), "missing: \(self)", file: file, line: line)
         tap()
     }
 
-    /// Taps the field and types over what's in it.
+    /// Taps a set's field and types over what's in it (its first key replaces it).
     func replaceText(_ text: String, file: StaticString = #filePath, line: UInt = #line) {
         tapWhenReady(file: file, line: line)
-        let current = (value as? String) ?? ""
-        if !current.isEmpty, current != placeholderValue { typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 2)) }
-        typeText(text)
+        XCUIApplication().typeKeys(text)
     }
 
     func waitForSelected(timeout: TimeInterval = 3) -> Bool {

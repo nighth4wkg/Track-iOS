@@ -20,7 +20,7 @@ final class PerfTour: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         let open = at(start)
         measureStep("open workout", settle: 2) { open.tap() }
-        let first = app.textFields["Bench Press set 1 weight in kg"]
+        let first = app.buttons["Bench Press set 1 weight in kg"]
         XCTAssertTrue(first.waitForExistence(timeout: 5))
 
         let header = at(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Bench Press'")).firstMatch)
