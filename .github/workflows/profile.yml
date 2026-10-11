@@ -1,15 +1,16 @@
 # Where the workout's time goes while Next is pressed over and over: Track launched under Time Profiler in the
 # Simulator with nothing else touching it (-perfOpen opens a 12-exercise workout, -perfNext walks 40 fields 150 ms
 # apart), then the app's main thread summarised by tools/profile-top.py, and each hitch from the app's frame log.
+# Then a round of everyday actions (App/PerfDrive.swift, -perfActions), each one's cost from the frame log.
 name: Profile
 on:
   workflow_dispatch:
   push:
-    branches: ['perf-next*'] # a new workflow can't be started by hand until it's on main
+    branches: ['perf-*']
 jobs:
   profile:
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Use the newest Xcode
@@ -45,9 +46,33 @@ jobs:
           python3 tools/profile-top.py out/time-profile.xml Track
           echo "-- hitches from the frame log --"
           xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'subsystem == "Track"' | tail -n 60
+      - name: Profile everyday actions
+        run: |
+          seed="$(python3 tools/demo-data.py | python3 tools/perf-seed.py)"
+          xcrun xctrace record --template 'Time Profiler' --device "$UDID" --time-limit 75s --output out/actions.trace             --env "TRACK_SEED=$seed" --launch -- build/Build/Products/Debug-iphonesimulator/Track.app             -track.storageMode local -frameLog -perfActions > xctrace.log 2>&1 || { cat xctrace.log; exit 1; }
+          xcrun xctrace export --input out/actions.trace --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]' > out/actions.xml
+          python3 tools/profile-top.py out/actions.xml Track
+          echo "-- each action, from the frame log --"
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'subsystem == "Track" AND category == "actions"' | grep action
+      - name: Record everyday actions on screen
+        run: |
+          seed="$(python3 tools/demo-data.py | python3 tools/perf-seed.py)"
+          xcrun simctl terminate "$UDID" com.nighth4wkg.track || true
+          xcrun simctl io "$UDID" recordVideo --codec h264 --force out/actions.mp4 > /dev/null 2>&1 &
+          recorder=$!
+          sleep 3
+          SIMCTL_CHILD_TRACK_SEED="$seed" xcrun simctl launch "$UDID" com.nighth4wkg.track -track.storageMode local -perfActions
+          sleep 66
+          kill -INT $recorder; wait $recorder || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clip-${{ github.run_number }}
+          path: out/actions.mp4
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: profile-${{ github.run_number }}
-          path: out/next.trace
+          path: out/*.trace
           retention-days: 3

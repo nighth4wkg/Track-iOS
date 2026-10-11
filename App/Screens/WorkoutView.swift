@@ -88,14 +88,14 @@ struct WorkoutView: View {
             .shadow(color: .black.opacity(pull + drag > 0 ? 0.25 : 0), radius: 20)
             .overlay(alignment: .leading) { edgeSwipe }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-            .onAppear { dragging = nil; pull = 0 }
+            // It stays built while it's left for later (MainView): opening starts it afresh, leaving ends the typing.
+            .onChange(of: model.workoutOpen) { _, open in if open { dragging = nil; pull = 0 } else { focus = nil } }
             // Settled back (let go short, or cancelled): the tabs underneath needn't be drawn again.
             .onChange(of: drag) { _, now in
-                if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if pull == 0, drag == 0 { model.workoutCovers = true } } }
+                if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if pull == 0, drag == 0, model.workoutOpen { model.workoutCovers = true } } }
             }
-            .task { try? await Task.sleep(for: .seconds(0.6)); model.workoutCovers = true }
+            .task(id: model.workoutOpen) { try? await Task.sleep(for: .seconds(Motion.screen + 0.1)); if model.workoutOpen, !Task.isCancelled { model.workoutCovers = true } }
             .task { await FrameLog.driveNext(fields) { focus = $0 } }
-            .onDisappear { model.workoutCovers = false }
             .sheet(isPresented: $addingExercise) {
                 ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
             }

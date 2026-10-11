@@ -73,7 +73,7 @@ final class AppModel {
     @ObservationIgnored var tabStep: CGFloat = 1
     /// The tab whose page last came up, so coming back from a split's page doesn't count as switching.
     @ObservationIgnored var arrivedTab = AppTab.home
-    var workoutOpen = false
+    var workoutOpen = false { didSet { if workoutOpen != oldValue { workoutCovers = false } } } // it slides first
     /// Today, refreshed when Track comes back on a new day, so Home's date, "Done today" and the week move on.
     private(set) var day = dayKey(nowMillis())
     /// The open workout fully covers the tabs (not sliding in or pulled aside), so they needn't be drawn under it.

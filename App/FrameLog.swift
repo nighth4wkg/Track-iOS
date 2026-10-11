@@ -16,6 +16,8 @@ import os
     private var late: Double = 0, jankLate: Double = 0, worst: Double = 0
     /// Each hitch while -perfNext drives ("ms since it began:ms late"), to see which steps they fall on.
     private var driveStart: CFTimeInterval?, trace: [String] = []
+    /// The everyday action PerfDrive just did: how long until the screen could draw again, and its hitches after.
+    private var action: (name: String, start: CFTimeInterval, respond: Double?, hitches: Int, late: Double, worst: Double)?
 
     static func install() {
         guard shared == nil, ProcessInfo.processInfo.arguments.contains("-frameLog"),
@@ -44,6 +46,8 @@ import os
         let gap = link.timestamp - last, slot = link.targetTimestamp - link.timestamp
         frames += 1
         worst = max(worst, gap)
+        if action?.respond == nil, let start = action?.start { action?.respond = CACurrentMediaTime() - start }
+        if gap > slot * 1.5, let worst = action?.worst { action?.hitches += 1; action?.late += gap - slot; action?.worst = max(worst, gap - slot) }
         guard gap > slot * 1.5 else { return }
         hitches += 1; late += gap - slot
         logger.log("hitch \(Int((gap - slot) * 1000)) ms late, total \(self.hitches)")
@@ -58,6 +62,17 @@ import os
         try? await Task.sleep(for: .seconds(6))
         shared?.driveStart = CACurrentMediaTime()
         for field in fields.prefix(40) { focus(field); try? await Task.sleep(for: .milliseconds(150)) }
+    }
+
+    /// PerfDrive's next action begins (nil: the last has ended): the one before goes to the device log ("Track
+    /// actions"): how long the screen waited for it, and how many frames came late after it and by how much.
+    static func mark(_ name: String?) {
+        guard let log = shared else { return }
+        if let a = log.action {
+            let late = "\(a.hitches) late frames, \(Int(a.late * 1000)) ms late in all, worst \(Int(a.worst * 1000)) ms"
+            Logger(subsystem: "Track", category: "actions").log("action \(a.name, privacy: .public): waited \(Int((a.respond ?? 0) * 1000)) ms, \(late, privacy: .public)")
+        }
+        log.action = name.map { ($0, CACurrentMediaTime(), nil, 0, 0, 0) }
     }
 
     /// Running totals since launch; a test reads them before and after a step and takes the difference.
