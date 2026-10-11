@@ -50,7 +50,7 @@ struct KeyInput: UIViewRepresentable {
         view.wanted = active
         // After the update: taking or giving up the keyboard changes the safe area being laid out.
         DispatchQueue.main.async {
-            if view.wanted { _ = view.becomeFirstResponder() } else if view.isFirstResponder { _ = view.resignFirstResponder() }
+            if view.wanted { view.isHidden = false; _ = view.becomeFirstResponder() } else if view.isFirstResponder { _ = view.resignFirstResponder() } else { view.isHidden = true }
         }
     }
 
@@ -62,14 +62,14 @@ struct KeyInput: UIViewRepresentable {
         /// the typing has ended.
         override var canBecomeFirstResponder: Bool { wanted }
         var hasText: Bool { true }
-        // Not a field of its own to VoiceOver or the UI tests: the set's boxes are (it stays built below the screen too).
-        override var isAccessibilityElement: Bool { get { false } set {} }
-        override var accessibilityElementsHidden: Bool { get { true } set {} }
+        // Hidden while not typing, so it's no field of its own to VoiceOver or the UI tests: the set's boxes are.
+        override init(frame: CGRect) { super.init(frame: frame); isHidden = true }
+        required init?(coder: NSCoder) { fatalError() }
         func insertText(_ text: String) { NotificationCenter.default.post(name: KeyInput.typed, object: text) }
         func deleteBackward() { NotificationCenter.default.post(name: KeyInput.typed, object: nil) }
         override func resignFirstResponder() -> Bool {
             let resigned = super.resignFirstResponder()
-            if resigned { wanted = false; onEnd() }
+            if resigned { wanted = false; isHidden = true; onEnd() }
             return resigned
         }
     }
