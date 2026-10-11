@@ -8,6 +8,7 @@ extension View {
 }
 
 private struct SetKeyboard: ViewModifier {
+    @Environment(AppModel.self) private var model
     @Binding var focus: String?
 
     func body(content: Content) -> some View {
@@ -19,6 +20,8 @@ private struct SetKeyboard: ViewModifier {
                         .frame(width: 1, height: 1).allowsHitTesting(false).accessibilityHidden(true)
                 }
                 .onChange(of: focus) { reveal(proxy) }
+                // A dialog (they open in their own window) ends the typing, rather than leaving the keyboard under it.
+                .onChange(of: model.confirm != nil) { _, open in if open { focus = nil } }
                 // The keyboard coming up (or the bar over it changing) can cover the set.
                 .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { _ in reveal(proxy) }
         }
@@ -55,7 +58,9 @@ struct KeyInput: UIViewRepresentable {
         var onEnd: () -> Void = {}
         var wanted = false
         var keyboardType: UIKeyboardType = .decimalPad
-        override var canBecomeFirstResponder: Bool { true }
+        /// Only while a set is typed in: iOS hands the keyboard back to what had it when a sheet closes, even after
+        /// the typing has ended.
+        override var canBecomeFirstResponder: Bool { wanted }
         var hasText: Bool { true }
         func insertText(_ text: String) { NotificationCenter.default.post(name: KeyInput.typed, object: text) }
         func deleteBackward() { NotificationCenter.default.post(name: KeyInput.typed, object: nil) }
