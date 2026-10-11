@@ -62,6 +62,9 @@ struct KeyInput: UIViewRepresentable {
         /// the typing has ended.
         override var canBecomeFirstResponder: Bool { wanted }
         var hasText: Bool { true }
+        // Not a field of its own to VoiceOver or the UI tests: the set's boxes are (it stays built below the screen too).
+        override var isAccessibilityElement: Bool { get { false } set {} }
+        override var accessibilityElementsHidden: Bool { get { true } set {} }
         func insertText(_ text: String) { NotificationCenter.default.post(name: KeyInput.typed, object: text) }
         func deleteBackward() { NotificationCenter.default.post(name: KeyInput.typed, object: nil) }
         override func resignFirstResponder() -> Bool {
