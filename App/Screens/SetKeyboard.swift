@@ -15,9 +15,13 @@ private struct SetKeyboard: ViewModifier {
         ScrollViewReader { proxy in
             content
                 .background(alignment: .topLeading) {
-                    // The keyboard going by itself (dragged away, another field taking it) ends the typing.
-                    KeyInput(active: focus != nil) { if focus != nil { focus = nil } }
-                        .frame(width: 1, height: 1).allowsHitTesting(false).accessibilityHidden(true)
+                    // Only built while typing, so there's no field of its own for VoiceOver or the UI tests (the set's
+                    // boxes are) and nothing for iOS to hand the keyboard back to when a sheet closes. The keyboard going
+                    // by itself (dragged away, another field taking it) ends the typing.
+                    if focus != nil {
+                        KeyInput { if focus != nil { focus = nil } }
+                            .frame(width: 1, height: 1).allowsHitTesting(false).accessibilityHidden(true).transition(.identity)
+                    }
                 }
                 .onChange(of: focus) { reveal(proxy) }
                 // A dialog (they open in their own window) ends the typing, rather than leaving the keyboard under it.
@@ -39,37 +43,35 @@ private struct SetKeyboard: ViewModifier {
 struct KeyInput: UIViewRepresentable {
     /// A key: the text added, or nil for delete.
     static let typed = Notification.Name("KeyInput.typed")
-    let active: Bool
     let onEnd: () -> Void
 
     func makeUIView(context: Context) -> Field { Field() }
 
     func updateUIView(_ view: Field, context: Context) {
         view.onEnd = onEnd
-        guard view.wanted != active else { return }
-        view.wanted = active
-        // After the update: taking or giving up the keyboard changes the safe area being laid out.
-        DispatchQueue.main.async {
-            if view.wanted { view.isHidden = false; _ = view.becomeFirstResponder() } else if view.isFirstResponder { _ = view.resignFirstResponder() } else { view.isHidden = true }
-        }
+        guard !view.started else { return }
+        view.started = true
+        // After the update: taking the keyboard changes the safe area being laid out.
+        DispatchQueue.main.async { _ = view.becomeFirstResponder() }
+    }
+
+    /// Typing ended: the keyboard goes with the field.
+    static func dismantleUIView(_ view: Field, coordinator: ()) {
+        view.onEnd = {}
+        _ = view.resignFirstResponder()
     }
 
     final class Field: UIView, UIKeyInput {
         var onEnd: () -> Void = {}
-        var wanted = false
+        var started = false
         var keyboardType: UIKeyboardType = .decimalPad
-        /// Only while a set is typed in: iOS hands the keyboard back to what had it when a sheet closes, even after
-        /// the typing has ended.
-        override var canBecomeFirstResponder: Bool { wanted }
+        override var canBecomeFirstResponder: Bool { true }
         var hasText: Bool { true }
-        // Hidden while not typing, so it's no field of its own to VoiceOver or the UI tests: the set's boxes are.
-        override init(frame: CGRect) { super.init(frame: frame); isHidden = true }
-        required init?(coder: NSCoder) { fatalError() }
         func insertText(_ text: String) { NotificationCenter.default.post(name: KeyInput.typed, object: text) }
         func deleteBackward() { NotificationCenter.default.post(name: KeyInput.typed, object: nil) }
         override func resignFirstResponder() -> Bool {
             let resigned = super.resignFirstResponder()
-            if resigned { wanted = false; isHidden = true; onEnd() }
+            if resigned { onEnd() }
             return resigned
         }
     }
