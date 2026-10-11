@@ -92,6 +92,7 @@ struct WorkoutView: View {
                 if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if pull == 0, drag == 0 { model.workoutCovers = true } } }
             }
             .task { try? await Task.sleep(for: .seconds(0.6)); model.workoutCovers = true }
+            .task { await FrameLog.driveNext(fields) { focus = $0 } }
             .onDisappear { model.workoutCovers = false }
             .sheet(isPresented: $addingExercise) {
                 ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }

@@ -47,6 +47,21 @@ final class PerfTour: XCTestCase {
         measureStep("idle 3s", settle: 3) {}
     }
 
+    /// Next pressed over and over, by the app itself (-perfNext): 40 fields, 150 ms apart, nothing else touching it.
+    func testNextSpam() {
+        app.terminate(); app.launchArguments.append("-perfNext"); app.launch()
+        let start = app.buttons["Start workout"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.tap()
+        Thread.sleep(forTimeInterval: 2.5)
+        let before = tally()
+        Thread.sleep(forTimeInterval: 11)
+        let after = tally()
+        let delta = { (key: String) in after[key, default: 0] - before[key, default: 0] }
+        print(String(format: "PERF Next x40 (in-app): %.0f frames, jank %.0f (%.0f ms late); all hitches %.0f (%.0f ms late)",
+                     delta("frames"), delta("jank"), delta("jankms"), delta("hitches"), delta("late")))
+    }
+
     /// Where an element is now, to tap later without looking it up again.
     private func at(_ element: XCUIElement) -> XCUICoordinate {
         let frame = element.frame

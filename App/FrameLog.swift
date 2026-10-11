@@ -48,6 +48,14 @@ import os
         if gap - slot < 0.25 { jank += 1; jankLate += gap - slot }
     }
 
+    /// With -perfNext too: once a workout opens, the keyboard moves on through its fields every 150 ms, as when Next
+    /// is pressed over and over, with no test tool touching the app meanwhile (PerfTour reads the tally around it).
+    static func driveNext(_ fields: [String], focus: (String) -> Void) async {
+        guard ProcessInfo.processInfo.arguments.contains("-perfNext") else { return }
+        try? await Task.sleep(for: .seconds(6))
+        for field in fields.prefix(40) { focus(field); try? await Task.sleep(for: .milliseconds(150)) }
+    }
+
     /// Running totals since launch; a test reads them before and after a step and takes the difference.
     fileprivate var summary: String {
         String(format: "frames=%d hitches=%d late=%.1f jank=%d jankms=%.1f worst=%.1f", frames, hitches, late * 1000, jank, jankLate * 1000, worst * 1000)
