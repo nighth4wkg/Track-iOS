@@ -48,8 +48,8 @@ struct SetRow: View {
                     .foregroundStyle(record != nil ? Palette.record : shown.done ? Palette.accent : Palette.muted)
                     .frame(width: 28)
                 field($weight, id: "kg", label: "weight in \(unit.rawValue)", keyboard: .decimalPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("kg") == true)
-                field($reps, id: "reps", label: "reps", keyboard: .numberPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("reps") == true)
-                field($rir, id: "rir", label: "RIR", keyboard: .numberPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("rir") == true)
+                field($reps, id: "reps", label: "reps", keyboard: .decimalPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("reps") == true)
+                field($rir, id: "rir", label: "RIR", keyboard: .decimalPad, glow: record != nil, done: shown.done, bad: error?.fields.contains("rir") == true)
                 check(done: shown.done, carried: carried, record: record != nil)
             }
             if let shownError { Text(shownError).font(.caption).foregroundStyle(Palette.dangerText) }
