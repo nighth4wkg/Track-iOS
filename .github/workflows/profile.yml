@@ -54,6 +54,22 @@ jobs:
           python3 tools/profile-top.py out/actions.xml Track
           echo "-- each action, from the frame log --"
           xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'subsystem == "Track" AND category == "actions"' | grep action
+      - name: Record everyday actions on screen
+        run: |
+          seed="$(python3 tools/demo-data.py | python3 tools/perf-seed.py)"
+          xcrun simctl terminate "$UDID" com.nighth4wkg.track || true
+          xcrun simctl io "$UDID" recordVideo --codec h264 --force out/actions.mp4 > /dev/null 2>&1 &
+          recorder=$!
+          sleep 3
+          SIMCTL_CHILD_TRACK_SEED="$seed" xcrun simctl launch "$UDID" com.nighth4wkg.track -track.storageMode local -perfActions
+          sleep 66
+          kill -INT $recorder; wait $recorder || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clip-${{ github.run_number }}
+          path: out/actions.mp4
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
