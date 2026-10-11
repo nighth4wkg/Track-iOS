@@ -32,7 +32,8 @@ struct MainView: View {
             // The workout over the tabs: slid up by the app rather than presented by iOS, which ignores every tap while
             // its pages slide, and kept built below the screen while it's left for later, so coming back is instant.
             WorkoutView()
-                .animation(.smooth(duration: Motion.screen)) { $0.offset(y: model.workoutOpen ? 0 : screen) }
+                .offset(y: model.workoutOpen ? 0 : screen)
+                .animation(.smooth(duration: Motion.screen), value: model.workoutOpen)
                 .allowsHitTesting(model.workoutOpen)
                 .accessibilityHidden(!model.workoutOpen)
         }
