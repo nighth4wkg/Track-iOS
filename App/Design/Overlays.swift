@@ -99,7 +99,7 @@ private struct NameCard: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines), problem = trimmed.isEmpty ? nil : naming.problem(trimmed)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 Text(naming.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
@@ -113,8 +113,9 @@ private struct NameCard: View {
                 .font(.body.weight(.semibold)).padding(.horizontal, 14).frame(minHeight: 48)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
                 .onChange(of: name) { _, value in if value.count > Limits.name { name = String(value.prefix(Limits.name)) } }
+            if let problem { Text(problem).font(.caption).foregroundStyle(Palette.dangerText) }
             Button(action: save) { Label(naming.action, systemImage: "arrow.up.right").labelStyle(TrailingIcon()) }
-                .buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty).padding(.top, 6)
+                .buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty || problem != nil).padding(.top, 6)
                 .accessibilityIdentifier("dialog-action")
         }
         .onAppear { name = naming.name; DispatchQueue.main.async { focused = true } }
@@ -122,9 +123,8 @@ private struct NameCard: View {
 
     private func save() {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        model.naming = nil
-        naming.onSave(trimmed)
+        guard !trimmed.isEmpty, naming.problem(trimmed) == nil else { return }
+        model.naming = nil; naming.onSave(trimmed)
     }
 }
 

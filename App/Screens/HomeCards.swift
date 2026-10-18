@@ -55,7 +55,7 @@ struct HomeTiles: View {
                 }
                 .foregroundStyle(Palette.text)
                 if let change = week.change {
-                    Text(change == 0 ? "Same as last week" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs last week")
+                    Text(week.volume == 0 ? "Nothing logged yet this week" : change == 0 ? "Same as last week" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs last week")
                         .font(.footnote.weight(.semibold)).foregroundStyle(change > 0 ? Palette.accent : Palette.muted).lineLimit(1)
                 }
             }

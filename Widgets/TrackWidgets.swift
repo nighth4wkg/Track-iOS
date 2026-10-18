@@ -17,11 +17,11 @@ struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestAttributes.self) { context in
             HStack(spacing: 14) {
-                ring(context.state, size: 44, line: 5)
+                ring(context, size: 44, line: 5)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(context.state.resting ? "Rest · \(context.attributes.workout)" : context.attributes.workout)
+                    Text(Self.resting(context) ? "Rest · \(context.attributes.workout)" : context.attributes.workout)
                         .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-                    countdown(context.state).font(.title.weight(.bold))
+                    countdown(context).font(.title.weight(.bold))
                 }
                 .layoutPriority(1)
                 Spacer(minLength: 4)
@@ -35,9 +35,9 @@ struct RestLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 10) {
-                        ring(context.state, size: 36, line: 4)
+                        ring(context, size: 36, line: 4)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(context.state.resting ? "Rest" : "Ready").font(.headline)
+                            Text(Self.resting(context) ? "Rest" : "Ready").font(.headline)
                             Text(context.attributes.workout).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                     }
@@ -45,24 +45,28 @@ struct RestLiveActivity: Widget {
                     .frame(maxHeight: .infinity)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    countdown(context.state).font(.system(size: 34, weight: .bold)).multilineTextAlignment(.trailing)
+                    countdown(context).font(.system(size: 34, weight: .bold)).multilineTextAlignment(.trailing)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(.trailing, 6)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     if context.state.resting { controls(stale: context.isStale, wide: true).padding(.horizontal, 6).padding(.top, 6) }
                 }
             } compactLeading: {
-                ring(context.state, size: 20, line: 3)
+                ring(context, size: 20, line: 3)
             } compactTrailing: {
-                countdown(context.state).font(.subheadline.weight(.semibold)).foregroundStyle(Self.mint)
+                countdown(context).font(.subheadline.weight(.semibold)).foregroundStyle(Self.mint)
                     .multilineTextAlignment(.trailing).frame(maxWidth: 44)
             } minimal: {
-                ring(context.state, size: 20, line: 3)
+                ring(context, size: 20, line: 3)
             }
             .keylineTint(Self.mint)
             .widgetURL(Self.workout)
         }
     }
+
+    /// Resting until the end time: iOS marks the activity stale then (RestLive's staleDate) and redraws it, so a rest
+    /// that runs out on its own shows "Go" without Track having to wake up.
+    private static func resting(_ context: ActivityViewContext<RestAttributes>) -> Bool { context.state.resting && !context.isStale }
 
     /// From now to the rest's end; empty once it has passed (a range can't run backwards).
     private static func left(_ state: RestAttributes.ContentState) -> ClosedRange<Date> {
@@ -71,9 +75,9 @@ struct RestLiveActivity: Widget {
     }
 
     /// The time left, counting down on its own; between rests, "Go".
-    @ViewBuilder private func countdown(_ state: RestAttributes.ContentState) -> some View {
-        if state.resting {
-            Text(timerInterval: Self.left(state), countsDown: true).monospacedDigit().lineLimit(1)
+    @ViewBuilder private func countdown(_ context: ActivityViewContext<RestAttributes>) -> some View {
+        if Self.resting(context) {
+            Text(timerInterval: Self.left(context.state), countsDown: true).monospacedDigit().lineLimit(1)
         } else {
             Text("Go").lineLimit(1)
         }
@@ -96,8 +100,9 @@ struct RestLiveActivity: Widget {
 
     /// A ring that empties as the rest runs out.
     /// Between rests, a mint tick instead.
-    @ViewBuilder private func ring(_ state: RestAttributes.ContentState, size: CGFloat, line: CGFloat) -> some View {
-        if state.resting {
+    @ViewBuilder private func ring(_ context: ActivityViewContext<RestAttributes>, size: CGFloat, line: CGFloat) -> some View {
+        if Self.resting(context) {
+            let state = context.state
             let start = min(state.until.addingTimeInterval(-Double(state.seconds)), state.until)
             ProgressView(timerInterval: start...state.until, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
                 .progressViewStyle(.circular)

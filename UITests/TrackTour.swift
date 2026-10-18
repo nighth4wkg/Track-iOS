@@ -65,7 +65,7 @@ final class TrackTour: XCTestCase {
             snap("dropped-0.1s", after: 0.1); snap("dropped-settled", after: 1)
             print("TOUR order: \(app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Lat pulldown", "Overhead Press"])).allElementsBoundByIndex.map { "\($0.label)@\(Int($0.frame.minY))" })")
         } else { missing.append("drag"); print("TOUR missing: drag") }
-        tap(app.buttons["Keep for later"], "Keep for later"); snap("home-in-progress", after: 1)
+        tap(app.buttons["keep-for-later"], "Keep for later"); snap("home-in-progress", after: 1)
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Resume workout'")).firstMatch, "Resume"); snap("resumed", after: 1)
         tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
         tap(app.buttons["dialog-action"], "confirm finish"); snap("recap", after: 1.5)

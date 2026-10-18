@@ -42,7 +42,7 @@ import os
 
     @objc private func tick(_ link: CADisplayLink) {
         defer { last = link.timestamp }
-        guard last > 0 else { return }
+        guard last > 0 else { logger.log("launch: first frame \(Self.sinceLaunch()) ms after the process started"); return }
         let gap = link.timestamp - last, slot = link.targetTimestamp - link.timestamp
         frames += 1
         worst = max(worst, gap)
@@ -73,6 +73,14 @@ import os
             Logger(subsystem: "Track", category: "actions").log("action \(a.name, privacy: .public): waited \(Int((a.respond ?? 0) * 1000)) ms, \(late, privacy: .public)")
         }
         log.action = name.map { ($0, CACurrentMediaTime(), nil, 0, 0, 0) }
+    }
+
+    /// Milliseconds since the kernel started this process (the launch, including what runs before main).
+    private static func sinceLaunch() -> Int {
+        var info = kinfo_proc(), size = MemoryLayout<kinfo_proc>.stride, mib = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return -1 }
+        let start = info.kp_proc.p_starttime
+        return Int((Date().timeIntervalSince1970 - (Double(start.tv_sec) + Double(start.tv_usec) / 1_000_000)) * 1000)
     }
 
     /// Running totals since launch; a test reads them before and after a step and takes the difference.

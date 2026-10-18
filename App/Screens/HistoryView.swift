@@ -20,14 +20,16 @@ struct HistoryView: View {
         let all = training.sessions.finished.sorted { $0.finishedAt! > $1.finishedAt! }
         let range = (day ?? from.map { dayKey(millis($0)) } ?? "", day ?? to.map { dayKey(millis($0)) } ?? "")
         let shown = training.sessions.filtered(query: query, from: range.0, to: range.1)
-        let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || day != nil || from != nil || to != nil
+        let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
+        let filtering = searching || day != nil || from != nil || to != nil
         let weeks = Dictionary(grouping: shown.prefix(shownCount)) { weekStart($0.finishedAt!) }.sorted { $0.key > $1.key }
         let recordSessions = model.derived("record sessions") { Set($0.improvements.map(\.after.sessionId)) }
         Page(title: "History", accessory: all.isEmpty ? nil : AnyView(filterButton), settingsOpen: $settingsOpen) {
             if !all.isEmpty {
                 search(filtering: filtering, label: "\(shown.count) of \(count(all.count, "workout"))")
                 if datesOpen { dateRange.transition(.opacity.combined(with: .move(edge: .top))) }
-                HistoryCalendar(month: $month, day: $day, sessions: all)
+                // While searching, the matches come first (the calendar would push them under the keyboard).
+                if !searching { HistoryCalendar(month: $month, day: $day, sessions: all).transition(.opacity) }
             }
             if all.isEmpty {
                 EmptyCard(icon: "calendar", title: "Your story starts here.", detail: "Finish a workout to save your sets, weights, and reps here.")
@@ -55,6 +57,7 @@ struct HistoryView: View {
             }
         }
         .animation(.smooth(duration: Motion.standard), value: datesOpen)
+        .animation(.smooth(duration: Motion.standard), value: query.trimmingCharacters(in: .whitespaces).isEmpty)
         .sensoryFeedback(.selection, trigger: day)
         .onChange(of: query) { shownCount = 20 }
     }
@@ -80,13 +83,14 @@ struct HistoryView: View {
     /// From and To, each a date or "Any".
     private var dateRange: some View {
         GlassList {
-            dateRow("From", $from, in: Date.distantPast...(to ?? .now))
-            dateRow("To", $to, in: (from ?? .distantPast)...Date.now)
+            dateRow("From", $from, in: Date.distantPast...(to ?? .now), start: Calendars.local.date(byAdding: .month, value: -1, to: .now)!)
+            dateRow("To", $to, in: (from ?? .distantPast)...Date.now, start: .now)
         }
         .environment(\.calendar, Calendars.local)
     }
 
-    private func dateRow(_ label: String, _ value: Binding<Date?>, in range: ClosedRange<Date>) -> some View {
+    /// `start`: the date "Any" picks, kept inside the range.
+    private func dateRow(_ label: String, _ value: Binding<Date?>, in range: ClosedRange<Date>, start: Date) -> some View {
         HStack {
             Text(label).foregroundStyle(Palette.text)
             Spacer()
@@ -96,10 +100,10 @@ struct HistoryView: View {
                     .labelsHidden()
                     .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
                 Button { withAnimation(.smooth) { value.wrappedValue = nil } } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted).frame(width: 44, height: 44).contentShape(Rectangle()) }
-                    .accessibilityLabel("Any \(label.lowercased()) date")
+                    .accessibilityLabel("Clear \(label.lowercased()) date")
             } else {
                 Button("Any") {
-                    withAnimation(.smooth) { value.wrappedValue = min(max(range.lowerBound, Calendars.local.date(byAdding: .month, value: -1, to: .now)!), range.upperBound) }
+                    withAnimation(.smooth) { value.wrappedValue = min(max(range.lowerBound, start), range.upperBound) }
                 }
                     .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
                     .padding(.horizontal, 12).frame(minHeight: 36).glass(radius: 12, fill: Palette.control, lifted: false)

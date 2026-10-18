@@ -69,8 +69,7 @@ struct SetRow: View {
         .onDisappear(perform: flush)
         // Leaving the app saves a number still waiting on its pause.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in if pending != nil { flush() } }
-        .onChange(of: set) { load(unit) }
-        .onChange(of: unit) { load(unit) }
+        .onChange(of: set) { load(unit) }.onChange(of: unit) { load(unit) }
         .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
         .onChange(of: rir) { if let n = Int(rir), n > Limits.rir { rir = String(Limits.rir) } } // up to Limits.rir
         .onChange(of: focused) { old, now in
@@ -142,9 +141,7 @@ struct SetRow: View {
         if field == "kg" { weight = value } else if field == "reps" { reps = value } else { rir = value }
         typedInto(field)
     }
-    private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? {
-        record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" }
-    }
+    private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? { record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" } }
 
     /// A set that becomes a best celebrates at once; a best that improves celebrates again. One already there when the
     /// row appeared stays calm.
@@ -180,12 +177,14 @@ struct SetRow: View {
         return set.edited(weight: weight, reps: reps, rir: rir, unit: unit, autoLog: autoLog && rirTyped)
     }
 
-    /// Saves what was typed now (a pause, leaving the row, the ✓, the row going away).
-    private func flush() { pending?.cancel(); pending = nil; save(typed) }
+    /// Saves what was typed now (a pause, leaving the row, the ✓, the row going away). Numbers out of range stay as
+    /// typed, with their error, and aren't saved: saving would drop them and clear the field.
+    private func flush() { pending?.cancel(); pending = nil; if !invalid { save(typed) } }
+    private var invalid: Bool { TrainingSet.inputError(weight: weight, reps: reps, rir: rir, unit: unit) != nil }
 
     /// The ✓ answers what you see: it logs the typed numbers, or un-logs a set that just logged itself (and then
     /// it stays un-logged until its RIR is typed again).
-    private func tapCheck() { flush(); rirTyped = false; model.toggle(set: set.id, in: exercise.id) }
+    private func tapCheck() { guard !invalid else { return }; flush(); rirTyped = false; model.toggle(set: set.id, in: exercise.id) } // invalid: its error says why
 
     private func save(_ next: TrainingSet) {
         guard next != set else { return }

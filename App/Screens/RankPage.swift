@@ -27,7 +27,9 @@ struct RankPage: View {
                 let signature = choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")
                 let ranks = model.derived("ranks \(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
                 let ranked = ranks.filter { $0.best != nil }
-                let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + Double($1.rank) + $1.progress } / Double(ranked.count)
+                // A muscle at the top rank counts as that rank: its progress of 1 only fills its bar.
+                let top = Double(Ranks.names.count - 1)
+                let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + min(top, Double($1.rank) + $1.progress) } / Double(ranked.count)
                 let overall = min(Ranks.names.count - 1, Int(score))
                 overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit,
                             basis: ranked.isEmpty || ranked.count == ranks.count ? nil : "Based on \(ranked.count) of \(count(ranks.count, "muscle"))")
@@ -120,12 +122,11 @@ struct RankPage: View {
 
     /// Changing the bodyweight later, in Track's dialog.
     private func editBodyweight(_ bodyweight: Double, _ unit: TrackCore.Settings.Unit) {
+        let valid = { (text: String) in TrainingSet.kilograms(from: text, unit: unit).flatMap { Limits.bodyweight.contains($0) ? $0 : nil } }
         model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
-                              name: TrainingSet.display(kg: bodyweight, unit: unit), label: "Bodyweight (\(unit.rawValue))", placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true, action: "Save") { text in
-            guard let kg = TrainingSet.kilograms(from: text, unit: unit), Limits.bodyweight.contains(kg) else {
-                model.show("Enter a bodyweight from \(Limits.wholeRange(Limits.bodyweight, unit)).")
-                return
-            }
+                              name: TrainingSet.display(kg: bodyweight, unit: unit), label: "Bodyweight (\(unit.rawValue))", placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true,
+                              problem: { valid($0) == nil ? "Enter a bodyweight from \(Limits.wholeRange(Limits.bodyweight, unit))." : nil }, action: "Save") { text in
+            guard let kg = valid(text) else { return }
             withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
         }
     }

@@ -140,7 +140,7 @@ struct WorkoutView: View {
     @ToolbarContentBuilder private func toolbar(_ active: Session, done: Int, total: Int, fields: [String]) -> some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button { model.workoutOpen = false } label: { Image(systemName: "chevron.left").foregroundStyle(Palette.text) }
-                .accessibilityLabel("Keep for later")
+                .accessibilityLabel("Back").accessibilityHint("Keeps the workout going for later").accessibilityIdentifier("keep-for-later")
         }
         ToolbarItem(placement: .principal) {
             Button { options = true } label: {

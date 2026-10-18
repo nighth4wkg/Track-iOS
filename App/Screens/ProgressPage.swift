@@ -34,8 +34,9 @@ struct ProgressPage: View {
                     }
                     .pickerStyle(.segmented).controlSize(.large).fixedSize()
                 }
-                if let change = change.change {
-                    Chip(text: change == 0 ? "Same as \(period.last)" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs \(period.last)", accent: change > 0)
+                if let delta = change.change {
+                    Chip(text: change.volume == 0 ? "Nothing logged yet \(period.now)" : delta == 0 ? "Same as \(period.last)"
+                        : "\(delta > 0 ? "▲" : "▼") \(abs(delta))% vs \(period.last)", accent: delta > 0)
                 }
                 VStack(spacing: 8) {
                     VolumeBars(volumes: model.derived("bars \(period) \(dayKey(now))") { $0.volumes(period.bars, per: period, at: now) }, label: period.name)
@@ -195,5 +196,5 @@ extension Period {
     var now: String { self == .day ? "today" : "this \(name.lowercased())" }
     var last: String { self == .day ? "yesterday" : "last \(name.lowercased())" }
     var bars: Int { self == .day ? 7 : self == .week ? 8 : 6 }
-    var first: String { "\(bars) \(name.lowercased())s ago" }
+    var first: String { "\(bars - 1) \(name.lowercased())s ago" } // the first bar's period: the last bar is the current one
 }

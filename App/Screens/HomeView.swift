@@ -38,7 +38,7 @@ struct HomeView: View {
     }
 
     private func create() {
-        model.naming = Naming(title: "Create a split", action: "Create split") { name in
+        model.naming = Naming(title: "Create a split", problem: { model.splitNameTaken($0) }, action: "Create split") { name in
             let split = Split(name: name)
             model.update { $0.splits.append(split) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { open = split.id }

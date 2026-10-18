@@ -22,7 +22,9 @@ struct HistoryDetail: View {
             VStack(spacing: 0) {
                 header(current, exercises: exercises.count, unit: unit)
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    // Lazy: only the cards on screen are built as the sheet opens (an 18-exercise day took 256 ms to
+                    // its first frame on an iPhone 16, 180 ms lazily).
+                    LazyVStack(alignment: .leading, spacing: 16) {
                         note(current)
                         ForEach(exercises) { exercise in
                             VStack(alignment: .leading, spacing: 8) {
@@ -42,7 +44,7 @@ struct HistoryDetail: View {
                 .scrollEdgeEffectStyle(.soft, for: .bottom) // a fade behind the buttons, never a band across the cards
             }
             .background(Backdrop())
-            // A bar, not an inset with a fill: the sets fade under the buttons, as in a workout. No full-width strip.
+            // A bar holding a floating capsule, not an inset with a fill: the sets scroll under it. No full-width strip.
             .safeAreaBar(edge: .bottom) {
                 HStack(spacing: 16) {
                     // Red text, no fill: Repeat is the point here, as on the website.
@@ -59,7 +61,9 @@ struct HistoryDetail: View {
                     }
                     .buttonStyle(PressStyle()).opacity(model.training.active != nil ? 0.45 : 1)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 12)
+                // A floating glass capsule like the keyboard bar's, solid inside so the sets don't show through.
+                .padding(8).glass(radius: 30, fill: Palette.dialog)
+                .padding(.horizontal, 16).padding(.bottom, 8)
             }
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -143,15 +147,16 @@ struct HistoryDetail: View {
                 HStack {
                     Text("\(draft.count)/\(Limits.notes)").font(.caption).foregroundStyle(Palette.muted)
                     Spacer()
-                    Button("Cancel") { withAnimation(.smooth) { noteOpen = false } }.foregroundStyle(Palette.text)
-                    Button("Save note") {
+                    Button { withAnimation(.smooth) { noteOpen = false } } label: { Text("Cancel").frame(minHeight: 44).contentShape(Rectangle()) }
+                        .foregroundStyle(Palette.text)
+                    Button {
                         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
                         model.update { training in
                             guard let index = training.sessions.firstIndex(where: { $0.id == current.id }) else { return }
                             training.sessions[index].notes = text.isEmpty ? nil : text
                         }
                         withAnimation(.smooth) { noteOpen = false }
-                    }
+                    } label: { Text("Save note").frame(minHeight: 44).contentShape(Rectangle()) }
                     .fontWeight(.semibold).disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines) == notes)
                 }
                 .font(.subheadline)

@@ -30,6 +30,8 @@ struct Naming: Identifiable {
     var label = "Split name"
     var placeholder = "e.g. Upper body"
     var number = false
+    /// What's wrong with a typed value, shown under the field while the action waits (nil: nothing).
+    var problem: (String) -> String? = { _ in nil }
     let action: String
     let onSave: (String) -> Void
 }

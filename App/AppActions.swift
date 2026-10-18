@@ -94,6 +94,11 @@ extension AppModel {
         }
     }
 
+    /// A split name already used by another split (`except`: the one being renamed), as the naming dialog's problem.
+    func splitNameTaken(_ name: String, except id: String? = nil) -> String? {
+        training.splits.contains { $0.id != id && $0.name.caseInsensitiveCompare(name) == .orderedSame } ? "You already have a split called \(name)." : nil
+    }
+
     func deleteSplit(_ split: Split) {
         confirm = Confirm(title: "Delete \(split.name)?", message: "This removes the split. Your workout history stays saved.", label: "Delete split",
                           destructive: true) { [weak self] in self?.update { $0.splits.removeAll { $0.id == split.id } } }

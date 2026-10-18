@@ -1,8 +1,10 @@
+import SafariServices
 import SwiftUI
 
 /// Settings → About: who made Track, where to report a problem, the privacy page and the version.
 struct AboutSettings: View {
     @State private var copied = false
+    @State private var privacy = false
     private static let discord = "n1ghthawq"
 
     var body: some View {
@@ -21,11 +23,15 @@ struct AboutSettings: View {
             }
             .buttonStyle(PressStyle())
             .sensoryFeedback(.success, trigger: copied) { _, now in now }
-            Link(destination: URL(string: "https://trackk.pages.dev/privacy#iphone")!) {
+            // Inside Track, as iOS apps show a web page, rather than switching to Safari.
+            Button { privacy = true } label: {
                 ListRow(icon: "shield", title: "Privacy", detail: "What Track stores and how to delete it") {
                     Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(PressStyle())
+            .sheet(isPresented: $privacy) { SafariView(url: URL(string: "https://trackk.pages.dev/privacy#iphone")!).ignoresSafeArea() }
             ListRow(mark: true, title: "Track for iPhone", detail: "Version \(Self.version)") { EmptyView() }
         }
     }
@@ -34,4 +40,10 @@ struct AboutSettings: View {
         let info = Bundle.main.infoDictionary
         return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
     }
+}
+
+private struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> SFSafariViewController { SFSafariViewController(url: url) }
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
 }

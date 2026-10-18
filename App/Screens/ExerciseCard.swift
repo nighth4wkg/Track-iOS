@@ -50,6 +50,7 @@ struct ExerciseCard: View, Equatable {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                         .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
                 }
+                .accessibilityElement(children: .combine) // one button: name and count, not the chevron ("Go Down")
                 .accessibilityAddTraits(.isButton)
                 .accessibilityValue(open ? "Open" : "Closed")
                 // Moving without the drag, for VoiceOver and Switch Control.

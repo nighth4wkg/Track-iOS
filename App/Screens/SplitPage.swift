@@ -36,7 +36,7 @@ struct SplitPage: View {
                                 .opacity(editing ? 0 : 1).allowsHitTesting(!editing).accessibilityHidden(editing)
                                 if !live {
                                     Button {
-                                        model.naming = Naming(title: "Rename split", name: split.name, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
+                                        model.naming = Naming(title: "Rename split", name: split.name, problem: { model.splitNameTaken($0, except: splitId) }, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
                                     } label: {
                                         // The line's height, with a 44pt tap area reaching into the space around it.
                                         Label("Rename", systemImage: "pencil").frame(minHeight: 44).contentShape(Rectangle()).padding(.vertical, -11)
@@ -73,7 +73,7 @@ struct SplitPage: View {
                                         .opacity(editing ? 0 : 1).accessibilityHidden(editing)
                                     if !live {
                                         HStack(spacing: 4) {
-                                            rowButton("pencil", "Swap \(exercise.name)", Palette.muted) { swapping = exercise }
+                                            rowButton("arrow.left.arrow.right", "Swap \(exercise.name)", Palette.muted) { swapping = exercise }
                                             rowButton("xmark", "Remove \(exercise.name)", Palette.dangerText) { remove(exercise, from: split) }
                                         }
                                         .opacity(editing ? 1 : 0).allowsHitTesting(editing).accessibilityHidden(!editing)
@@ -90,11 +90,11 @@ struct SplitPage: View {
                         Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
                     }
                     if model.training.active != nil {
-                        Button("Resume your active workout") { model.workoutOpen = true }
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).frame(maxWidth: .infinity, minHeight: 44)
+                        Button { model.workoutOpen = true } label: { Text("Resume your active workout").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
                     }
-                    Button { model.deleteSplit(split) } label: { Label("Delete split", systemImage: "trash") }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.dangerText).frame(maxWidth: .infinity, minHeight: 44)
+                    Button { model.deleteSplit(split) } label: { Label("Delete split", systemImage: "trash").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.dangerText)
                         .buttonStyle(PressStyle()).padding(.top, 24)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)

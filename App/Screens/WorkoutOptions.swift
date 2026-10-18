@@ -21,7 +21,8 @@ struct WorkoutOptions: View {
             option(split != nil ? "Rename split" : "Rename workout", "pencil") {
                 dismiss()
                 model.naming = Naming(title: split != nil ? "Rename split" : "Rename workout", name: active?.name ?? "",
-                                      label: split != nil ? "Split name" : "Workout name", action: "Save name") { name in
+                                      label: split != nil ? "Split name" : "Workout name", problem: { name in split.flatMap { model.splitNameTaken(name, except: $0.id) } },
+                                      action: "Save name") { name in
                     // The split's name changes now too, not only when the workout is finished.
                     model.update { training in training.active?.name = name; if let id = split?.id { training.edit(id) { $0.name = name } } }
                 }

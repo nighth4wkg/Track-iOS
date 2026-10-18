@@ -9,7 +9,7 @@ enum Palette {
     static let muted = Color(light: 0x59616E, dark: 0xC0C7C5)
     static let hairline = Color(light: 0xC8CDD6, dark: 0x6C7779).opacity(0.55)
     /// Unfilled bars (the website's --track at 70%): grey enough to read on a white card in light mode.
-    static let bar = Color(light: 0xC8CDD6, dark: 0x6C7779).opacity(0.7)
+    static let bar = Color(light: 0xA9B1BD, dark: 0x6C7779).opacity(0.7) // light: past bars still read on a white card
     /// The one accent: text and small marks. Big green blocks are only the primary button.
     static let accent = Color(light: 0x0A7A48, dark: Hex.mint)
     static let primary = Color(light: 0x3FD583, dark: Hex.mint)

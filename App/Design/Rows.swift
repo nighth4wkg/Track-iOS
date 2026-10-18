@@ -20,7 +20,7 @@ struct ListRow<Trailing: View>: View {
             .accessibilityHidden(true) // decorative: the title says it
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline).foregroundStyle(Palette.text).lineLimit(2)
-                Text(detail).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1)
+                Text(detail).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(2)
             }
             Spacer(minLength: 8)
             trailing
