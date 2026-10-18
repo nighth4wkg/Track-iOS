@@ -45,15 +45,15 @@ struct ProgressPage: View {
                 }
             }
             // The website's measures: 16 inside, a 28pt total, 112pt bars, tiles 8 apart.
-            .padding(16).glass()
+            .padding(16).glass().probe("bars")
             HStack(spacing: 8) {
                 tile(icon: "flame", value: "\(model.derived("streak \(dayKey(now))") { $0.weeklyStreak(at: now) })", label: "Week streak") { model.tab = .home }
                 LevelTile { xpHelp = true }
                 tile(icon: "medal", value: "\(model.derived("award count") { $0.questAwards.count })/\(Quest.all.count)", label: "Achievements") { quests = true }
             }
-            .fixedSize(horizontal: false, vertical: true)
+            .fixedSize(horizontal: false, vertical: true).probe("tiles")
             SmallHeader(title: "Personal records")
-            if records.isEmpty {
+            if Probe.off("records") {} else if records.isEmpty {
                 EmptyCard(icon: "chart.line.uptrend.xyaxis",
                           title: training.sessions.isEmpty ? "Your next workout starts the story" : "No records yet",
                           detail: training.sessions.isEmpty ? "Complete a workout to set your first baseline."

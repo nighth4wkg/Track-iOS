@@ -98,14 +98,14 @@ struct Glass: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         content
-            .background {
+            .probe("glass") { $0.background {
                 shape.fill(fill)
                     .overlay(shape.fill(LinearGradient(colors: [.white.opacity(0.09), .white.opacity(0.02), .clear],
                                                        startPoint: .topLeading, endPoint: UnitPoint(x: 0.6, y: 0.6))))
                     .overlay(shape.strokeBorder(LinearGradient(colors: [Palette.rim, Palette.rim.opacity(0.2)],
                                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-                    .shadow(color: lifted ? Palette.shadow : .clear, radius: 15, y: 10)
-            }
+                    .shadow(color: lifted && !Probe.off("shadow") ? Palette.shadow : .clear, radius: 15, y: 10)
+            } }
     }
 }
 

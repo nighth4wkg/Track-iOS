@@ -19,7 +19,8 @@ import TrackCore
                   ("leave workout", { model.workoutOpen = false })]
         steps += AppTab.allCases.dropFirst().map { tab in ("tab \(tab)", { model.tab = tab }) } + [("tab home", { model.tab = .home })]
         steps += [("history sheet open", { model.history = model.training.sessions.first }), ("history sheet close", { model.history = nil }),
-                  ("back into workout", { model.workoutOpen = true }), ("leave workout again", { model.workoutOpen = false })]
+                  ("back into workout", { model.workoutOpen = true }), ("leave workout again", { model.workoutOpen = false }),
+                  ("discard it", { model.update { $0.discard() } }), ("open a new workout", { model.start(split) }), ("leave the new one", { model.workoutOpen = false })]
         for (name, step) in steps {
             FrameLog.mark(name)
             step()

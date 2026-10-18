@@ -37,7 +37,7 @@ struct WorkoutView: View {
                                  + " Swipe a set left to delete it.")
                                 .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        ForEach(active.exercises) { exercise in
+                        ForEach(Probe.off("cards") ? [] : active.exercises) { exercise in
                             ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
                                          box: box, bests: bests, focus: $focus,
                                          focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
@@ -64,20 +64,20 @@ struct WorkoutView: View {
                 .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
                     .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { dragging = nil } } } }
                 .scrollDismissesKeyboard(.interactively)
-                .setKeyboard($focus)
+                .probe("kb") { $0.setKeyboard($focus) }
                 .background(Backdrop())
                 .navigationTitle(active.name)
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
+                .probe("wtoolbar") { $0.toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) } }
                 // A bar (iOS 26), not an inset: the page blurs and fades behind it as it does under the top bar, so the
                 // cards' edges don't frame the capsule.
-                .safeAreaBar(edge: .bottom) {
+                .probe("wbar") { $0.safeAreaBar(edge: .bottom) {
                     // While typing, one capsule over the keyboard (the rest's time, Next, Done) instead of the rest capsule.
                     // Without the keyboard the capsule dips into the home indicator's strip, 16pt from the screen's edge,
                     // as iOS's own floating bars do (a phone with a home button has no strip, so it stays put).
                     Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().padding(.bottom, -max(0, homeIndicator - 8)) } }
                         .animation(.smooth(duration: Motion.quick), value: focus == nil)
-                }
+                } }
             }
             .onDrop(of: [.text], delegate: drop(active))
             // Behind it the whole screen takes the drop too, status bar included: let go anywhere and the drag ends.

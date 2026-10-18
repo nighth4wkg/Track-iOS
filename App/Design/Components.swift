@@ -18,7 +18,7 @@ struct Page<Content: View>: View {
     @State private var shift: CGFloat = 0
 
     var body: some View {
-        NavigationStack {
+        NavStack {
             ScrollView {
                 // The website's page: 24pt from the edges, a 32pt semibold title.
                 VStack(alignment: .leading, spacing: spacing) {
@@ -30,7 +30,7 @@ struct Page<Content: View>: View {
                             accessory
                         }
                     }
-                    content
+                    content.probe("content")
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
@@ -42,16 +42,16 @@ struct Page<Content: View>: View {
             .scrollPosition($position)
             .onAppear(perform: arrive)
             .scrollDismissesKeyboard(.interactively)
-            .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
+            .probe("pan") { $0.gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
                 guard let step = HorizontalPan.tabStep(x, velocity), let index = AppTab.allCases.firstIndex(of: model.tab) else { return }
                 let next = index + step
                 if AppTab.allCases.indices.contains(next) { model.tab = AppTab.allCases[next] }
-            }))
-            .background(Backdrop())
+            })) }
+            .probe("backdrop") { $0.background(Backdrop()) }
             // No navigation title: the page shows its own, and a hidden one was read by VoiceOver (and named the
             // back button of the pages pushed from here, "Ready to train" instead of Back).
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .probe("toolbar") { $0.toolbar {
                 let streak = model.derived("streak \(dayKey(nowMillis()))") { $0.weeklyStreak(at: nowMillis()) }
                 // The brand sits on the bar itself, as on the website: no glass bubble behind it.
                 ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
@@ -71,7 +71,7 @@ struct Page<Content: View>: View {
                     Button { settingsOpen = true } label: { Image(systemName: "gearshape").foregroundStyle(Palette.text) }
                         .accessibilityLabel("Settings")
                 }
-            }
+            } }
         }
     }
 
@@ -178,4 +178,10 @@ struct GlassCircleButton: View {
                 .buttonStyle(PressStyle()).accessibilityLabel(label)
         }
     }
+}
+
+/// A NavigationStack, unless -no-nav leaves it out.
+struct NavStack<Content: View>: View {
+    @ViewBuilder let content: Content
+    var body: some View { if Probe.off("nav") { content } else { NavigationStack { content } } }
 }

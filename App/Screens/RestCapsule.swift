@@ -12,7 +12,7 @@ struct RestCapsule: View {
     var body: some View {
         let until = model.training.restUntil
         Group {
-            if let until {
+            if let until, !Probe.off("rest") {
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))

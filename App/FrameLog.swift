@@ -67,6 +67,7 @@ import os
     /// PerfDrive's next action begins (nil: the last has ended): the one before goes to the device log ("Track
     /// actions"): how long the screen waited for it, and how many frames came late after it and by how much.
     static func mark(_ name: String?) {
+        if let name { Sampler.begin(name) }
         guard let log = shared else { return }
         if let a = log.action {
             let late = "\(a.hitches) late frames, \(Int(a.late * 1000)) ms late in all, worst \(Int(a.worst * 1000)) ms"

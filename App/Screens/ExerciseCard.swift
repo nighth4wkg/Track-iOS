@@ -67,7 +67,7 @@ struct ExerciseCard: View, Equatable {
                         Color.clear.frame(width: 52, height: 1)
                     }
                     .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted)
-                    ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
+                    ForEach(Probe.off("rows") ? [] : Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
                         SetRow(exercise: exercise, set: set, number: index + 1, unit: unit, autoLog: autoLog, bests: bests,
                                earlier: Array(exercise.sets.prefix(index)), focus: focus,
                                focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil },

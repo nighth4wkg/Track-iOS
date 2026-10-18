@@ -26,10 +26,10 @@ struct HistoryView: View {
         let recordSessions = model.derived("record sessions") { Set($0.improvements.map(\.after.sessionId)) }
         Page(title: "History", accessory: all.isEmpty ? nil : AnyView(filterButton), settingsOpen: $settingsOpen) {
             if !all.isEmpty {
-                search(filtering: filtering, label: "\(shown.count) of \(count(all.count, "workout"))")
+                search(filtering: filtering, label: "\(shown.count) of \(count(all.count, "workout"))").probe("search")
                 if datesOpen { dateRange.transition(.opacity.combined(with: .move(edge: .top))) }
                 // While searching, the matches come first (the calendar would push them under the keyboard).
-                if !searching { HistoryCalendar(month: $month, day: $day, sessions: all).transition(.opacity) }
+                if !searching { HistoryCalendar(month: $month, day: $day, sessions: all).transition(.opacity).probe("calendar") }
             }
             if all.isEmpty {
                 EmptyCard(icon: "calendar", title: "Your story starts here.", detail: "Finish a workout to save your sets, weights, and reps here.")
@@ -39,7 +39,7 @@ struct HistoryView: View {
                 EmptyCard(icon: "calendar", title: "No workouts found.", detail: "Try another exercise or date range.")
                 Button("Clear filters") { clear() }.buttonStyle(SecondaryButtonStyle())
             }
-            ForEach(weeks, id: \.key) { week, items in
+            ForEach(Probe.off("list") ? [] : weeks, id: \.key) { week, items in
                 VStack(alignment: .leading, spacing: 8) {
                     SmallHeader(title: weekTitle(week))
                     NativeList(items: items, onDelete: { model.deleteWorkout($0) }) { session in

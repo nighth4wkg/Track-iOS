@@ -32,7 +32,7 @@ struct RankPage: View {
                 let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + min(top, Double($1.rank) + $1.progress) } / Double(ranked.count)
                 let overall = min(Ranks.names.count - 1, Int(score))
                 overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit,
-                            basis: ranked.isEmpty || ranked.count == ranks.count ? nil : "Based on \(ranked.count) of \(count(ranks.count, "muscle"))")
+                            basis: ranked.isEmpty || ranked.count == ranks.count ? nil : "Based on \(ranked.count) of \(count(ranks.count, "muscle"))").probe("overall")
                 if let closest = ranked.filter({ $0.next != nil }).max(by: { $0.progress < $1.progress }), let next = closest.next, let best = closest.best {
                     // The rank up that's nearest, and the one lift that gets it.
                     VStack(alignment: .leading, spacing: 4) {
@@ -45,7 +45,7 @@ struct RankPage: View {
                 }
                 let counted = model.derived("counted \(signature)") { $0.countedNames(choices: choices) }
                 GlassList {
-                    ForEach(ranks, id: \.muscle) { rank in
+                    ForEach(Probe.off("muscles") ? [] : ranks, id: \.muscle) { rank in
                         MuscleRow(rank: rank, unit: unit, names: counted.filter { $0.groups.contains(rank.muscle.rawValue) })
                     }
                 }
