@@ -104,20 +104,33 @@ enum Radius {
     static let small: CGFloat = 4, inner: CGFloat = 12, card: CGFloat = 18, sheet: CGFloat = 28
 }
 
-/// The shape a surface takes: a rounded box at one of the radii, a pill, or a circle (a circular corner as big as it
-/// can be: SwiftUI caps it at half the shorter side).
+/// The shape a surface takes: a rounded box at one of the radii, a pill, or a circle.
 enum Corner {
     case small, inner, card, sheet, pill, circle
 
-    var shape: RoundedRectangle {
+    var shape: Rounded {
         switch self {
-        case .small: RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
-        case .inner: RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
-        case .card: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-        case .sheet: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous)
-        case .pill, .circle: RoundedRectangle(cornerRadius: .greatestFiniteMagnitude, style: .circular)
+        case .small: Rounded(radius: Radius.small)
+        case .inner: Rounded(radius: Radius.inner)
+        case .card: Rounded(radius: Radius.card)
+        case .sheet: Rounded(radius: Radius.sheet)
+        case .pill, .circle: Rounded(radius: nil)
         }
     }
+}
+
+/// A box with continuous corners at a radius, or fully round ends (a pill, or a circle when square) when it has none.
+struct Rounded: InsettableShape {
+    let radius: CGFloat?
+    var inset: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let box = rect.insetBy(dx: inset, dy: inset)
+        guard let radius else { return RoundedRectangle(cornerRadius: min(box.width, box.height) / 2, style: .circular).path(in: box) }
+        return RoundedRectangle(cornerRadius: max(0, radius - inset), style: .continuous).path(in: box)
+    }
+
+    func inset(by amount: CGFloat) -> Rounded { Rounded(radius: radius, inset: inset + amount) }
 }
 
 /// Text styles, as the PWA's t-12 to t-32 (the iPhone's caption, subheadline, headline, title3, title and large
