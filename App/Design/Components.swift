@@ -74,55 +74,6 @@ struct Page<Content: View>: View {
     }
 }
 
-/// Rows on one glass card, split by the website's hairline: 16pt in from both sides, full width between them
-/// (app/styles/list-group.css).
-struct GlassList<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Group(subviews: content) { rows in
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    if index > 0 { Rectangle().fill(Palette.hairline).frame(height: 1).padding(.horizontal, 16) }
-                    row.padding(.horizontal, 16).padding(.vertical, 10)
-                }
-            }
-        }
-        .glass()
-        .clipShape(RoundedRectangle(cornerRadius: Measure.card, style: .continuous))
-    }
-}
-
-/// A section heading as on the website: "Your splits 2" with optional round buttons at the end.
-struct SectionHeading<Trailing: View>: View {
-    let title: String
-    var count: Int?
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            Text(title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-            if let count { Text("\(count)").font(.subheadline).foregroundStyle(Palette.muted) }
-            Spacer()
-            trailing
-        }
-        .padding(.top, 8)
-    }
-}
-
-extension SectionHeading where Trailing == EmptyView {
-    init(title: String, count: Int? = nil) { self.init(title: title, count: count) { EmptyView() } }
-}
-
-/// A small muted heading over a group, as History's "This week" or "Sep 14 – 20".
-struct SmallHeader: View {
-    let title: String
-
-    var body: some View {
-        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted).padding(.leading, 4).padding(.top, 8)
-    }
-}
-
 /// A round icon button in Liquid Glass (iOS 26), or the Sheen glass before it.
 struct RoundButton: View {
     let icon: String

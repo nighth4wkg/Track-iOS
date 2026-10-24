@@ -29,17 +29,7 @@ enum Palette {
     static let hairline = Color.white.opacity(0.12)
     static let wash = Color.white.opacity(0.06)
     static let dim = Color.black.opacity(0.65)
-    // Names the screens not yet moved to the PWA look still use; each goes as its screen is ported.
-    static let control = Surface.control.shade[0]
-    static let card = Surface.card.shade[0]
-    static let dialog = Surface.sheet.shade[0]
-    static let bar = previous
-    static let rim = Color.white.opacity(0.08)
-    static let shadow = Color.black.opacity(0.45)
-    static let record = Color(hex: 0xF2C14E)
-    static let streak = Color(hex: 0xFFB76B)
     static let action = Color(hex: 0x4F5762)
-    static let dangerDeep = Color(hex: 0xBD1616)
 }
 
 /// The RAISED surfaces' fills, top to bottom, by what they are.
@@ -182,6 +172,8 @@ enum Motion {
 /// The widest a page's column gets, and a card's corners.
 enum Measure {
     static let page: CGFloat = 600
+    /// The sign-in column, as the PWA's --narrow.
+    static let narrow: CGFloat = 480
     static let card: CGFloat = Radius.card
 }
 
@@ -248,25 +240,6 @@ struct Sunk: ViewModifier {
 extension View {
     func raised(_ surface: Surface = .card, _ corner: Corner = .card) -> some View { modifier(Raised(surface: surface, corner: corner)) }
     func sunk(_ corner: Corner = .inner, ring: Color? = nil) -> some View { modifier(Sunk(corner: corner, ring: ring)) }
-}
-
-/// The old glass call, drawn RAISED until each screen moves to raised() or sunk().
-struct Glass: ViewModifier {
-    var radius: CGFloat = Measure.card
-    var fill: Color = Palette.control
-    var lifted = true
-
-    func body(content: Content) -> some View {
-        content.modifier(Raised(surface: lifted ? .card : .control,
-                                corner: radius >= Size.control / 2 ? .pill : radius > Radius.inner ? .card : .inner))
-    }
-}
-
-extension View {
-    @available(*, deprecated, message: "Use raised() or sunk() with tokens.")
-    func glass(radius: CGFloat = Measure.card, fill: Color = Palette.control, lifted: Bool = true) -> some View {
-        modifier(Glass(radius: radius, fill: fill, lifted: lifted))
-    }
 }
 
 /// The screen's one main action: the green pill (RAISED green), shrinking a little while pressed.

@@ -21,21 +21,6 @@ struct Confirm: Identifiable {
     let action: () -> Void
 }
 
-/// Something to type in Track's dialog: a split's or workout's name, or the bodyweight.
-struct Naming: Identifiable {
-    let id = UUID()
-    let title: String
-    var message = "Give your routine a name that makes sense to you."
-    var name = ""
-    var label = "Split name"
-    var placeholder = "e.g. Upper body"
-    var number = false
-    /// What's wrong with a typed value, shown under the field while the action waits (nil: nothing).
-    var problem: (String) -> String? = { _ in nil }
-    let action: String
-    let onSave: (String) -> Void
-}
-
 /// A short note at the bottom ("Set removed"), with Undo when there's something to bring back.
 struct Toast: Identifiable, Equatable {
     let id = UUID()
@@ -64,7 +49,6 @@ final class AppModel {
     /// Why the saved copy couldn't be read, if it couldn't. The app then starts empty without overwriting it.
     private(set) var loadError: String?
     var confirm: Confirm? { didSet { dialogChanged() } }
-    var naming: Naming? { didSet { dialogChanged() } }
     var toast: Toast?
     /// The screens that can show the toast, in the order they came up (see ToastOverlay).
     var toastHosts: [UUID] = []
@@ -172,7 +156,7 @@ final class AppModel {
         workoutOpen = false
     }
 
-    private func dialogChanged() { DialogWindow.update(open: confirm != nil || naming != nil, typing: naming != nil) }
+    private func dialogChanged() { DialogWindow.update(open: confirm != nil) }
 
     func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }
 

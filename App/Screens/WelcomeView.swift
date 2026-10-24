@@ -1,87 +1,47 @@
 import SwiftUI
 
-/// The first screen: where to keep your training. Sync (an account shared with the website) or this iPhone only.
-/// What works today comes first and carries the accent; sync follows, marked Soon. Local can turn on sync later in Settings.
+/// The first screen, as the PWA's sign-in page: the mark, "Welcome to Track" and what it's for, then the ways in.
+/// Local works today (primary); sync with a Track account is marked Soon and says so. Local can turn on sync later.
 struct WelcomeView: View {
     @Environment(AppModel.self) private var model
     @State private var syncSoon = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Brand().padding(.bottom, 24)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Your training space").font(.body).foregroundStyle(Palette.muted)
-                    Text("Welcome to Track").font(.largeTitle.weight(.bold)).foregroundStyle(Palette.text)
+            VStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    TrackMark(size: IconSize.emblem).foregroundStyle(Palette.text)
+                        .frame(width: Size.emblem, height: Size.emblem).raised(.control, .inner).accessibilityHidden(true)
+                    Text("Welcome to Track").type(.t32).foregroundStyle(Palette.text).padding(.top, Space.s4)
+                    Text("Your splits, sets and progress.").type(.t14).foregroundStyle(Palette.muted)
                 }
-                Text("A simple gym tracker for your splits, sets and progress.").font(.body).foregroundStyle(Palette.text)
-                Text("Choose where your workouts live.").font(.body).foregroundStyle(Palette.muted).padding(.bottom, 8)
-                ChoiceCard(icon: "iphone", title: "Keep it on this iPhone",
-                           detail: "No account. Everything stays on this device.", accent: true) {
-                    withAnimation(.smooth) { model.choose(.local) }
+                .multilineTextAlignment(.center)
+                .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+                VStack(spacing: Space.s3) {
+                    Button("Continue locally") { withAnimation(.smooth(duration: Motion.standard)) { model.choose(.local) } }
+                        .buttonStyle(PrimaryButtonStyle())
+                    Button { syncSoon = true } label: {
+                        HStack(spacing: Space.s2) { Text("Sync with an account"); Badge(text: "Soon", plain: true) }
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
                 }
-                ChoiceCard(icon: "arrow.triangle.2.circlepath.icloud", title: "Sync across devices",
-                           detail: "Your workouts on iPhone, iPad and the web.", badge: "Soon") {
-                    syncSoon = true
-                }
-                Text("Sync with the website is coming. You can turn it on in Settings when it arrives.")
-                    .font(.footnote).foregroundStyle(Palette.muted)
-                    .frame(maxWidth: .infinity).padding(.top, 8)
+                .padding(.top, Space.s6)
+                Text("Local mode keeps everything on this device.").type(.t14).foregroundStyle(Palette.muted)
+                    .multilineTextAlignment(.center).padding(.top, Space.s2)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .frame(maxWidth: 480)
+            .padding(Space.s4)
+            .frame(maxWidth: Measure.narrow)
             .frame(maxWidth: .infinity)
+            .containerRelativeFrame(.vertical, alignment: .center) { length, _ in length }
         }
         .scrollBounceBehavior(.basedOnSize)
         .background(Backdrop())
         .alert("Sync is coming soon", isPresented: $syncSoon) {
-            Button("Keep it on this iPhone") { withAnimation(.smooth) { model.choose(.local) } }
+            Button("Continue locally") { withAnimation(.smooth(duration: Motion.standard)) { model.choose(.local) } }
             Button("Not now", role: .cancel) {}
         } message: {
-            Text("Signing in with your Track account arrives in an upcoming build. Start on this iPhone now and turn on sync later; nothing is lost.")
+            Text("Signing in with your Track account arrives in an upcoming build. Start locally now and turn on sync later; nothing is lost.")
         }
-    }
-}
-
-/// One choice: an icon tile, a title over one line of detail, and a chevron, on a glass card.
-private struct ChoiceCard: View {
-    let icon: String
-    let title: String
-    let detail: String
-    var accent = false
-    var badge: String?
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(accent ? Palette.accent : Palette.text)
-                    .frame(width: 48, height: 48)
-                    .glass(radius: 14, fill: Palette.control, lifted: false).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(title).font(.headline).foregroundStyle(Palette.text)
-                        if let badge {
-                            Text(badge).font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .glass(radius: 10, fill: Palette.control, lifted: false)
-                        }
-                    }
-                    Text(detail).font(.subheadline).foregroundStyle(Palette.muted)
-                        .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 88)
-            .glass()
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressStyle())
     }
 }
 

@@ -55,7 +55,7 @@ struct MainView: View {
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
         .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
-        .trackOverlays()
+        .trackOverlays(nav: model.pushed == 0 && !model.workoutOpen)
     }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {
