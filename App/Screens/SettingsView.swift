@@ -136,10 +136,6 @@ private struct TrainingSettings: View {
                     }
                 }
             }
-            SettingRow(icon: "circle.lefthalf.filled", label: "Appearance") {
-                GlassMenu(selection: settings.theme == .liquid ? .system : settings.theme,
-                          options: [(.system, "System"), (.light, "Light"), (.dark, "Dark")]) { value in model.update { $0.settings.theme = value } }
-            }
         }
         .onAppear { draft = String(settings.restSeconds) }
         .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }

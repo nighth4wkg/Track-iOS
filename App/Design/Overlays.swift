@@ -191,10 +191,7 @@ extension View {
 }
 
 private struct Presented: ViewModifier {
-    @Environment(AppModel.self) private var model
-
     func body(content: Content) -> some View {
-        let theme = model.training.settings.theme
-        content.overlay { ToastOverlay() }.preferredColorScheme(theme == .light ? .light : theme == .dark ? .dark : nil)
+        content.overlay { ToastOverlay() }
     }
 }

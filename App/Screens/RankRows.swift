@@ -11,7 +11,7 @@ struct MuscleRow: View {
 
     var body: some View {
         let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
-        let text = rank.best == nil ? Palette.muted : Palette.rankText[rank.rank]
+        let text = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
         VStack(alignment: .leading, spacing: 10) {
             // The header is the row's button; what opens under it (the exercise chips) is outside it.
             Button { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } label: {

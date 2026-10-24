@@ -2,12 +2,8 @@ import SwiftUI
 import TrackCore
 
 extension Palette {
-    /// Starter, Novice, Solid, Strong, Elite: vivid in both themes for bars and the medal (the website's dark-theme
-    /// colours, which read clearly on the light glass too); text uses `rankText`, a shade deeper in light mode.
-    static let ranks: [Color] = [Color(hex: 0x9AA3AB), Color(hex: 0x4E9EF0), Color(hex: 0x2FD27A), Color(hex: 0xA77CF7), Color(hex: 0xF2BE3B)]
-    static let rankText: [Color] = [Color(light: 0x5F6A73, dark: 0x9AA3AB), Color(light: 0x1F6FBF, dark: 0x5AA7EC),
-                                    Color(light: 0x16804A, dark: 0x48E58D), Color(light: 0x7447C9, dark: 0xB287F5),
-                                    Color(light: 0x8A6A00, dark: 0xF2C14E)]
+    /// Starter, Novice, Solid, Strong, Elite, as the PWA's --rank-0 to --rank-4: bars, the medal and their text.
+    static let ranks: [Color] = [Color(hex: 0xA9B0B6), Color(hex: 0x5AA7EC), Color(hex: 0x4CC38A), Color(hex: 0xE8A93A), Color(hex: 0xB287F5)]
 }
 
 /// Rank: each muscle ranked from its strongest lift relative to bodyweight, the overall rank (the average place on
@@ -37,7 +33,7 @@ struct RankPage: View {
                     // The rank up that's nearest, and the one lift that gets it.
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Nearest rank up").font(.subheadline).foregroundStyle(Palette.muted)
-                        Text("\(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])").font(.headline).foregroundStyle(Palette.rankText[closest.rank + 1])
+                        Text("\(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])").font(.headline).foregroundStyle(Palette.ranks[closest.rank + 1])
                         Text("Lift \(liftWeight(next.kg, best.kind, unit, target: true)) × \(next.reps) on \(best.exercise)")
                             .font(.subheadline).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
                     }
@@ -62,7 +58,7 @@ struct RankPage: View {
 
     private func overallCard(_ overall: Int?, progress: Double, bodyweight: Double, unit: TrackCore.Settings.Unit, basis: String?) -> some View {
         let color = overall.map { Palette.ranks[$0] } ?? Palette.muted
-        let text = overall.map { Palette.rankText[$0] } ?? Palette.muted
+        let text = overall.map { Palette.ranks[$0] } ?? Palette.muted
         return VStack(spacing: 8) {
             Image(systemName: "medal.fill").font(.system(size: 34, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 72, height: 72)
@@ -77,7 +73,7 @@ struct RankPage: View {
                     VStack(spacing: 6) {
                         RankBar(progress: overall.map { index < $0 || index == Ranks.names.count - 1 && index == $0 ? 1 : index == $0 ? progress : 0 } ?? 0, color: Palette.ranks[index])
                         Text(Ranks.names[index]).font(.caption2.weight(index == overall ? .bold : .regular))
-                            .foregroundStyle(index == overall ? Palette.rankText[index] : Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
+                            .foregroundStyle(index == overall ? Palette.ranks[index] : Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
                     }
                 }
             }

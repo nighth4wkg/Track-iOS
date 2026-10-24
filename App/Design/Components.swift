@@ -33,7 +33,7 @@ struct Page<Content: View>: View {
                     content
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+                .padding(.bottom, Size.nav + Space.s4 * 2)
                 .frame(maxWidth: Measure.page)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
