@@ -47,16 +47,21 @@ struct Field: View {
     /// What VoiceOver calls it.
     let label: String
     var limit = Limits.name
+    /// A mark at its start, as the search's magnifier.
+    var icon: String?
     var submit: () -> Void = {}
     @FocusState private var focused: Bool
 
     var body: some View {
-        TextField(label, text: $text, prompt: Text(placeholder).foregroundStyle(Palette.placeholder))
-            .focused($focused)
-            .submitLabel(.done)
-            .onSubmit(submit)
-            .scaledFont(TextStyle.t16.size)
-            .foregroundStyle(Palette.text)
+        HStack(spacing: Space.s2) {
+            if let icon { Image(systemName: icon).font(.system(size: IconSize.medium)).foregroundStyle(Palette.muted).accessibilityHidden(true) }
+            TextField(label, text: $text, prompt: Text(placeholder).foregroundStyle(Palette.placeholder))
+                .focused($focused)
+                .submitLabel(.done)
+                .onSubmit(submit)
+                .scaledFont(TextStyle.t16.size)
+                .foregroundStyle(Palette.text)
+        }
             .padding(.horizontal, Space.s3)
             .frame(minHeight: Size.control)
             .sunk(.inner, ring: focused ? Palette.accent : nil)

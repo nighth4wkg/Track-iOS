@@ -88,6 +88,8 @@ enum Size {
     static let emblem: CGFloat = 56
     /// A progress bar.
     static let bar: CGFloat = 8
+    /// A trained day's mark on the calendar.
+    static let dot: CGFloat = 5
     /// The Progress chart.
     static let chart: CGFloat = 96
     /// Home's week ring, and its stroke.

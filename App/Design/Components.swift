@@ -156,11 +156,12 @@ struct RoundButton: View {
     var active = false
     /// An icon colour of its own (red for a delete).
     var tint: Color?
+    var size = IconSize.regular
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: IconSize.regular, weight: .semibold)).contentTransition(.symbolEffect(.replace))
+            Image(systemName: icon).font(.system(size: size, weight: .semibold)).contentTransition(.symbolEffect(.replace))
                 .foregroundStyle(tint ?? (active ? Palette.accent : Palette.text))
                 .frame(width: Size.control, height: Size.control)
                 .raised(.control, .circle)

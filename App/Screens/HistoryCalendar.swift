@@ -1,82 +1,75 @@
 import SwiftUI
 import TrackCore
 
-/// One month of training at a glance, as the website's calendar: the month over its workouts · time, ‹ › through the
-/// months that have workouts up to this one, and a Monday-first grid. Trained days are lit (today's in the accent),
-/// today is ringed. Tapping a trained day shows only it; tapping it again, all.
+/// The training calendar, as the PWA's: the month over a Monday-first grid with the neighbouring months' days greyed.
+/// Today sits on a raised tile in green; a dot under a day means you trained. Tap a day to see only it; again, all.
 struct HistoryCalendar: View {
     @Binding var month: Date
-    @Binding var day: String?
+    @Binding var from: String
+    @Binding var to: String
     let sessions: [Session]
 
     var body: some View {
         let calendar = Calendars.local
-        let inMonth = sessions.filter { calendar.isDate(Date(timeIntervalSince1970: Double($0.finishedAt!) / 1000), equalTo: month, toGranularity: .month) }
         let trained = Set(sessions.map { dayKey($0.finishedAt!) })
-        let days = calendar.range(of: .day, in: .month, for: month)!.count
-        let lead = (calendar.component(.weekday, from: month) + 5) % 7
         let today = dayKey(nowMillis())
-        let isCurrent = calendar.isDate(month, equalTo: .now, toGranularity: .month)
-        let earliest = sessions.compactMap(\.finishedAt).min().map { Self.monthStart(Date(timeIntervalSince1970: Double($0) / 1000)) } ?? month
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(month.formatted(.gregorian.month(.wide).year(calendar.isDate(month, equalTo: .now, toGranularity: .year) ? .omitted : .defaultDigits)))
-                        .font(.headline).foregroundStyle(Palette.text)
-                    Text(inMonth.isEmpty ? "No workouts" : "\(count(inMonth.count, "workout")) · \(trainingDuration(inMonth.reduce(0) { $0 + $1.minutes }))")
-                        .font(.subheadline).foregroundStyle(Palette.muted)
-                }
+        let lead = (calendar.component(.weekday, from: month) + 5) % 7
+        let length = calendar.range(of: .day, in: .month, for: month)!.count
+        let start = calendar.date(byAdding: .day, value: -lead, to: month)!
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+        VStack(alignment: .leading, spacing: Space.s2) {
+            HStack(spacing: Space.s2) {
+                Text(month.formatted(.gregorian.month(.wide).year())).type(.t16).foregroundStyle(Palette.text)
                 Spacer()
-                RoundButton(icon: "chevron.left", label: "Previous month") { step(-1) }
-                    .disabled(month <= earliest).opacity(month <= earliest ? 0.4 : 1)
-                RoundButton(icon: "chevron.right", label: "Next month") { step(1) }.disabled(isCurrent).opacity(isCurrent ? 0.4 : 1)
+                RoundButton(icon: "chevron.left", label: "Previous month", size: IconSize.medium) { step(-1) }
+                RoundButton(icon: "chevron.right", label: "Next month", size: IconSize.medium) { step(1) }
             }
-            HStack(spacing: 4) {
+            LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
-                    Text(letter).font(.caption.weight(.bold)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity)
+                    Text(letter).type(.t12).foregroundStyle(Palette.muted)
                 }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
-                ForEach(-lead..<0, id: \.self) { _ in Color.clear.frame(height: 40) }
-                ForEach(1...days, id: \.self) { number in
-                    let date = calendar.date(byAdding: .day, value: number - 1, to: month)!
+            .accessibilityHidden(true)
+            LazyVGrid(columns: columns, spacing: Space.s1) {
+                ForEach(0..<(lead + length + 6) / 7 * 7, id: \.self) { offset in
+                    let date = calendar.date(byAdding: .day, value: offset, to: start)!
                     let key = dayKey(millis(date))
-                    let lit = trained.contains(key)
+                    let picked = from == key && to == key
                     let isToday = key == today
-                    Button { if lit { withAnimation(.smooth) { day = day == key ? nil : key } } } label: {
-                        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        Text("\(number)").font(.subheadline.weight(.semibold)).monospacedDigit()
-                            .foregroundStyle(lit ? Palette.primaryText : isToday ? Palette.text : Palette.muted)
-                            .frame(maxWidth: .infinity, minHeight: 40)
-                            .background(shape.fill(lit ? Palette.primary : Palette.control))
-                            .overlay(shape.strokeBorder(isToday ? (lit ? Palette.primaryText : Palette.text) : .clear, lineWidth: 2))
-                            .overlay(shape.inset(by: -4).strokeBorder(day == key ? Palette.text : .clear, lineWidth: 2))
-                            .opacity(key > today ? 0.45 : 1)
+                    let inMonth = calendar.isDate(date, equalTo: month, toGranularity: .month)
+                    Button { from = picked ? "" : key; to = picked ? "" : key } label: {
+                        VStack(spacing: Space.s1) {
+                            Text(date.formatted(.gregorian.day())).type(.t14).fontWeight(isToday ? .bold : nil).monospacedDigit()
+                                .foregroundStyle(!inMonth ? Palette.faint : isToday ? Palette.accent : Palette.text)
+                            Circle().fill(trained.contains(key) ? Palette.accent : .clear).frame(width: Size.dot, height: Size.dot)
+                        }
+                        .frame(width: Size.tile, height: Size.tile)
+                        .background { if picked { Corner.inner.shape.fill(Palette.greenPick) } }
+                        .modifier(TodayTile(on: isToday && !picked))
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .disabled(!lit)
-                    .accessibilityLabel(date.formatted(.gregorian.month(.wide).day()) + (lit ? ", trained" : ""))
+                    .accessibilityLabel(date.formatted(.gregorian.month(.wide).day()) + (trained.contains(key) ? ", trained" : ""))
+                    .accessibilityAddTraits(picked ? .isSelected : [])
                 }
             }
-            .id(month)
-            .transition(.opacity)
         }
-        .padding(16)
-        .glass()
-        .onAppear {
-            // Opens on this month, or on the latest workout's month when this one has none yet.
-            if inMonth.isEmpty, let latest = sessions.compactMap(\.finishedAt).max() {
-                month = Self.monthStart(Date(timeIntervalSince1970: Double(latest) / 1000))
-            }
-        }
+        .padding(Space.s4)
+        .raised()
     }
 
     static func monthStart(_ date: Date) -> Date { Calendars.local.dateInterval(of: .month, for: date)!.start }
 
     private func step(_ months: Int) {
-        withAnimation(.smooth(duration: Motion.quick)) {
-            month = Calendars.local.date(byAdding: .month, value: months, to: month)!
-            day = nil
-        }
+        month = Calendars.local.date(byAdding: .month, value: months, to: month)!
+    }
+}
+
+/// Today's day on the raised control tile.
+private struct TodayTile: ViewModifier {
+    let on: Bool
+
+    func body(content: Content) -> some View {
+        if on { content.raised(.control, .inner) } else { content }
     }
 }
