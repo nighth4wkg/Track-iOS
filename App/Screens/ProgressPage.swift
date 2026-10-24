@@ -34,8 +34,8 @@ struct ProgressPage: View {
                     .pickerStyle(.segmented).controlSize(.large).fixedSize()
                 }
                 if let delta = change.change {
-                    Chip(text: change.volume == 0 ? "Nothing logged yet \(period.now)" : delta == 0 ? "Same as \(period.last)"
-                        : "\(delta > 0 ? "▲" : "▼") \(abs(delta))% vs \(period.last)", accent: delta > 0)
+                    Badge(text: change.volume == 0 ? "Nothing logged yet \(period.now)" : delta == 0 ? "Same as \(period.last)"
+                        : "\(delta > 0 ? "▲" : "▼") \(abs(delta))% vs \(period.last)", plain: !(delta > 0))
                 }
                 VStack(spacing: 8) {
                     VolumeBars(volumes: model.derived("bars \(period) \(dayKey(now))") { $0.volumes(period.bars, per: period, at: now) }, label: period.name)

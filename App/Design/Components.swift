@@ -154,15 +154,73 @@ struct RoundButton: View {
     let icon: String
     let label: String
     var active = false
+    /// An icon colour of its own (red for a delete).
+    var tint: Color?
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: IconSize.regular, weight: .semibold)).contentTransition(.symbolEffect(.replace))
-                .foregroundStyle(active ? Palette.accent : Palette.text)
+                .foregroundStyle(tint ?? (active ? Palette.accent : Palette.text))
                 .frame(width: Size.control, height: Size.control)
                 .raised(.control, .circle)
         }
         .buttonStyle(PressStyle()).accessibilityLabel(label)
+    }
+}
+
+/// The PWA's Arrange mode (ArrangeRow and Grip): each row on its own card with a grip at its end. Drag the grip and
+/// the row follows the finger while the others slide aside to make room; let go and it moves that many places.
+struct ArrangeList<Item: Identifiable, Row: View>: View {
+    let items: [Item]
+    /// What the grip is read as: "Move Push".
+    let name: (Item) -> String
+    let onMove: (_ from: Int, _ to: Int) -> Void
+    @ViewBuilder let row: (Item) -> Row
+    @State private var held: Item.ID?
+    @State private var drag: CGFloat = 0
+    /// One row and the gap under it: how far a drag goes per place.
+    @State private var step = Size.row
+
+    var body: some View {
+        let from = items.firstIndex { $0.id == held }
+        let steps = from.map { start in max(-start, min(items.count - 1 - start, Int((drag / step).rounded()))) } ?? 0
+        VStack(spacing: Space.s3) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                HStack(spacing: Space.s3) {
+                    row(item)
+                    Spacer(minLength: 0)
+                    Image(systemName: "line.3.horizontal").font(.system(size: IconSize.medium, weight: .semibold)).foregroundStyle(Palette.text)
+                        .frame(width: Size.control, height: Size.control).raised(.control, .circle)
+                        .contentShape(Circle())
+                        .gesture(DragGesture(coordinateSpace: .global)
+                            .onChanged { held = item.id; drag = $0.translation.height }
+                            .onEnded { _ in
+                                withAnimation(.smooth(duration: Motion.fast)) {
+                                    if steps != 0 { onMove(index, index + steps) }
+                                    held = nil
+                                    drag = 0
+                                }
+                            })
+                        .accessibilityLabel("Move \(name(item))")
+                }
+                .padding(Space.s4)
+                .frame(minHeight: Size.control + Space.s4 * 2)
+                .raised()
+                .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { step = $0 }
+                .offset(y: room(index, from, steps)).animation(.smooth(duration: Motion.fast), value: steps)
+                .offset(y: item.id == held ? drag : 0)
+                .zIndex(item.id == held ? 1 : 0)
+            }
+        }
+        .sensoryFeedback(.selection, trigger: steps)
+    }
+
+    /// The others make room: those between the held row's place and where it would go shift one place its way.
+    private func room(_ index: Int, _ from: Int?, _ steps: Int) -> CGFloat {
+        guard let from, index != from else { return 0 }
+        if steps > 0, index > from, index <= from + steps { return -step }
+        if steps < 0, index < from, index >= from + steps { return step }
+        return 0
     }
 }

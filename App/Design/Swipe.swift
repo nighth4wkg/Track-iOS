@@ -103,3 +103,25 @@ struct SwipeRow<Content: View>: View {
         .onDisappear { SwipeZones.frames[zone] = nil }
     }
 }
+
+/// The PWA's swipe to arm (ui/swipe.ts): the row stays put; a release that went left, a flick left, or a long press
+/// arms it (its end becomes a red delete), and a swipe back disarms it. While armed, a tap on the row disarms it
+/// instead of opening it (the caller checks `armed` in its tap).
+struct SwipeToArm: ViewModifier {
+    @Binding var armed: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .contentShape(Rectangle())
+            .gesture(HorizontalPan(onChange: { _ in }, onEnd: { x, velocity in
+                let arming = abs(velocity) > HorizontalPan.flick ? velocity < 0 : x < 0
+                withAnimation(.smooth(duration: Motion.fast)) { armed = arming }
+            }))
+            .onLongPressGesture(minimumDuration: Motion.hold) { withAnimation(.smooth(duration: Motion.fast)) { armed = true } }
+            .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
+    }
+}
+
+extension View {
+    func swipeToArm(_ armed: Binding<Bool>) -> some View { modifier(SwipeToArm(armed: armed)) }
+}

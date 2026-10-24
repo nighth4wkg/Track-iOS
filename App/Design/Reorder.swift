@@ -50,7 +50,7 @@ struct ReorderList: View {
                         HStack(spacing: 8) {
                             Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            Chip(text: "\(done)/\(exercise.sets.count)", accent: done > 0 && done == exercise.sets.count)
+                            Badge(text: "\(done)/\(exercise.sets.count)", plain: !(done > 0 && done == exercise.sets.count))
                             Image(systemName: "line.3.horizontal").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
                         }
                         .frame(height: Self.row - 32).padding(16)

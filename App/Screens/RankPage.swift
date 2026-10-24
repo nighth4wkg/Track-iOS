@@ -155,12 +155,13 @@ struct RankBar: View {
     let color: Color
 
     var body: some View {
-        Capsule().fill(Palette.input).frame(height: 8)
+        Color.clear.frame(height: Size.bar).sunk(.pill)
             .overlay(alignment: .leading) {
                 GeometryReader { geometry in
                     Capsule().fill(color).frame(width: max(0, min(1, progress)) * geometry.size.width)
                 }
             }
-            .animation(.smooth(duration: 0.6), value: progress)
+            .clipShape(Capsule())
+            .animation(.smooth(duration: Motion.slow), value: progress)
     }
 }

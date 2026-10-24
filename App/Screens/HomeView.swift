@@ -1,119 +1,120 @@
 import SwiftUI
 import TrackCore
 
-/// Home, as on the website: today's date over "Ready to train" (or "Keep going"), the workout in progress or the Up
-/// next card (swapped at once: Start opens the workout over it, and a fading native list would leave a gap), your splits (tap one for its page, swipe it left for Delete, hold and drag to move it), then this
-/// week's volume and the next achievement.
+/// Home, as the PWA's: the brand and Settings, today's date over "Ready to train" (or "Keep going"), the week ring
+/// with what's next (or the workout in progress), your splits (tap one for its page, swipe it left for its delete,
+/// Arrange to move them), then this week's volume and the next achievement.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Binding var settingsOpen: Bool
     @State private var open: String?
+    @State private var arranging = false
 
     var body: some View {
         let training = model.training
         let now = nowMillis()
-        let nextId = training.active == nil ? training.nextSplit?.split.id : nil
         Page(title: training.active == nil ? "Ready to train" : "Keep going",
-             caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), spacing: Space.s4, settingsOpen: $settingsOpen) {
-            if let error = model.loadError {
-                Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(Palette.dangerText)
+             caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), settingsOpen: $settingsOpen) {
+            VStack(alignment: .leading, spacing: 0) {
+                if let error = model.loadError {
+                    Label(error, systemImage: "exclamationmark.triangle").type(.t14).foregroundStyle(Palette.danger).padding(.bottom, Space.s4)
+                }
+                UpNextCard(training: training, now: now, create: create)
+                if !training.splits.isEmpty { splits(training).padding(.top, Space.s6) }
+                HomeTiles(training: training, now: now).padding(.top, Space.s3)
             }
-            if let active = training.active {
-                NativeList(items: [active], deleteLabel: "Discard", onDelete: { _ in model.discard() }, insets: EdgeInsets()) { ResumeCard(active: $0) }
-            } else if training.nextSplit != nil {
-                UpNextCard(training: training, now: now)
-            }
-            SectionHeading(title: "Your splits") {
-                if !training.splits.isEmpty { RoundButton(icon: "plus", label: "Create split", action: create) }
-            }
-            if training.splits.isEmpty {
-                FirstSplitCard(create: create)
-            } else {
-                SplitList(nextId: nextId) { open = $0 }
-                .navigationDestination(item: $open) { SplitPage(splitId: $0) }
-            }
-            HomeTiles(training: training, now: now)
+            .navigationDestination(item: $open) { SplitPage(splitId: $0) }
         }
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
+        .onChange(of: training.splits.count) { _, count in if count < 2 { arranging = false } }
+    }
+
+    private func splits(_ training: Training) -> some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            HStack {
+                Text("Your splits").type(.t20).foregroundStyle(Palette.text)
+                Spacer()
+                HStack(spacing: Space.s1) {
+                    if training.splits.count > 1 {
+                        RoundButton(icon: arranging ? "checkmark" : "arrow.up.arrow.down", label: arranging ? "Done arranging splits" : "Arrange splits") {
+                            withAnimation(.smooth(duration: Motion.standard)) { arranging.toggle() }
+                        }
+                    }
+                    if !arranging { RoundButton(icon: "plus", label: "New split", action: create) }
+                }
+            }
+            if arranging {
+                ArrangeList(items: training.splits, name: \.name, onMove: { from, to in model.update { $0.splits = $0.splits.moved(from, to: to) } }) { split in
+                    SplitLine(split: split)
+                }
+                .transition(.opacity)
+            } else {
+                VStack(spacing: Space.s3) {
+                    ForEach(training.splits) { split in
+                        SplitCard(split: split, next: training.active == nil && training.nextSplit?.split.id == split.id) { open = split.id }
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
     }
 
     private func create() {
-        model.naming = Naming(title: "Create a split", problem: { model.splitNameTaken($0) }, action: "Create split") { name in
+        model.naming = Naming(title: "New split", problem: { model.splitNameTaken($0) }, action: "Create") { name in
             let split = Split(name: name)
             model.update { $0.splits.append(split) }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { open = split.id }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { open = split.id }
         }
     }
 }
 
-/// Your splits on one card in iOS's own list: tap one for its page, swipe it left for Delete, hold and drag it to
-/// move it. The end of each row says In progress, Next, or ›.
-private struct SplitList: View {
-    @Environment(AppModel.self) private var model
-    let nextId: String?
-    let open: (String) -> Void
+/// A split's tile, name and size, as a row on Home and in Arrange.
+private struct SplitLine: View {
+    let split: Split
 
     var body: some View {
-        NativeList(items: model.training.splits, onDelete: { model.deleteSplit($0) },
-                   onMove: { from, to in model.update { $0.splits = $0.splits.moved(from, to: to) } }) { split in
-            Button { open(split.id) } label: { row(split).contentShape(Rectangle()) }
-                .buttonStyle(PressStyle())
-        }
-    }
-
-    private func row(_ split: Split) -> some View {
-        ListRow(mark: true, title: split.name, detail: split.exercises.isEmpty ? "Tap to add exercises" : split.summary) { end(split) }
-    }
-
-    @ViewBuilder private func end(_ split: Split) -> some View {
-        if model.training.active?.splitId == split.id {
-            Chip(text: "In progress")
-        } else if split.id == nextId {
-            Chip(text: "Next", accent: true)
-        } else {
-            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
-        }
-    }
-}
-
-/// The workout in progress: a live dot, its name, elapsed · sets logged · exercises, and Resume (Home's one primary).
-/// Swipe it left to discard it; Track asks first.
-private struct ResumeCard: View {
-    @Environment(AppModel.self) private var model
-    let active: Session
-
-    var body: some View {
-        Button { model.workoutOpen = true } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Palette.primary).frame(width: 8, height: 8)
-                        Text("Workout in progress").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.accent)
-                    }
-                    Text(active.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text).lineLimit(1)
-                }
-                HStack(spacing: 0) {
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        stat(elapsed(active.startedAt, context.date), "Elapsed")
-                    }
-                    stat("\(active.completedSets.count)", "Sets logged")
-                    stat("\(active.exercises.count)", "Exercises")
-                }
-                Label("Resume workout", systemImage: "play.fill").font(.headline).foregroundStyle(Palette.primaryText)
-                    .frame(maxWidth: .infinity, minHeight: 50).background(Capsule().fill(Palette.primary))
+        HStack(spacing: Space.s3) {
+            TrackMark(size: IconSize.medium).foregroundStyle(Palette.text)
+                .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(split.name).type(.t16).foregroundStyle(Palette.text)
+                Text(split.exercises.isEmpty ? "Tap to add exercises" : split.summary).type(.t14).foregroundStyle(Palette.muted)
             }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(PressStyle())
-        .sensoryFeedback(.impact(weight: .medium), trigger: model.workoutOpen) { _, open in open }
     }
+}
 
-    private func stat(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.headline).monospacedDigit().foregroundStyle(Palette.text)
-            Text(label).font(.caption).foregroundStyle(Palette.muted)
+/// One split on its own card: tap it for its page; swipe it left (or hold it) and its end becomes a red trash, which
+/// asks first. The one up next says so.
+private struct SplitCard: View {
+    @Environment(AppModel.self) private var model
+    let split: Split
+    let next: Bool
+    let open: () -> Void
+    @State private var armed = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button { if armed { armed = false } else { open() } } label: {
+                HStack(spacing: Space.s3) {
+                    SplitLine(split: split)
+                    Spacer(minLength: 0)
+                    if next && !armed { Badge(text: "Next").transition(.opacity) }
+                }
+                .padding(Space.s4)
+                .frame(minHeight: Size.control + Space.s4 * 2)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
+            if armed {
+                RoundButton(icon: "trash", label: "Delete \(split.name)", tint: Palette.danger) { armed = false; model.deleteSplit(split) }
+                    .padding(.trailing, Space.s4)
+                    .transition(.opacity)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .raised()
+        .swipeToArm($armed)
     }
 }
 
@@ -122,29 +123,4 @@ func elapsed(_ start: Int, _ now: Date) -> String {
     let seconds = max(0, Int(now.timeIntervalSince1970) - start / 1000)
     return seconds >= 3600 ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
         : String(format: "%d:%02d", seconds / 60, seconds % 60)
-}
-
-/// The first-run card: create a split, or start from a template in one tap.
-private struct FirstSplitCard: View {
-    @Environment(AppModel.self) private var model
-    let create: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            TrackMark(size: 28).foregroundStyle(Palette.text).frame(width: 56, height: 56).glass(radius: 16, fill: Palette.control, lifted: false)
-            Text("Create your first split.").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-            Text("Build a routine you can reuse for every session.").font(.subheadline).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-            Button(action: create) { Label("Create split", systemImage: "plus") }.buttonStyle(PrimaryButtonStyle())
-            Text("Or start from a template").font(.caption).foregroundStyle(Palette.muted).padding(.top, 4)
-            FlowLayout(spacing: 8) {
-                ForEach(SplitTemplate.all) { template in
-                    Button(template.name) { withAnimation(.smooth) { model.update { $0.splits.append(template.makeSplit()) } } }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
-                        .padding(.horizontal, 14).frame(minHeight: 40).glass(radius: 20, fill: Palette.control, lifted: false)
-                        .buttonStyle(PressStyle())
-                }
-            }
-        }
-        .padding(24).frame(maxWidth: .infinity).glass()
-    }
 }

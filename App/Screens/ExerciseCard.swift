@@ -39,7 +39,7 @@ struct ExerciseCard: View, Equatable {
                 HStack(spacing: 8) {
                     Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Chip(text: "\(done)/\(exercise.sets.count)", accent: finished)
+                    Badge(text: "\(done)/\(exercise.sets.count)", plain: !finished)
                     Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
                         .rotationEffect(.degrees(open ? 180 : 0))
                 }

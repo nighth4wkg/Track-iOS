@@ -90,6 +90,9 @@ enum Size {
     static let bar: CGFloat = 8
     /// The Progress chart.
     static let chart: CGFloat = 96
+    /// Home's week ring, and its stroke.
+    static let weekRing: CGFloat = 88
+    static let ringStroke: CGFloat = 8
     /// The narrowest a side-by-side tile gets.
     static let tileMin: CGFloat = 160
 }
@@ -161,6 +164,8 @@ enum Motion {
     static let screen = 0.45
     /// How small a pressed button gets.
     static let press = 0.97
+    /// A long press that arms a row's delete, as the PWA's list gesture.
+    static let hold = 0.5
 }
 
 /// The widest a page's column gets, and a card's corners.
@@ -272,12 +277,14 @@ struct PrimaryButtonStyle: ButtonStyle {
 /// Every other button: a RAISED control pill; one that deletes says so in red (the PWA's discard).
 struct SecondaryButtonStyle: ButtonStyle {
     var danger = false
+    /// Beside or in place of the main button, it takes the main button's height.
+    var height = Size.control
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .type(.t16)
             .foregroundStyle(danger ? Palette.danger : Palette.text)
-            .frame(maxWidth: .infinity, minHeight: Size.control)
+            .frame(maxWidth: .infinity, minHeight: height)
             .raised(.control, .pill)
             .scaleEffect(configuration.isPressed ? Motion.press : 1)
             .animation(.smooth(duration: Motion.fast), value: configuration.isPressed)

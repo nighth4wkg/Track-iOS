@@ -89,7 +89,7 @@ private struct ChoiceCard: View {
 struct PressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? Motion.press : 1)
+            .animation(.smooth(duration: Motion.fast), value: configuration.isPressed)
     }
 }
