@@ -1,157 +1,134 @@
 import SwiftUI
 import TrackCore
 
-/// One exercise, as the website's card: a header that opens and closes it (swipe it left for Edit and Delete, on iOS's
-/// own swipe), then its sets and Add set | the sides switch. As on the website, it stays open until closed by hand or
-/// until every set is done (taking the keyboard with it); one opened or closed by hand stays that way until its sets
-/// change between all done and not. Hold the
-/// name and drag to move the exercise (see ReorderList).
+/// One exercise, as the PWA's card. Closed: its number, name and "1 of 3 sets · last 60×8", tapped to open. Open: its
+/// name over its muscle and rest, ⋯ for its options (swipe the name left and ⋯ becomes a red ✕ that removes it, with
+/// Undo), the Set · Last · kg · Reps · RIR · Done columns, a row per set and Add set.
 struct ExerciseCard: View, Equatable {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
+    let number: Int
+    let open: Bool
     let unit: TrackCore.Settings.Unit
     let autoLog: Bool
-    let box: ReorderBox
     let bests: RecordBests
+    /// This exercise in the split's last workout: the Last column.
+    let last: Exercise?
+    let restSeconds: Int
+    let muscle: String
     var focus: Binding<String?>
     /// The field being typed in, when it's on this card: a card skipped as unchanged doesn't see the focus move, so
     /// this tells it (and its rows) when the keyboard comes or goes here.
     let focusHere: String?
-    @Binding var dragging: String?
-    @State private var manual: (open: Bool, finished: Bool)?
-    /// The sets' height. A closed card keeps its sets, clipped to nothing, so opening many at once (after a drag)
-    /// only animates heights instead of building every row in one frame.
-    @State private var setsHeight: CGFloat?
-    /// A set's new best, over the header for a moment with room around it (each one a new id, so a better one
-    /// restarts it). Drawn on the card, sized to the header, since the header's swipe clips anything larger.
-    @State private var best: (text: String, id: Int)?
-    @State private var headerHeight: CGFloat = 44
-    /// Edit (on the header's swipe) opens the picker; what's picked takes this exercise's place, sets and all.
-    @State private var replacing = false
-    @State private var picked: String?
+    let onOpen: () -> Void
+    let onOptions: () -> Void
+    @State private var armed = false
 
     var body: some View {
-        let done = exercise.sets.filter(\.done).count
-        let finished = !exercise.sets.isEmpty && done == exercise.sets.count
-        let open = (manual.map { $0.finished == finished ? $0.open : !finished } ?? !finished)
-        VStack(spacing: 0) {
-            SwipeRow(onEdit: { replacing = true }, onDelete: { model.removeExercise(exercise) }) {
-                HStack(spacing: 8) {
-                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Badge(text: "\(done)/\(exercise.sets.count)", plain: !finished)
-                    Image(systemName: "chevron.down").font(.subheadline.weight(.bold)).foregroundStyle(Palette.muted)
-                        .rotationEffect(.degrees(open ? 180 : 0))
+        Group {
+            if open { card } else { closed }
+        }
+        .onChange(of: open) { if !open { armed = false } }
+    }
+
+    private var closed: some View {
+        Button(action: onOpen) {
+            HStack(spacing: Space.s3) {
+                Text("\(number)").type(.t16).monospacedDigit().foregroundStyle(Palette.text)
+                    .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
+                    Text(Self.detail(exercise, nil, unit, last: last)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted).lineLimit(1)
                 }
-                .frame(minHeight: 44)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down").font(.system(size: IconSize.medium, weight: .semibold)).foregroundStyle(Palette.muted)
+            }
+            .padding(Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .raised()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressStyle())
+        .accessibilityValue("Closed")
+    }
+
+    private var card: some View {
+        let labels = exercise.setLabels
+        let next = exercise.sets.firstIndex { !$0.done }
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Space.s3) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(exercise.name).type(.t20).foregroundStyle(Palette.text)
+                    Text("\(muscle) · Rest \(restText(restSeconds))").type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
-                .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { manual = (!open, finished) } }
-                .reorderHandle(exercise.id, box: box, dragging: $dragging) {
-                    Text(exercise.name).font(.title3.weight(.semibold)).foregroundStyle(Palette.text).lineLimit(1)
-                        .padding(.horizontal, 20).frame(minWidth: 220, minHeight: 60, alignment: .leading).glass(fill: Palette.dialog)
-                }
-                .accessibilityElement(children: .combine) // one button: name and count, not the chevron ("Go Down")
-                .accessibilityAddTraits(.isButton)
-                .accessibilityValue(open ? "Open" : "Closed")
-                // Moving without the drag, for VoiceOver and Switch Control.
-                .accessibilityAction(named: "Move up") { move(by: -1) }
-                .accessibilityAction(named: "Move down") { move(by: 1) }
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
-            VStack(spacing: 8) {
-                    HStack(spacing: 8) {
-                        Text("SET").frame(width: 28)
-                        Text(unit.rawValue.uppercased()).frame(maxWidth: .infinity)
-                        Text("REPS").frame(maxWidth: .infinity)
-                        Text("RIR").frame(maxWidth: .infinity)
-                        Color.clear.frame(width: 52, height: 1)
-                    }
-                    .font(.caption2.weight(.bold)).foregroundStyle(Palette.muted)
-                    ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
-                        SetRow(exercise: exercise, set: set, number: index + 1, unit: unit, autoLog: autoLog, bests: bests,
-                               earlier: Array(exercise.sets.prefix(index)), focus: focus,
-                               focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil },
-                               onRecord: { best = ($0, (best?.id ?? 0) + 1) })
-                            .id(set.id) // what the keyboard scrolls to (SetKeyboard)
+                .onTapGesture { if armed { withAnimation(.smooth(duration: Motion.fast)) { armed = false } } }
+                ZStack {
+                    if armed {
+                        RoundButton(icon: "xmark", label: "Remove \(exercise.name)", tint: Palette.danger) { armed = false; model.removeExercise(exercise) }
                             .transition(.opacity)
+                    } else {
+                        RoundButton(icon: "ellipsis", label: "\(exercise.name) options", action: onOptions).transition(.opacity)
                     }
-                    HStack(spacing: 0) {
-                        Button { addSet() } label: { Label("Add set", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44) }
-                            .disabled(exercise.sets.count >= Limits.sets)
-                        Rectangle().fill(Palette.hairline).frame(width: 1, height: 20)
-                        Button { model.update { $0.updateActive(exercise: exercise.id) { $0 = $0.togglingSides() } } } label: {
-                            Label(sidesLabel, systemImage: "arrow.left.arrow.right").frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                    }
-                    .buttonStyle(PressStyle()).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
+                }
             }
-            .padding(.top, 8)
-            .fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { setsHeight = $0 }
-            .frame(height: open ? setsHeight : 0, alignment: .top)
-            .clipped()
-            .opacity(open ? 1 : 0)
-            .allowsHitTesting(open)
-            .accessibilityHidden(!open)
-        }
-        // focusHere, not the focus itself: reading that would redraw every card (and row) on each move of the keyboard.
-        .onChange(of: focusHere) { _, id in
-            // The keyboard's Next reaching a closed card opens it.
-            if id != nil, !open {
-                withAnimation(.smooth(duration: Motion.standard)) { manual = (true, finished) }
+            .swipeToArm($armed)
+            SetColumns {
+                Text("Set"); Text("Last"); Text(unit.rawValue); Text("Reps"); Text("RIR"); Text("Done")
             }
-        }
-        // Done or not done again: back to folding by itself (one opened by hand and re-ticked folds too). Its last
-        // set logged while typing in it: the card folds, so the keyboard goes too.
-        .onChange(of: finished) { _, now in
-            manual = nil
-            if now, focusHere != nil { focus.wrappedValue = nil }
-        }
-        .overlay(alignment: .top) {
-            if let best {
-                RecordNote(text: best.text).frame(height: headerHeight + 12).padding(.horizontal, -6).offset(y: -6)
-                    .transition(.scale(scale: 0.96).combined(with: .opacity))
+            .type(.t12).foregroundStyle(Palette.muted)
+            .padding(.top, Space.s4)
+            .accessibilityHidden(true)
+            VStack(spacing: Space.s2) {
+                ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
+                    SetRow(exercise: exercise, set: set, label: labels[index], next: index == next, unit: unit, autoLog: autoLog, bests: bests,
+                           last: last.flatMap { $0.sets.indices.contains(index) ? $0.sets[index] : nil },
+                           focus: focus,
+                           focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil })
+                        .id(set.id) // what the keyboard scrolls to (SetKeyboard)
+                        .transition(.opacity)
+                }
             }
+            .padding(.top, Space.s2)
+            Button { model.update { $0.updateActive(exercise: exercise.id) { $0 = $0.addingSet() } } } label: { Label("Add set", systemImage: "plus") }
+                .buttonStyle(SecondaryButtonStyle())
+                .disabled(exercise.sets.count >= Limits.sets)
+                .padding(.top, Space.s4)
         }
-        .animation(.smooth(duration: Motion.standard), value: best?.id)
-        .task(id: best?.id) { if best != nil { try? await Task.sleep(for: .seconds(RecordNote.seconds)); best = nil } }
-        .padding(16)
-        .glass(lifted: false)
-        .clipShape(RoundedRectangle(cornerRadius: Measure.card, style: .continuous))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.cards[exercise.id] = $0 }
-        .animation(.smooth(duration: Motion.standard), value: open)
+        .padding(Space.s4)
+        .raised()
         .animation(.smooth(duration: Motion.quick), value: exercise.sets.map(\.id))
-        .sensoryFeedback(.selection, trigger: open)
-        // The swap asks first once the picker has gone (its split changes too).
-        .sheet(isPresented: $replacing, onDismiss: {
-            guard let name = picked else { return }
-            picked = nil
-            model.swap(exercise, for: name, inWorkout: true, splitId: model.training.active?.splitId)
-        }) {
-            ExercisePicker(replacing: exercise.name) { picked = $0 }
-        }
     }
 
     /// Saving a set redraws only its card, not every card in the workout (the keyboard focus updates each by itself).
     static func == (a: Self, b: Self) -> Bool {
-        a.exercise == b.exercise && a.unit == b.unit && a.autoLog == b.autoLog && a.bests.id == b.bests.id
-            && a.focusHere == b.focusHere
+        a.exercise == b.exercise && a.number == b.number && a.open == b.open && a.unit == b.unit && a.autoLog == b.autoLog
+            && a.bests.id == b.bests.id && a.last == b.last && a.restSeconds == b.restSeconds && a.muscle == b.muscle && a.focusHere == b.focusHere
     }
 
-    private var sidesLabel: String {
-        switch exercise.startingSide { case nil: "Sides: both"; case .left?: "Sides: left first"; case .right?: "Sides: right first" }
+    /// "1 of 3 sets · last 60×8": done of the sets as counted, and last time's first set.
+    static func detail(_ exercise: Exercise, _ previous: Session?, _ unit: TrackCore.Settings.Unit, last: Exercise? = nil) -> String {
+        let last = last ?? previous?.exercises.first { $0.id == exercise.id || $0.name == exercise.name }
+        return "\(exercise.doneCount) of \(count(exercise.setCount, "set")) · last \(lastText(last?.sets.first, unit))"
     }
 
-    /// A new set with the last one's weight and reps to start from (RIR blank), on the other side if in sides.
-    private func addSet() {
-        model.update { $0.updateActive(exercise: exercise.id) { exercise in exercise.sets.append(exercise.nextSet) } }
+    /// A set from last time, compact so it fits its column on the smallest phones: "60×8", or "–".
+    static func lastText(_ set: TrainingSet?, _ unit: TrackCore.Settings.Unit) -> String {
+        guard let set, set.isValid, let kg = set.kg, let reps = set.reps else { return "–" }
+        return "\(TrainingSet.display(kg: kg, unit: unit))×\(reps)"
     }
+}
 
-    private func move(by step: Int) {
-        model.update { training in
-            guard let from = training.active?.exercises.firstIndex(where: { $0.id == exercise.id }),
-                  training.active?.exercises.indices.contains(from + step) == true else { return }
-            training.active?.exercises.swapAt(from, from + step)
+/// The set grid's six columns, as the PWA's .sets: each as wide as a cell at most, spread across the card.
+struct SetColumns<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: Space.s1) {
+            Group(subviews: content) { cells in
+                ForEach(cells) { cell in cell.frame(maxWidth: Size.cell).frame(maxWidth: .infinity) }
+            }
         }
     }
 }

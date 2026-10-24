@@ -10,33 +10,44 @@ extension AppModel {
         update { $0.restUntil = seconds == 0 ? nil : max(nowMillis(), $0.restUntil ?? 0) + seconds * 1000 }
     }
 
-    /// Removes a set; its exercise goes too when it was the last one. One Undo brings both back.
-    func removeSet(_ setId: String, in exerciseId: String) {
-        guard let active = training.active, let at = active.exercises.firstIndex(where: { $0.id == exerciseId }),
-              let index = active.exercises[at].sets.firstIndex(where: { $0.id == setId }) else { return }
-        let exercise = active.exercises[at], set = exercise.sets[index], sessionId = active.id
-        let last = exercise.sets.count == 1
+    /// The rest's −15s and +15s, as the PWA's: from now if none is running; one pushed into the past ends.
+    func shiftRest(by seconds: Int) {
         update { training in
-            if last { training.active?.exercises.remove(at: at) } else { training.updateActive(exercise: exerciseId) { $0.sets.remove(at: index) } }
+            let until = (training.restUntil ?? nowMillis()) + seconds * 1000
+            training.restUntil = until > nowMillis() ? until : nil
         }
-        show(last ? "\(exercise.name) removed" : "Set removed") { [weak self] in
+    }
+
+    /// Removes a set as counted (both sides of a pair); an exercise's only set takes the exercise with it. One Undo
+    /// brings it back.
+    func removeSet(_ setId: String, in exerciseId: String) {
+        guard let active = training.active, let exercise = active.exercises.first(where: { $0.id == exerciseId }),
+              let group = exercise.setGroups.first(where: { $0.contains { $0.id == setId } }),
+              let index = exercise.sets.firstIndex(where: { $0.id == group[0].id }) else { return }
+        if exercise.setCount == 1 { removeExercise(exercise); return }
+        let sessionId = active.id, ids = Set(group.map(\.id))
+        update { $0.updateActive(exercise: exerciseId) { $0.sets.removeAll { ids.contains($0.id) } } }
+        show("Set removed.") { [weak self] in
             self?.update { training in
                 guard training.active?.id == sessionId else { return }
-                if last, !(training.active?.exercises.contains { $0.id == exercise.id } ?? true) {
-                    let end = training.active?.exercises.count ?? 0
-                    training.active?.exercises.insert(exercise, at: min(at, end))
-                } else {
-                    training.updateActive(exercise: exerciseId) { $0.sets.insert(set, at: min(index, $0.sets.count)) }
+                training.updateActive(exercise: exerciseId) { exercise in
+                    guard !exercise.sets.contains(where: { ids.contains($0.id) }) else { return }
+                    exercise.sets.insert(contentsOf: group, at: min(index, exercise.sets.count))
                 }
             }
         }
     }
 
+    /// Removes an exercise from the workout at once, with Undo (its split keeps it).
     func removeExercise(_ exercise: Exercise) {
-        confirm = Confirm(title: "Remove \(exercise.name)?",
-                          message: "Remove this exercise and its entered sets from the current workout. Your saved split and past workouts stay unchanged.",
-                          label: "Remove exercise", destructive: true) { [weak self] in
-            self?.update { $0.active?.exercises.removeAll { $0.id == exercise.id } }
+        guard let active = training.active, let index = active.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
+        let sessionId = active.id
+        update { $0.active?.exercises.remove(at: index) }
+        show("Exercise removed.") { [weak self] in
+            self?.update { training in
+                guard training.active?.id == sessionId, !(training.active?.exercises.contains { $0.id == exercise.id } ?? true) else { return }
+                training.active?.exercises.insert(exercise, at: min(index, training.active?.exercises.count ?? 0))
+            }
         }
     }
 
@@ -61,14 +72,11 @@ extension AppModel {
                           label: "Swap", action: change)
     }
 
-    /// Asks first, as the website does: what will be saved, and that unmarked sets are left out.
+    /// The owner's rule, as the PWA's: a workout saves only when every set is done (the header's count is full).
     func finish() {
         guard let active = training.active else { return }
-        let done = active.completedSets.count
-        guard done > 0 else { show("Tap the circle beside each set you’ve done, then finish."); return }
-        confirm = Confirm(title: "Finish this workout?",
-                          message: "Save \(count(done, "done set")). Sets not marked done are left out.",
-                          label: "Finish workout") { [weak self] in self?.save() }
+        guard active.exercises.doneCount >= active.exercises.plannedCount else { show("Mark all exercises done first."); return }
+        save()
     }
 
     func save() {
@@ -88,8 +96,13 @@ extension AppModel {
 
     func discard() {
         confirm = Confirm(title: "Discard this workout?", message: "Its sets won’t be saved. Your split stays.", label: "Discard workout", destructive: true) { [weak self] in
-            self?.update { $0.discard() }
-            self?.workoutOpen = false
+            guard let self, let kept = training.active else { return }
+            update { $0.discard() }
+            workoutOpen = false
+            show("Workout discarded.") { [weak self] in
+                guard let self, training.active == nil else { return }
+                update { $0.active = kept }
+            }
         }
     }
 

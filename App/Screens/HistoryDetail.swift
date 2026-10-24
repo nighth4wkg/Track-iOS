@@ -83,7 +83,7 @@ struct HistoryDetail: View {
                 .font(.subheadline).foregroundStyle(Palette.muted)
             HStack(alignment: .top, spacing: 16) {
                 stat("Exercises", "\(exercises)")
-                stat("Sets", "\(current.completedSets.count)")
+                stat("Sets", "\(current.loggedCount)")
                 stat("Volume", weight(current.volume, unit), small: unit.rawValue, accent: true).frame(minWidth: 120)
             }
             .padding(.top, 20)

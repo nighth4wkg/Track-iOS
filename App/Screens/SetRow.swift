@@ -1,34 +1,32 @@
 import SwiftUI
 import TrackCore
 
-/// A set, as the website's row: its number (or side), kg · reps · RIR, and the ✓. Last time's numbers are suggestions
-/// with a faint ✓ ("tap to repeat"); in auto mode, changing a number logs the set. A set that beats every earlier
-/// result turns its ✓ into a trophy, glows, and its card's header says what it beat for a moment (RecordNote). Swipe left to arm a red ✕ that deletes it (Undo).
-/// As on the website, what you type shows at once (✓, trophy, errors) and is saved when you pause, leave the row or
-/// tap ✓, so typing never waits on the whole workout redrawing.
+/// A set, as the PWA's row: its number (green on the next to do), last time's numbers, kg · reps · RIR, and ✓. In
+/// auto mode, changing a number logs the set. Swipe left and ✓ becomes a red ✕ that deletes it (Undo). A new heaviest
+/// set says what it beat under the row.
+/// What you type shows at once (✓, errors) and is saved when you pause, leave the row or tap ✓, so typing never waits
+/// on the whole workout redrawing.
 struct SetRow: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     let set: TrainingSet
-    let number: Int
+    /// "1", or "1L" / "1R" for a side.
+    let label: String
+    /// The first set still to do.
+    let next: Bool
     let unit: TrackCore.Settings.Unit
     let autoLog: Bool
     let bests: RecordBests
-    let earlier: [TrainingSet]
+    /// The same set last time: the Last column.
+    let last: TrainingSet?
     var focus: Binding<String?>
     /// The field being typed in when it's in this row ("kg", "reps", "rir"): read instead of the focus, so moving the
     /// keyboard redraws only the rows it leaves and enters.
     let focused: String?
-    /// A best to show in the card's header, as what it beat.
-    var onRecord: (String) -> Void = { _ in }
     @State private var weight = ""
     @State private var reps = ""
     @State private var rir = ""
-    @State private var arm: CGFloat = 0
     @State private var armed = false
-    @State private var celebrated: String?
-    @State private var burst = 0
-    @State private var hint = false
     /// Auto mode logs the set once a key is pressed in its RIR, even the same number again. Tapping into the RIR, or a
     /// RIR only carried over, doesn't count.
     @State private var rirTyped = false
@@ -38,39 +36,43 @@ struct SetRow: View {
 
     var body: some View {
         let shown = typed
-        let record = bests.record(for: exercise.name, shown, earlierToday: earlier)
-        let carried = !shown.done && shown.kg != nil && shown.reps != nil
         let error = TrainingSet.inputError(weight: weight, reps: reps, rir: rir, unit: unit)
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Text(set.side.map { $0 == .left ? "L" : "R" } ?? "\(number)")
-                    .font(.body.weight(.bold)).monospacedDigit()
-                    .foregroundStyle(record != nil ? Palette.record : shown.done ? Palette.accent : Palette.muted)
-                    .frame(width: 28)
-                field(weight, id: "kg", label: "weight in \(unit.rawValue)", glow: record != nil, done: shown.done, bad: error?.fields.contains("kg") == true)
-                field(reps, id: "reps", label: "reps", glow: record != nil, done: shown.done, bad: error?.fields.contains("reps") == true)
-                field(rir, id: "rir", label: "RIR", glow: record != nil, done: shown.done, bad: error?.fields.contains("rir") == true)
-                check(done: shown.done, carried: carried, record: record != nil)
+        let heaviest: Double? = if case .heaviest(let before)? = bests.record(for: exercise.name, shown) { before } else { nil }
+        let best = heaviest != nil && shown.done
+        let name = set.side.map { "Set \(label), \($0.rawValue) side" } ?? "Set \(label)"
+        VStack(alignment: .leading, spacing: Space.s2) {
+            SetColumns {
+                Text(label).type(.t16).fontWeight(.semibold).monospacedDigit()
+                    .foregroundStyle(next ? Palette.accent : Palette.text)
+                    .frame(maxWidth: .infinity, minHeight: Size.control).raised(.control, .inner)
+                    .accessibilityLabel(name)
+                Text(ExerciseCard.lastText(last, unit)).type(.t12).monospacedDigit().foregroundStyle(Palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .accessibilityLabel("Last time \(ExerciseCard.lastText(last, unit))")
+                field(weight, id: "kg", label: "\(unit.rawValue), \(name)", bad: error?.fields.contains("kg") == true)
+                field(reps, id: "reps", label: "Reps, \(name)", bad: error?.fields.contains("reps") == true)
+                field(rir, id: "rir", label: "Reps in reserve, \(name)", bad: error?.fields.contains("rir") == true)
+                check(done: shown.done, name: name)
             }
-            if let shownError { Text(shownError).font(.caption).foregroundStyle(Palette.dangerText) }
+            if let shownError { Text(shownError).type(.t12).foregroundStyle(Palette.danger) }
+            if let heaviest, best {
+                HStack(spacing: Space.s2) {
+                    Badge(text: "New best")
+                    Text("\(TrainingSet.display(kg: shown.kg ?? 0, unit: unit)) \(unit.rawValue) beats \(TrainingSet.display(kg: heaviest, unit: unit)) \(unit.rawValue)")
+                        .type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                }
+                .transition(.opacity.combined(with: .scale(scale: Motion.press)))
+            }
         }
         .onChange(of: error?.message) { _, now in withAnimation(.smooth(duration: Motion.standard)) { shownError = now } }
-        .contentShape(Rectangle())
-        .gesture(HorizontalPan(onChange: { x in
-            arm = max(0, min(1, (armed ? 1 : 0) - x / 72))
-        }, onEnd: { _, velocity in
-            let arming = abs(velocity) > HorizontalPan.flick ? velocity < 0 : arm > 0.5
-            withAnimation(.smooth(duration: Motion.fast)) { arm = arming ? 1 : 0 }
-            armed = arming
-        }))
+        .swipeToArm($armed)
         .animation(.smooth(duration: Motion.quick), value: shown.done)
-        .animation(.smooth(duration: Motion.standard), value: hint)
-        .onAppear { load(unit); celebrated = signature(record, shown) }
+        .animation(.smooth(duration: Motion.standard), value: best)
+        .onAppear { load(unit) }
         .onDisappear(perform: flush)
         // Leaving the app saves a number still waiting on its pause.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in if pending != nil { flush() } }
         .onChange(of: set) { load(unit) }.onChange(of: unit) { load(unit) }
-        .onChange(of: signature(record, shown)) { _, now in celebrate(now, record.map { RecordNote.describe($0, shown, unit: unit) }) }
         .onChange(of: rir) { if let n = Int(rir), n > Limits.rir { rir = String(Limits.rir) } } // up to Limits.rir
         .onChange(of: focused) { old, now in
             // Leaving the row saves it straight away; tapping a number arms it, so the first keystroke replaces it.
@@ -79,49 +81,35 @@ struct SetRow: View {
         }
         // A key on the workout's one keyboard (SetKeyboard), for the field being typed in here.
         .onReceive(NotificationCenter.default.publisher(for: KeyInput.typed)) { if let focused { key(focused, $0.object as? String) } }
-        .sensoryFeedback(.success, trigger: burst)
+        .sensoryFeedback(.success, trigger: best) { _, now in now }
     }
 
-    private func check(done: Bool, carried: Bool, record: Bool) -> some View {
+    /// ✓ (green once done), or the red ✕ while armed.
+    private func check(done: Bool, name: String) -> some View {
         Button { armed ? delete() : tapCheck() } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(record ? Palette.record : done ? Palette.primary : Palette.control)
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(LinearGradient(colors: [Palette.danger, Palette.dangerDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .opacity(arm)
-                Image(systemName: record ? "trophy.fill" : "checkmark").font(.body.weight(.bold))
-                    .foregroundStyle(done ? Palette.primaryText : Palette.muted.opacity(carried ? 0.9 : 0.4))
-                    .opacity(1 - arm).scaleEffect((1 - 0.4 * arm) * (hint ? 1.12 : 1))
-                Image(systemName: "xmark").font(.body.weight(.bold)).foregroundStyle(.white)
-                    .opacity(arm).scaleEffect(0.6 + 0.4 * arm)
-            }
-            .frame(width: 52, height: 48)
-            .glass(radius: 14, fill: .clear, lifted: false)
+            Image(systemName: armed ? "xmark" : "checkmark").font(.system(size: IconSize.medium, weight: .bold))
+                .foregroundStyle(armed ? Palette.danger : done ? Palette.primaryText : Palette.muted)
+                .frame(maxWidth: .infinity, minHeight: Size.control)
+                .raised(done && !armed ? .green : .control, .inner)
+                .contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(.borderless)
-        .accessibilityLabel(armed ? "Delete \(exercise.name) set \(number)"
-            : "\(exercise.name) set \(number)\(record ? ", new best" : ""): \(done ? "done. Tap to undo" : carried ? "same as last time. Tap to log" : "mark done")")
+        .buttonStyle(PressStyle())
+        .accessibilityLabel(armed ? "Delete \(name)" : done ? "\(name) done" : "Mark \(name) done")
+        .accessibilityAddTraits(done ? .isSelected : [])
         .accessibilityAction(named: "Delete set") { delete() } // the swipe, for VoiceOver
         .sensoryFeedback(trigger: done) { _, now in now ? .impact(weight: .medium) : .selection }
-        .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
     }
 
-    /// A number field, named for VoiceOver as the website's: "Bench Press set 1 reps". Tapping it types into it on the
-    /// workout's one keyboard. Its edge: gold for a best, red out of range, the accent while typing in it.
-    private func field(_ text: String, id: String, label: String, glow: Bool, done: Bool, bad: Bool) -> some View {
-        Text(text.isEmpty ? "—" : text).lineLimit(1).minimumScaleFactor(0.5)
-            .font(.body.weight(.bold)).monospacedDigit()
-            .foregroundStyle(text.isEmpty ? Palette.muted : glow ? Palette.record : done ? Palette.accent : Palette.text)
-            .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity, minHeight: 48)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(glow ? Palette.record.opacity(0.8) : bad ? Palette.dangerText
-                : focused == id ? Palette.accent : .clear, lineWidth: 1.5))
-            .shadow(color: Palette.record.opacity(glow && hint ? 0.45 : 0), radius: 6)
+    /// A number field on the workout's one keyboard, named for VoiceOver as the PWA's: "Reps, Set 1". Its ring: red
+    /// out of range, green while typing in it.
+    private func field(_ text: String, id: String, label: String, bad: Bool) -> some View {
+        Text(text).type(.t16).fontWeight(.semibold).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+            .foregroundStyle(Palette.text)
+            .frame(maxWidth: .infinity, minHeight: Size.control)
+            .sunk(.inner, ring: bad ? Palette.danger : focused == id ? Palette.accent : nil)
             .contentShape(Rectangle())
             .onTapGesture { focus.wrappedValue = "\(set.id).\(id)" }
-            .accessibilityLabel("\(exercise.name) set \(number) \(label)").accessibilityValue(text)
+            .accessibilityLabel(label).accessibilityValue(text)
             .accessibilityAddTraits(focused == id ? [.isButton, .isSelected] : .isButton)
             .accessibilityAction { focus.wrappedValue = "\(set.id).\(id)" }
     }
@@ -141,22 +129,7 @@ struct SetRow: View {
         if field == "kg" { weight = value } else if field == "reps" { reps = value } else { rir = value }
         typedInto(field)
     }
-    private func signature(_ record: LiveRecord?, _ set: TrainingSet) -> String? { record.map { "\($0):\(set.kg ?? 0):\(set.reps ?? 0)" } }
-
-    /// A set that becomes a best celebrates at once; a best that improves celebrates again. One already there when the
-    /// row appeared stays calm.
-    private func celebrate(_ now: String?, _ text: String?) {
-        guard let now, now != celebrated else { return }
-        celebrated = now
-        if let text { onRecord(text); AccessibilityNotification.Announcement("New best. " + text).post() }
-        burst += 1
-        withAnimation(.smooth(duration: Motion.standard)) { hint = true }
-        let mine = burst
-        DispatchQueue.main.asyncAfter(deadline: .now() + RecordNote.seconds) { if burst == mine { withAnimation(.smooth) { hint = false } } }
-    }
-
     private func delete() {
-        withAnimation(.smooth(duration: Motion.fast)) { arm = 0 }
         armed = false
         withAnimation(.smooth(duration: Motion.quick)) { model.removeSet(set.id, in: exercise.id) }
     }

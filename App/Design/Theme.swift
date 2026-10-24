@@ -99,6 +99,9 @@ enum Size {
     /// Home's week ring, and its stroke.
     static let weekRing: CGFloat = 88
     static let ringStroke: CGFloat = 8
+    /// The rest timer's ring and its line.
+    static let restRing: CGFloat = 36
+    static let restStroke: CGFloat = 4
     /// The narrowest a side-by-side tile gets.
     static let tileMin: CGFloat = 160
 }
@@ -267,12 +270,15 @@ extension View {
 /// The screen's one main action: the green pill (RAISED green), shrinking a little while pressed.
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
+    /// In a bar beside other controls (Finish, Skip): a control's height and as wide as its label.
+    var compact = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .type(.t16).fontWeight(.bold)
             .foregroundStyle(Palette.primaryText)
-            .frame(maxWidth: .infinity, minHeight: Size.primary)
+            .padding(.horizontal, compact ? Space.s4 : 0)
+            .frame(maxWidth: compact ? nil : .infinity, minHeight: compact ? Size.control : Size.primary)
             .raised(.green, .pill)
             .scaleEffect(configuration.isPressed ? Motion.press : 1)
             .opacity(enabled ? 1 : 0.45)

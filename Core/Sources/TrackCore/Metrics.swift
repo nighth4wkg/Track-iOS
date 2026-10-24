@@ -87,7 +87,7 @@ extension Array where Element == Session {
     public func amount(_ tally: Tally) -> Double {
         switch tally {
         case .volume: reduce(0) { $0 + $1.volume }
-        case .sets: Double(reduce(0) { $0 + $1.completedSets.count })
+        case .sets: Double(reduce(0) { $0 + $1.loggedCount })
         case .workouts: Double(count)
         case .time: Double(reduce(0) { $0 + $1.minutes })
         }

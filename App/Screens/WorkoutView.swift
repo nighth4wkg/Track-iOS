@@ -1,16 +1,18 @@
 import SwiftUI
 import TrackCore
 
-/// The active workout, as on the website: ‹ (or a swipe in from the left edge) keeps it for later, the name opens its
-/// options, Finish; the progress bar; a one-line guide until the first workout is finished; a card per exercise (hold
-/// a name and drag to move it); Add exercise; and the rest timer floating at the bottom. The keyboard's Next walks
-/// weight → reps → RIR → next set.
+/// The workout in progress, as the PWA's: ⌄ keeps it for later (or a swipe in from the left edge), the name opens its
+/// options, Finish; the progress bar; one exercise open at a time (the first with a set to do, unless you opened
+/// another), each closed one a card to tap; Add exercise; the rest timer floating at the bottom. The keyboard's Next
+/// walks weight → reps → RIR → next set.
 struct WorkoutView: View {
     @Environment(AppModel.self) private var model
-    @State private var addingExercise = false
-    @State private var options = false
-    @State private var dragging: String?
-    @State private var box = ReorderBox()
+    @State private var sheet: WorkoutSheet?
+    /// The exercise opened by hand; nil follows the workout (the first with a set to do).
+    @State private var opened: String?
+    @State private var arranging = false
+    /// Picked in the swap picker: swapped (asking first when the split has it) once the picker has gone.
+    @State private var picked: (exercise: Exercise, name: String)?
     /// How far the page is pulled right by the edge swipe: live while the finger is down (gone, animated, if the
     /// system cancels the swipe), then the slide away.
     @GestureState(resetTransaction: Transaction(animation: .smooth(duration: Motion.quick))) private var drag: CGFloat = 0
@@ -22,85 +24,151 @@ struct WorkoutView: View {
     var body: some View {
         if let active = model.training.active {
             let fields = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
-            let total = active.exercises.reduce(0) { $0 + $1.sets.count }
+            let done = active.exercises.doneCount, planned = active.exercises.plannedCount
+            let expanded = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
+                ?? (active.exercises.first { $0.doneCount < $0.setCount } ?? active.exercises.first)?.id
+            let previous = model.derived("previous \(active.splitId)") { $0.filter { $0.splitId == active.splitId }.max { ($0.finishedAt ?? 0) < ($1.finishedAt ?? 0) } }
+            let unit = model.training.settings.unit
             let bests = model.bests
-            NavigationStack {
-                ScrollView {
-                    VStack(spacing: 12) {
-                        Color.clear.frame(height: 0).id("top")
-                        ProgressView(value: Double(active.completedSets.count), total: Double(max(total, 1)))
-                            .tint(Palette.primary).scaleEffect(x: 1, y: 1.6, anchor: .center)
-                            .animation(.smooth, value: active.completedSets.count)
-                            .padding(.bottom, 4)
-                        if model.training.sessions.isEmpty {
-                            Text((model.training.settings.logSets == .manual ? "Tap ✓ when a set is done." : "Fill in a set’s numbers down to RIR to log it, or tap ✓ to repeat last time.")
-                                 + " Swipe a set left to delete it.")
-                                .font(.footnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, alignment: .leading)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header(active, done: done, planned: planned)
+                    RankBar(progress: Double(done) / Double(max(1, planned)), color: Palette.accent)
+                        .padding(.top, Space.s3)
+                        .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
+                    if arranging {
+                        ArrangeList(items: active.exercises, name: \.name, onMove: { from, to in
+                            model.update { training in
+                                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
+                                training.active?.exercises = moved
+                            }
+                        }) { exercise in
+                            HStack(spacing: Space.s3) {
+                                Text("\((active.exercises.firstIndex { $0.id == exercise.id } ?? 0) + 1)").type(.t16).monospacedDigit()
+                                    .foregroundStyle(Palette.text).frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
+                                    Text(ExerciseCard.detail(exercise, previous, unit)).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                                }
+                            }
                         }
-                        ForEach(active.exercises) { exercise in
-                            ExerciseCard(exercise: exercise, unit: model.training.settings.unit, autoLog: model.training.settings.logSets != .manual,
-                                         box: box, bests: bests, focus: $focus,
-                                         focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
-                                         dragging: $dragging).equatable()
+                        .padding(.top, Space.s4)
+                        .transition(.opacity)
+                    } else {
+                        VStack(spacing: Space.s3) {
+                            ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
+                                ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
+                                             autoLog: model.training.settings.logSets != .manual, bests: bests,
+                                             last: previous?.exercises.first { $0.id == exercise.id || $0.name == exercise.name },
+                                             restSeconds: model.training.settings.restSeconds,
+                                             muscle: LiftTable.ranking(for: exercise.name, choices: model.training.settings.lifts ?? [:])?.groups.first ?? "Exercise",
+                                             focus: $focus,
+                                             focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
+                                             onOpen: { withAnimation(.smooth(duration: Motion.standard)) { opened = exercise.id } },
+                                             onOptions: { sheet = .exercise(exercise.id) })
+                                    .equatable()
+                            }
+                            Button { sheet = .add } label: { Label("Add exercise", systemImage: "plus") }
+                                .buttonStyle(SecondaryButtonStyle())
+                                .id("bottom")
                         }
-                        Button { addingExercise = true } label: { Label("Add exercise", systemImage: "plus") }
-                            .font(.body.weight(.semibold)).foregroundStyle(Palette.text).frame(minHeight: 44)
-                            .buttonStyle(PressStyle())
-                            .id("bottom")
+                        .padding(.top, Space.s4)
+                        .transition(.opacity)
                     }
-                    .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 24)
-                    .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
-                    // While an exercise is held the cards wait unseen, moved without animating (ReorderList shows the moves).
-                    .transaction { if dragging != nil { $0.animation = nil } }
-                    .animation(.smooth(duration: Motion.standard), value: active.exercises.map(\.id))
-                    .animation(.smooth(duration: Motion.standard), value: active.exercises.map { $0.sets.allSatisfy(\.done) }) // a card folding moves the rest
-                    .opacity(dragging == nil ? 1 : 0).allowsHitTesting(dragging == nil)
-                    .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
                 }
-                .scrollEdgeEffectStyle(.hard, for: .top) // the timer stays readable over scrolled sets
-                .scrollEdgeEffectStyle(.soft, for: .bottom) // a fade behind the capsule, never a hard line across the cards
-                .scrollDisabled(dragging != nil).onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.viewport = $0 }
-                // A drag the system cancelled leaves the list up: a tap puts the cards back.
-                .overlay { if let held = dragging { ReorderList(exercises: active.exercises, held: held, box: box).transition(.opacity)
-                    .onTapGesture { withAnimation(.smooth(duration: Motion.standard)) { dragging = nil } } } }
-                .scrollDismissesKeyboard(.interactively)
-                .setKeyboard($focus)
-                .background(Backdrop())
-                .navigationTitle(active.name)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar { toolbar(active, done: active.completedSets.count, total: total, fields: fields) }
-                // A bar (iOS 26), not an inset: the page blurs and fades behind it as it does under the top bar, so the
-                // cards' edges don't frame the capsule.
-                .safeAreaBar(edge: .bottom) {
-                    // While typing, one capsule over the keyboard (the rest's time, Next, Done) instead of the rest capsule.
-                    // Without the keyboard the capsule dips into the home indicator's strip, 16pt from the screen's edge,
-                    // as iOS's own floating bars do (a phone with a home button has no strip, so it stays put).
-                    Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().padding(.bottom, -max(0, homeIndicator - 8)) } }
-                        .animation(.smooth(duration: Motion.quick), value: focus == nil)
-                }
+                .padding(.horizontal, Space.s4).padding(.top, Space.s4).padding(.bottom, Space.s6)
+                .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
+                .animation(.smooth(duration: Motion.standard), value: active.exercises.map(\.id))
+                .animation(.smooth(duration: Motion.standard), value: expanded)
+                .animation(.smooth(duration: Motion.standard), value: arranging)
+                .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
             }
-            .onDrop(of: [.text], delegate: drop(active))
-            // Behind it the whole screen takes the drop too, status bar included: let go anywhere and the drag ends.
-            .background { Color.clear.ignoresSafeArea().onDrop(of: [.text], delegate: drop(active)) }
-            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { box.height = $0 }
+            .scrollDismissesKeyboard(.interactively)
+            .setKeyboard($focus)
             .background(Backdrop())
+            // A bar (iOS 26), not an inset: the page fades behind it.
+            .safeAreaBar(edge: .bottom) {
+                // While typing, one bar over the keyboard (the rest's time, Next, Done) instead of the rest timer. Without
+                // the keyboard the timer sits as far from the screen's edge as the nav pill.
+                Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().padding(.bottom, Space.s4 - homeIndicator) } }
+                    .animation(.smooth(duration: Motion.quick), value: focus == nil)
+            }
             .offset(x: pull + drag)
-            .shadow(color: .black.opacity(pull + drag > 0 ? 0.25 : 0), radius: 20)
+            .shadow(color: .black.opacity(pull + drag > 0 ? 0.25 : 0), radius: Space.s5)
             .overlay(alignment: .leading) { edgeSwipe }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             // It stays built while it's left for later (MainView): opening starts it afresh, leaving ends the typing.
-            .onChange(of: model.workoutOpen) { _, open in if open { dragging = nil; pull = 0 } else { focus = nil } }
+            .onChange(of: model.workoutOpen) { _, open in if open { pull = 0; arranging = false } else { focus = nil } }
+            // The keyboard's Next reaching a closed card opens it.
+            .onChange(of: focus) { _, id in
+                guard let id, let exercise = active.exercises.first(where: { ex in ex.sets.contains { id.hasPrefix($0.id) } }), exercise.id != expanded else { return }
+                withAnimation(.smooth(duration: Motion.standard)) { opened = exercise.id }
+            }
+            // A card whose last set just got done hands over to the next with sets to do (the keyboard goes with it).
+            .onChange(of: active.exercises.first { $0.id == expanded }.map { $0.doneCount == $0.setCount }) { was, now in
+                guard was == false, now == true else { return }
+                withAnimation(.smooth(duration: Motion.standard)) { opened = nil }
+                focus = nil
+            }
             // Settled back (let go short, or cancelled): the tabs underneath needn't be drawn again.
             .onChange(of: drag) { _, now in
-                if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { if pull == 0, drag == 0, model.workoutOpen { model.workoutCovers = true } } }
+                if now == 0 { DispatchQueue.main.asyncAfter(deadline: .now() + Motion.slow) { if pull == 0, drag == 0, model.workoutOpen { model.workoutCovers = true } } }
             }
             .task(id: model.workoutOpen) { try? await Task.sleep(for: .seconds(Motion.screen + 0.1)); if model.workoutOpen, !Task.isCancelled { model.workoutCovers = true } }
             .task { await FrameLog.driveNext(fields) { focus = $0 } }
-            .sheet(isPresented: $addingExercise) {
-                ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
+            .sheet(item: $sheet, onDismiss: swapPicked) { kind in
+                Group {
+                    switch kind {
+                    case .add: ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
+                    case .swap(let exercise): ExercisePicker(replacing: exercise.name) { picked = (exercise, $0) }
+                    case .workout: WorkoutOptions(arrange: { sheet = nil; withAnimation(.smooth(duration: Motion.standard)) { arranging = true } },
+                                                  rename: { sheet = .rename })
+                    case .rename: RenameWorkout()
+                    case .exercise(let id): ExerciseOptions(exerciseId: id, swap: { sheet = .swap($0) })
+                    }
+                }
+                .trackOverlays()
             }
-            .sheet(isPresented: $options) { WorkoutOptions().trackOverlays() }
         }
+    }
+
+    private func swapPicked() {
+        guard let picked else { return }
+        self.picked = nil
+        model.swap(picked.exercise, for: picked.name, inWorkout: true, splitId: model.training.active?.splitId)
+    }
+
+    /// ⌄, the name over the time and sets (it opens the options), Finish (Done while arranging).
+    private func header(_ active: Session, done: Int, planned: Int) -> some View {
+        HStack(spacing: Space.s3) {
+            RoundButton(icon: "chevron.down", label: "Keep for later") { model.workoutOpen = false }
+                .accessibilityHint("Keeps the workout going for later").accessibilityIdentifier("keep-for-later")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button { sheet = .workout } label: {
+                VStack(spacing: 0) {
+                    HStack(spacing: Space.s1) {
+                        Text(active.name).type(.t16).foregroundStyle(Palette.text).lineLimit(1)
+                        Image(systemName: "chevron.down").font(.system(size: IconSize.small, weight: .semibold)).foregroundStyle(Palette.muted)
+                    }
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text("\(elapsed(active.startedAt, context.date)) · \(done)/\(planned) sets").type(.t14).monospacedDigit()
+                            .foregroundStyle(Palette.muted).lineLimit(1)
+                    }
+                }
+            }
+            .buttonStyle(PressStyle())
+            .layoutPriority(1)
+            .accessibilityLabel("\(active.name): workout options")
+            Group {
+                if arranging {
+                    Button("Done") { withAnimation(.smooth(duration: Motion.standard)) { arranging = false } }.buttonStyle(SecondaryButtonStyle(hug: true))
+                } else {
+                    Button("Finish") { model.finish() }.buttonStyle(PrimaryButtonStyle(compact: true)).accessibilityLabel("Finish workout")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .frame(minHeight: Size.control)
     }
 
     /// The home indicator's strip at the bottom of the screen (0 on a phone with a home button), never the keyboard.
@@ -108,22 +176,11 @@ struct WorkoutView: View {
         UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
     }
 
-    private func drop(_ active: Session) -> ReorderDrop {
-        ReorderDrop(ids: active.exercises.map(\.id), box: box, dragging: $dragging, scroll: { edge in
-            withAnimation(.smooth(duration: 0.6)) { box.scroll?(edge) }
-        }, move: { from, to in
-            model.update { training in
-                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
-                training.active?.exercises = moved
-            }
-        })
-    }
-
-    /// The website's swipe back: from the left edge, the page follows the finger; past a third (or a flick) it slides
-    /// away and the workout is kept for later, otherwise it settles back.
+    /// The swipe back: from the left edge, the page follows the finger; past a third (or a flick) it slides away and
+    /// the workout is kept for later, otherwise it settles back.
     private var edgeSwipe: some View {
-        Color.clear.frame(width: 16).contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 8, coordinateSpace: .global)
+        Color.clear.frame(width: Space.s4).contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: Space.s2, coordinateSpace: .global)
                 .updating($drag) { value, drag, _ in drag = max(0, value.translation.width) }
                 .onChanged { _ in if model.workoutCovers { model.workoutCovers = false } }
                 .onEnded { drag in
@@ -137,62 +194,41 @@ struct WorkoutView: View {
                 })
     }
 
-    @ToolbarContentBuilder private func toolbar(_ active: Session, done: Int, total: Int, fields: [String]) -> some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button { model.workoutOpen = false } label: { Image(systemName: "chevron.left").foregroundStyle(Palette.text) }
-                .accessibilityLabel("Back").accessibilityHint("Keeps the workout going for later").accessibilityIdentifier("keep-for-later")
-        }
-        ToolbarItem(placement: .principal) {
-            Button { options = true } label: {
-                VStack(spacing: 1) {
-                    HStack(spacing: 4) {
-                        Text(active.name).font(.headline).lineLimit(1)
-                        Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                    }
-                    .foregroundStyle(Palette.text)
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        Text("\(elapsed(active.startedAt, context.date)) · \(done) of \(count(total, "set"))")
-                            .font(.caption).monospacedDigit().foregroundStyle(Palette.muted)
-                    }
-                }
-            }
-            .accessibilityLabel("\(active.name): workout options")
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if #available(iOS 26, *) {
-                Button("Finish") { model.finish() }.fontWeight(.bold).foregroundStyle(Palette.primaryText)
-                    .buttonStyle(.glassProminent).tint(Palette.primary).accessibilityLabel("Finish workout")
-            } else {
-                Button("Finish") { model.finish() }.fontWeight(.bold).foregroundStyle(Palette.primaryText)
-                    .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(Palette.primary)
-            }
-        }
-    }
-
-    /// While typing: one capsule just over the keyboard with the rest's time on the left, then Next (weight → reps →
-    /// RIR → next set) and Done. It replaces the rest capsule meanwhile, so the two never stack up.
+    /// While typing: one bar just over the keyboard with the rest's time on the left, then Next (weight → reps → RIR →
+    /// next set) and Done. It replaces the rest timer meanwhile, so the two never stack up.
     private func keyboardBar(_ fields: [String]) -> some View {
-        // Without a rest it's just Next and Done, at the right: no empty bar.
-        let resting = model.training.restUntil != nil
-        return HStack(spacing: 8) {
+        let resting = (model.training.restUntil ?? 0) > nowMillis()
+        return HStack(spacing: Space.s2) {
             if resting {
-                RestCapsule(compact: true)
-                Spacer(minLength: 8)
+                RestCapsule(compact: true).padding(.leading, Space.s2)
+                Spacer(minLength: Space.s2)
             }
             if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
-                Button("Next") { self.focus = fields[index + 1] }.foregroundStyle(Palette.text)
-                    .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
+                Button("Next") { self.focus = fields[index + 1] }.buttonStyle(SecondaryButtonStyle(hug: true))
             }
-            Button("Done") { focus = nil }.foregroundStyle(Palette.primaryText)
-                .padding(.horizontal, 22).frame(minHeight: 44).glass(radius: 22, fill: Palette.primary, lifted: false)
+            Button("Done") { focus = nil }.buttonStyle(PrimaryButtonStyle(compact: true))
         }
-        .font(.body.weight(.semibold)).buttonStyle(PressStyle())
-        // A floating glass capsule like the rest's, solid inside so the page doesn't show through; the pills sit 8pt in,
-        // their curves matching its own.
-        .padding(.leading, resting ? 14 : 8).padding(.trailing, 8).padding(.vertical, 8)
-        .glass(radius: 30, fill: Palette.dialog)
+        .padding(Space.s1)
+        .raised(.float, .pill)
         .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal, 16).padding(.bottom, 8)
+        .padding(.horizontal, Space.s4).padding(.bottom, Space.s2)
         .transition(.opacity)
+    }
+}
+
+/// The workout's one sheet at a time: what each tap opens (opening another replaces the one up).
+enum WorkoutSheet: Identifiable {
+    case add, workout, rename
+    case swap(Exercise)
+    case exercise(String)
+
+    var id: String {
+        switch self {
+        case .add: "add"
+        case .workout: "workout"
+        case .rename: "rename"
+        case .swap(let exercise): "swap \(exercise.id)"
+        case .exercise(let id): "exercise \(id)"
+        }
     }
 }

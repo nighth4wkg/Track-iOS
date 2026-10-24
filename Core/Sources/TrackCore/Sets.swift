@@ -78,6 +78,11 @@ extension Session {
     /// The sets that count: marked done and valid. Carried-over numbers are only suggestions until then.
     public var completedSets: [TrainingSet] { exercises.flatMap { $0.sets.filter { $0.done && $0.isValid } } }
 
+    /// Logged sets as counted: done and valid, a left and right pair once.
+    public var loggedCount: Int {
+        exercises.reduce(0) { $0 + Exercise.groups($1.sets.filter { $0.done && $0.isValid }).count }
+    }
+
     /// Minutes from start to finish, at least 1 once finished.
     public var minutes: Int {
         guard let finishedAt, finishedAt >= startedAt else { return 0 }
@@ -100,14 +105,6 @@ extension Exercise {
     /// Which side the exercise starts on, or nil when its sets are two-sided.
     public var startingSide: Side? { sets.first { $0.side != nil }?.side }
 
-    /// Cycles Both → Left first → Right first → Both. Sets alternate from the starting side; Both clears every tag.
-    public func togglingSides() -> Exercise {
-        let start: Side? = startingSide == nil ? .left : startingSide == .left ? .right : nil
-        var exercise = self
-        for index in exercise.sets.indices { exercise.sets[index].side = start.map { index % 2 == 0 ? $0 : $0.other } }
-        return exercise
-    }
-
     /// The side a newly added set takes: the opposite of the last set's, if the exercise is in sides.
     public var nextSide: Side? { sets.last?.side?.other ?? (usesSides ? .left : nil) }
 
@@ -117,16 +114,80 @@ extension Exercise {
         TrainingSet(kg: sets.last?.kg, reps: sets.last?.reps, side: nextSide)
     }
 
+    /// The sets as counted: a left and the right beside it (either order) are one set.
+    public var setGroups: [[TrainingSet]] { Exercise.groups(sets) }
+
+    static func groups(_ sets: [TrainingSet]) -> [[TrainingSet]] {
+        var groups: [[TrainingSet]] = [], index = 0
+        while index < sets.count {
+            let set = sets[index]
+            if let side = set.side, index + 1 < sets.count, sets[index + 1].side == side.other {
+                groups.append([set, sets[index + 1]]); index += 2
+            } else { groups.append([set]); index += 1 }
+        }
+        return groups
+    }
+
+    public var setCount: Int { setGroups.count }
+    /// Sets with every side ticked done.
+    public var doneCount: Int { setGroups.filter { $0.allSatisfy(\.done) }.count }
+
+    /// Each stored set's label: its number, with its side when one-sided ("1L", "1R").
+    public var setLabels: [String] {
+        setGroups.enumerated().flatMap { index, group in group.map { "\(index + 1)\($0.side.map { $0 == .left ? "L" : "R" } ?? "")" } }
+    }
+
+    /// One more set: a pair when one-sided (or the missing side, if the last set has only one).
+    public func addingSet() -> Exercise {
+        var exercise = self
+        exercise.sets.append(exercise.nextSet)
+        if let last = exercise.setGroups.last, last.count == 1, last[0].side != nil { exercise.sets.append(exercise.nextSet) }
+        return exercise
+    }
+
+    /// Both → Left first → Right first → Both. Turning sides on makes each set a pair (the right takes the left's
+    /// weight and reps to start); turning them off keeps each pair's first side, and the other only if it was done.
+    public func cyclingSides() -> Exercise {
+        var exercise = self
+        switch startingSide {
+        case nil:
+            exercise.sets = sets.flatMap { set -> [TrainingSet] in
+                var left = set, right = set
+                left.side = .left
+                right.id = newID(); right.done = false; right.side = .right
+                return [left, right]
+            }
+        case .left?:
+            for index in exercise.sets.indices { exercise.sets[index].side = exercise.sets[index].side?.other }
+        case .right?:
+            exercise.sets = setGroups.flatMap { group -> [TrainingSet] in
+                let plain = group.map { set -> TrainingSet in var set = set; set.side = nil; return set }
+                guard plain.count == 2 else { return plain }
+                return plain[1].done && !plain[0].done ? [plain[1]] : plain[1].done ? plain : [plain[0]]
+            }
+        }
+        return exercise
+    }
+
     /// A new exercise named as one-sided starts in sides.
     public static func firstSide(for name: String) -> Side? {
         let lower = name.lowercased()
         return oneSided.firstMatch(in: lower, range: NSRange(lower.startIndex..., in: lower)) == nil ? nil : .left
     }
 
-    /// A new exercise with one empty set.
+    /// A new exercise with three sets (three pairs when its name says it is one-sided), as the PWA's withSets.
     public static func new(named name: String) -> Exercise {
-        Exercise(name: name.trimmingCharacters(in: .whitespacesAndNewlines), sets: [TrainingSet(side: firstSide(for: name))])
+        var exercise = Exercise(name: name.trimmingCharacters(in: .whitespacesAndNewlines), sets: [TrainingSet(side: firstSide(for: name))])
+        if exercise.sets[0].side != nil { exercise.sets.append(exercise.nextSet) }
+        while exercise.setCount < 3 { exercise = exercise.addingSet() }
+        return exercise
     }
+}
+
+extension Array where Element == Exercise {
+    /// The sets planned, as counted.
+    public var plannedCount: Int { reduce(0) { $0 + $1.setCount } }
+    public var doneCount: Int { reduce(0) { $0 + $1.doneCount } }
 }
 
 extension Array {

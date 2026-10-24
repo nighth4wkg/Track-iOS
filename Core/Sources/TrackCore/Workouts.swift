@@ -101,11 +101,5 @@ public struct SplitTemplate: Sendable, Identifiable {
     ]
 
     /// A new split from the template: each exercise starts with three empty sets.
-    public func makeSplit() -> Split {
-        Split(name: name, exercises: exercises.map { name in
-            var exercise = Exercise.new(named: name)
-            exercise.sets += (1..<3).map { _ in TrainingSet() }
-            return exercise
-        })
-    }
+    public func makeSplit() -> Split { Split(name: name, exercises: exercises.map(Exercise.new(named:))) }
 }

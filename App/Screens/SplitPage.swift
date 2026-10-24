@@ -118,7 +118,7 @@ struct SplitPage: View {
     private func names(_ exercise: Exercise) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
-            Text(count(exercise.sets.count, "set")).type(.t14).foregroundStyle(Palette.muted)
+            Text(count(exercise.setCount, "set")).type(.t14).foregroundStyle(Palette.muted)
         }
     }
 

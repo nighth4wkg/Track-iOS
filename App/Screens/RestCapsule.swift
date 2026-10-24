@@ -1,9 +1,9 @@
 import SwiftUI
 import TrackCore
 
-/// Rest, as the website's capsule floating at the bottom: a ring running down, the time left, +30s and Skip. When it
-/// runs out it says "Go · Ready for your next set" with Done, and buzzes; it rises in and sinks out. `compact` is just
-/// the ring and the time, for the keyboard's bar while typing.
+/// Rest, as the PWA's timer floating where the nav pill sits: a ring running down, the time left, −15s, +15s and Skip.
+/// It shows only while the rest runs, rising in and sinking out; running out buzzes. `compact` is just the ring and the
+/// time, for the keyboard's bar while typing.
 struct RestCapsule: View {
     @Environment(AppModel.self) private var model
     var compact = false
@@ -16,27 +16,8 @@ struct RestCapsule: View {
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))
-                    if compact { small(left, total) } else {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle().stroke(Palette.input, lineWidth: 5)
-                                Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                                    .rotationEffect(.degrees(-90)).animation(.linear(duration: 0.5), value: left)
-                            }
-                            .frame(width: 40, height: 40)
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(left > 0 ? clock(left) : "Go")
-                                    .font(.title3.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
-                                Text(left > 0 ? "Rest" : "Ready for your next set").font(.caption).foregroundStyle(Palette.muted).lineLimit(1)
-                            }
-                            Spacer(minLength: 4)
-                            if left > 0 { pill("+30s") { model.changeRest(by: 30) }.accessibilityLabel("Add 30 seconds") }
-                            pill(left > 0 ? "Skip" : "Done") { model.changeRest(by: 0) }
-                        }
-                        .padding(.leading, 14).padding(.trailing, 10).padding(.vertical, 10)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .glass(radius: 32, fill: .clear)
-                        .padding(.horizontal, 16).padding(.bottom, 8)
+                    if left > 0 {
+                        if compact { ring(left, total).accessibilityLabel("Rest, \(clock(left)) left") } else { full(left, total) }
                     }
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -49,31 +30,48 @@ struct RestCapsule: View {
             }
         }
         .animation(.smooth(duration: Motion.slow), value: until)
-        .sensoryFeedback(.success, trigger: ended)
+        .sensoryFeedback(.warning, trigger: ended)
     }
 
-    /// The ring and the time left ("Go" once it's over), with no controls.
-    private func small(_ left: Double, _ total: Double) -> some View {
-        HStack(spacing: 8) {
+    private func full(_ left: Double, _ total: Double) -> some View {
+        HStack(spacing: Space.s2) {
+            ring(left, total).accessibilityLabel("\(clock(left)) of rest left")
+            Spacer(minLength: 0)
+            pill("−15s", "15 seconds less") { model.shiftRest(by: -15) }
+            pill("+15s", "15 seconds more") { model.shiftRest(by: 15) }
+            Button("Skip") { model.changeRest(by: 0) }.buttonStyle(PrimaryButtonStyle(compact: true))
+        }
+        .padding(.horizontal, Space.s2)
+        .frame(height: Size.nav)
+        .raised(.float, .pill)
+        .frame(maxWidth: Size.navWidth)
+        .padding(.horizontal, Space.s4)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Rest timer")
+    }
+
+    /// The ring running down beside the time left.
+    private func ring(_ left: Double, _ total: Double) -> some View {
+        HStack(spacing: Space.s2) {
             ZStack {
-                Circle().stroke(Palette.input, lineWidth: 4)
-                Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                Circle().stroke(Palette.input, lineWidth: Size.restStroke)
+                Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: Size.restStroke, lineCap: .round))
                     .rotationEffect(.degrees(-90)).animation(.linear(duration: 0.5), value: left)
             }
-            .frame(width: 26, height: 26)
-            Text(left > 0 ? clock(left) : "Go").font(.headline).monospacedDigit().foregroundStyle(left > 0 ? Palette.text : Palette.accent)
+            .frame(width: Size.restRing, height: Size.restRing)
+            Text(clock(left)).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(left > 0 ? "Rest, \(clock(left)) left" : "Rest over")
     }
 
-    private func clock(_ left: Double) -> String { String(format: "%d:%02d", Int(left.rounded(.up)) / 60, Int(left.rounded(.up)) % 60) }
+    private func clock(_ left: Double) -> String { restText(Int(left.rounded(.up))) }
 
-    private func pill(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(title, action: action)
-            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
-            .padding(.horizontal, 16).frame(minHeight: 44)
-            .glass(radius: 22, fill: Palette.control, lifted: false)
-            .buttonStyle(PressStyle())
+    private func pill(_ title: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).type(.t12).fontWeight(.semibold).foregroundStyle(Palette.text)
+                .frame(width: Size.control, height: Size.control).raised(.control, .circle)
+        }
+        .buttonStyle(PressStyle())
+        .accessibilityLabel(label)
     }
 }

@@ -70,18 +70,25 @@ final class WorkoutTests: XCTestCase {
         XCTAssertEqual(try TrainingSet(kg: 40, reps: 5).toggledDone().rir, 0)
     }
 
-    func testSidesAlternateAndOneSidedNamesStartInSides() {
-        XCTAssertEqual(Exercise.new(named: "Single-arm dumbbell row").sets[0].side, .left)
-        XCTAssertNil(Exercise.new(named: "Bench Press").sets[0].side)
-        var exercise = Exercise(name: "Lunge", sets: [TrainingSet(), TrainingSet(), TrainingSet()])
-        exercise = exercise.togglingSides()
-        XCTAssertEqual(exercise.sets.map(\.side), [.left, .right, .left])
-        XCTAssertEqual(exercise.nextSide, .right)
-        exercise = exercise.togglingSides()
-        XCTAssertEqual(exercise.sets.map(\.side), [.right, .left, .right])
-        exercise = exercise.togglingSides()
-        XCTAssertEqual(exercise.sets.map(\.side), [nil, nil, nil])
-        XCTAssertNil(exercise.nextSide)
+    func testSidesPairCountAsOneSet() {
+        XCTAssertEqual(Exercise.new(named: "Single-arm dumbbell row").sets.map(\.side), [.left, .right, .left, .right, .left, .right])
+        XCTAssertEqual(Exercise.new(named: "Single-arm dumbbell row").setCount, 3)
+        XCTAssertEqual(Exercise.new(named: "Bench Press").sets.map(\.side), [nil, nil, nil])
+        var exercise = Exercise(name: "Lunge", sets: [TrainingSet(kg: 20, reps: 8, done: true), TrainingSet()])
+        exercise = exercise.cyclingSides()
+        XCTAssertEqual(exercise.sets.map(\.side), [.left, .right, .left, .right])
+        XCTAssertEqual(exercise.sets.map(\.done), [true, false, false, false], "the new right side starts not done")
+        XCTAssertEqual(exercise.sets[1].kg, 20, "the right side takes the left's numbers")
+        XCTAssertEqual(exercise.setLabels, ["1L", "1R", "2L", "2R"])
+        XCTAssertEqual(exercise.doneCount, 0)
+        XCTAssertEqual(exercise.addingSet().setCount, 3)
+        exercise = exercise.cyclingSides()
+        XCTAssertEqual(exercise.sets.map(\.side), [.right, .left, .right, .left])
+        XCTAssertEqual(exercise.setCount, 2)
+        exercise = exercise.cyclingSides()
+        XCTAssertEqual(exercise.sets.map(\.side), [nil, nil], "off keeps each pair's first side")
+        XCTAssertEqual(exercise.sets[0].done, true)
+        XCTAssertEqual(exercise.addingSet().setCount, 3)
     }
 
     func testTheSplitTakesTheWorkoutsShapeOnlyWhenFinished() throws {

@@ -118,7 +118,7 @@ private struct HistoryRow: View {
             .raised(.control, .inner)
             VStack(alignment: .leading, spacing: 0) {
                 Text(session.name).type(.t16).foregroundStyle(Palette.text)
-                Text("\(session.minutes) min · \(count(session.completedSets.count, "set")) · \(weight(session.volume, unit)) \(unit.rawValue)")
+                Text("\(session.minutes) min · \(count(session.loggedCount, "set")) · \(weight(session.volume, unit)) \(unit.rawValue)")
                     .type(.t14).foregroundStyle(Palette.muted)
             }
             Spacer(minLength: 0)

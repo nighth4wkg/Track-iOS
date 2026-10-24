@@ -22,7 +22,7 @@ struct UpNextCard: View {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text("\(elapsed(active.startedAt, context.date)) min").type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                         }
-                        Text("\(active.completedSets.count) of \(count(active.exercises.reduce(0) { $0 + $1.sets.count }, "set")) done")
+                        Text("\(active.exercises.doneCount) of \(count(active.exercises.plannedCount, "set")) done")
                             .type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                     } else if let next = training.nextSplit {
                         Badge(text: "Up next").padding(.bottom, Space.s1)
@@ -159,6 +159,6 @@ private struct GoalBar: View {
 extension Split {
     /// "3 exercises · 9 sets"
     var summary: String {
-        "\(count(exercises.count, "exercise")) · \(count(exercises.reduce(0) { $0 + $1.sets.count }, "set"))"
+        "\(count(exercises.count, "exercise")) · \(count(exercises.plannedCount, "set"))"
     }
 }
