@@ -68,5 +68,9 @@ struct Field: View {
             .frame(minHeight: Size.control)
             .sunk(.inner, ring: focused ? Palette.accent : nil)
             .onChange(of: text) { _, value in if value.count > limit { text = String(value.prefix(limit)) } }
+            .toolbar {
+                // Number pads have no return key.
+                if keyboard != .default, focused { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focused = false; submit() } } }
+            }
     }
 }

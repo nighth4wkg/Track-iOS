@@ -2,170 +2,181 @@ import SwiftUI
 import TrackCore
 import UserNotifications
 
-/// Settings, as the website's sheet: "Settings" with ✕, the Training · Data · Account · About tabs (tap, drag the
-/// selection, or swipe the page), and rows of a label with its glass select. Every choice ticks.
+/// Settings on one page, as the PWA's: "Settings" with Done, then Training, Data, Account and About, each a card of rows.
 struct SettingsView: View {
-    enum Tab: String, CaseIterable { case training = "Training", data = "Data", account = "Account", about = "About" }
-    @Environment(\.dismiss) private var dismiss
-    @State private var tab = Tab.training
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // iOS's own segmented control: Liquid Glass, and its selection can be dragged along.
-                    Picker("Section", selection: $tab.animation(.smooth(duration: Motion.standard))) {
-                        ForEach(Tab.allCases, id: \.self) { Text($0.rawValue) }
-                    }
-                    .pickerStyle(.segmented)
-                    .controlSize(.extraLarge)
-                    .sensoryFeedback(.selection, trigger: tab)
-                    switch tab {
-                    case .training: TrainingSettings()
-                    case .data: DataSettings()
-                    case .account: AccountSettings()
-                    case .about: AboutSettings()
-                    }
-                }
-                .padding(.horizontal, 16).padding(.bottom, 24)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
-                // Swipe to the next or previous tab, as on the website.
-                guard let step = HorizontalPan.tabStep(x, velocity), let index = Tab.allCases.firstIndex(of: tab) else { return }
-                let next = index + step
-                if Tab.allCases.indices.contains(next) { withAnimation(.smooth(duration: Motion.standard)) { tab = Tab.allCases[next] } }
-            }))
-            .background(Backdrop())
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
-                }
-            }
-        }
-        .presentationDragIndicator(.visible)
-    }
-}
-
-/// A setting: its name (and a line of help) with its control at the end.
-struct SettingRow<Control: View>: View {
-    var icon: String?
-    let label: String
-    var detail: String?
-    @ViewBuilder let control: Control
-
-    var body: some View {
-        HStack(spacing: 12) {
-            if let icon { Image(systemName: icon).font(.body).foregroundStyle(Palette.muted).frame(width: 22).accessibilityHidden(true) } // decorative: VoiceOver read "Scale For Weighing Mass"
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.body).foregroundStyle(Palette.text)
-                if let detail { Text(detail).font(.caption).foregroundStyle(Palette.muted) }
-            }
-            Spacer(minLength: 8)
-            control
-        }
-        .frame(minHeight: 44)
-    }
-}
-
-private struct TrainingSettings: View {
     @Environment(AppModel.self) private var model
-    private static let rests = [30, 60, 90, 120, 180, 300]
-    /// A rest that isn't one of the presets is typed in seconds (Limits.restSeconds), as on the website.
-    @State private var custom = false
-    @State private var draft = ""
-    @State private var error: String?
-    @FocusState private var typing: Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var resting: Resting?
     /// Notifications turned off for Track: the rest timer can't alert with the phone locked.
     @State private var alertsOff = false
 
-    private func saveCustom() {
-        guard let seconds = Int(draft), Limits.restSeconds.contains(seconds) else {
-            error = "Enter \(Limits.restSeconds.lowerBound)–\(Limits.restSeconds.upperBound) seconds."
-            return
-        }
-        error = nil
-        model.update { $0.settings.restSeconds = seconds }
-    }
+    enum Resting: String, Identifiable { case list, custom; var id: String { rawValue } }
 
     var body: some View {
         let settings = model.training.settings
-        let showCustom = custom || !Self.rests.contains(settings.restSeconds)
-        GlassList {
-            SettingRow(icon: "scalemass", label: "Weight unit") {
-                GlassMenu(selection: settings.unit, options: [(.kg, "kg"), (.lb, "lb")]) { value in model.update { $0.settings.unit = value } }
-            }
-            SettingRow(icon: "target", label: "Weekly goal") {
-                GlassMenu(selection: settings.weeklyGoal, options: Limits.weeklyGoal.map { ($0, count($0, "day")) }) { value in
-                    model.update { $0.settings.weeklyGoal = value }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Settings").type(.t32).foregroundStyle(Palette.text)
+                    Spacer()
+                    Button("Done") { dismiss() }.buttonStyle(SecondaryButtonStyle(hug: true))
                 }
-            }
-            SettingRow(icon: "checklist", label: "Log sets", detail: settings.logSets == .manual ? "Only the ✓ logs a set" : "Filling in RIR logs the set") {
-                GlassMenu(selection: settings.logSets ?? .auto, options: [(.auto, "Auto"), (.manual, "Manual")]) { value in
-                    model.update { $0.settings.logSets = value }
-                }
-            }
-            SettingRow(icon: "timer", label: "Rest timer") {
-                GlassMenu(selection: showCustom ? -1 : settings.restSeconds,
-                          options: Self.rests.map { ($0, String(format: "%d:%02d", $0 / 60, $0 % 60)) } + [(-1, "Custom")]) { value in
-                    if value == -1 { custom = true; draft = String(settings.restSeconds) } else { custom = false; model.update { $0.settings.restSeconds = value } }
-                }
-            }
-            if showCustom {
-                VStack(alignment: .leading, spacing: 6) {
-                    SettingRow(label: "Duration") {
-                        HStack(spacing: 6) {
-                            TextField("90", text: $draft).keyboardType(.numberPad).multilineTextAlignment(.center)
-                                .font(.body.weight(.semibold)).monospacedDigit().frame(width: 72, height: 40)
-                                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.input))
-                                .focused($typing).onSubmit(saveCustom)
-                                .onChange(of: typing) { _, now in if !now { saveCustom() } }
-                                .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { typing = false }.fontWeight(.semibold) } }
-                            Text("sec").foregroundStyle(Palette.muted)
+                section("Training") {
+                    Row(title: "Weight unit") {
+                        Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
+                            value: Binding(get: { settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)
+                    }
+                    Button { resting = .list } label: { Row(title: "Rest timer", value: "\(restText(settings.restSeconds)) min", chevron: true) }
+                        .buttonStyle(PressStyle())
+                    Row(title: "Log sets") {
+                        Seg(label: "Log sets", options: [(value: TrackCore.Settings.LogSets.auto, text: "Auto"), (value: .manual, text: "Tap")],
+                            value: Binding(get: { settings.logSets ?? .auto }, set: { mode in model.update { $0.settings.logSets = mode } }), compact: true)
+                    }
+                    goal(settings.weeklyGoal)
+                    if alertsOff {
+                        Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
+                            Row(title: "Rest alerts are off", value: "Allow", chevron: true)
                         }
                     }
-                    if let error { Text(error).font(.caption).foregroundStyle(Palette.dangerText) }
                 }
+                section("Data") {
+                    Row(title: "Cloud sync", value: "On this device only")
+                    BackupSection()
+                }
+                section("Account") {
+                    Row(title: "Signed in", value: "Local only")
+                    Button { model.leaveLocal() } label: { Row(title: "Leave local mode") { EmptyView() } }.buttonStyle(PressStyle())
+                }
+                Text("About").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
+                VStack(alignment: .leading, spacing: Space.s2) {
+                    Text("A personal project").type(.t16).foregroundStyle(Palette.text)
+                    Text("Built with AI for my own training. Expect rough edges.").type(.t14).foregroundStyle(Palette.muted)
+                }
+                .padding(Space.s4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .raised()
+                .padding(.top, Space.s2)
+                AboutSettings().padding(.top, Space.s3)
             }
-            if alertsOff {
-                Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
-                    ListRow(icon: "bell.slash", title: "Rest alerts are off", detail: "Allow notifications for Track in Settings") {
-                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+            .padding(.horizontal, Space.s4)
+            .padding(.top, Space.s4)
+            .padding(.bottom, Space.s6)
+            .frame(maxWidth: Measure.page)
+            .frame(maxWidth: .infinity)
+        }
+        .background(Backdrop())
+        .presentationDragIndicator(.visible)
+        .sheet(item: $resting) { kind in
+            switch kind {
+            case .list: RestList { resting = .custom }
+            case .custom: CustomRest(seconds: settings.restSeconds)
+            }
+        }
+        .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }
+    }
+
+    private func section<Rows: View>(_ title: String, @ViewBuilder rows: () -> Rows) -> some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(title).type(.t14).foregroundStyle(Palette.muted)
+            RowCard(content: rows)
+        }
+        .padding(.top, title == "Training" ? Space.s4 : Space.s6)
+    }
+
+    /// Weekly goal: the days a week, one fewer or one more.
+    private func goal(_ days: Int) -> some View {
+        HStack(spacing: Space.s3) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Weekly goal").type(.t16).foregroundStyle(Palette.text).lineLimit(1)
+                Text("\(count(days, "day")) a week").type(.t14).monospacedDigit().foregroundStyle(Palette.muted).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            RoundButton(icon: "minus", label: "One day fewer") { model.update { $0.settings.weeklyGoal -= 1 } }
+                .disabled(days <= Limits.weeklyGoal.lowerBound)
+            RoundButton(icon: "plus", label: "One day more") { model.update { $0.settings.weeklyGoal += 1 } }
+                .disabled(days >= Limits.weeklyGoal.upperBound)
+        }
+        .padding(.horizontal, Space.s4)
+        .padding(.vertical, Space.s3)
+        .frame(minHeight: Size.row)
+        .sensoryFeedback(.selection, trigger: days)
+    }
+}
+
+/// "1:30"
+func restText(_ seconds: Int) -> String { String(format: "%d:%02d", seconds / 60, seconds % 60) }
+
+/// The rest presets, and Custom for any other time (checked once it's set).
+private struct RestList: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let custom: () -> Void
+    private static let presets = [60, 90, 120, 150, 180, 240, 300]
+
+    var body: some View {
+        let current = model.training.settings.restSeconds
+        SheetFrame(title: "Rest timer") {
+            RowCard {
+                ForEach(Self.presets, id: \.self) { seconds in
+                    Button { model.update { $0.settings.restSeconds = seconds }; dismiss() } label: {
+                        Row(title: "\(restText(seconds)) min") { if seconds == current { Check() } }
+                    }
+                    .buttonStyle(PressStyle())
+                    .accessibilityAddTraits(seconds == current ? .isSelected : [])
+                }
+                Button(action: custom) {
+                    Row(title: "Custom") {
+                        if Self.presets.contains(current) { RowValue(text: "", chevron: true) } else { RowValue(text: "\(restText(current)) min"); Check() }
                     }
                 }
+                .buttonStyle(PressStyle())
             }
+            .padding(.top, Space.s3)
         }
-        .onAppear { draft = String(settings.restSeconds) }
-        .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }
-        .animation(.smooth(duration: Motion.standard), value: custom)
     }
 }
 
-private struct DataSettings: View {
+/// The green tick of a chosen row.
+struct Check: View {
+    var body: some View {
+        Image(systemName: "checkmark").font(.system(size: IconSize.medium, weight: .semibold)).foregroundStyle(Palette.accent)
+    }
+}
+
+/// Any rest time in the allowed range, as minutes and seconds.
+private struct CustomRest: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let seconds: Int
+    @State private var minutes = ""
+    @State private var secs = ""
 
     var body: some View {
-        Text("Your data").font(.headline).foregroundStyle(Palette.text)
-        Text("Your workouts are saved on this iPhone only. Export a backup before deleting Track or moving to another phone.")
-            .font(.subheadline).foregroundStyle(Palette.muted)
-        GlassList {
-            ListRow(icon: model.mode == .sync ? "icloud" : "iphone", title: "Sync status",
-                    detail: model.loadError == nil ? "Saved on this iPhone · \(count(model.training.sessions.count, "workout"))" : "Not saving: restore a backup below") { EmptyView() }
-            BackupSection()
+        let whole = { (text: String) -> Int? in text.trimmingCharacters(in: .whitespaces).isEmpty ? 0 : Int(text.trimmingCharacters(in: .whitespaces)) }
+        let total = whole(minutes).flatMap { m in whole(secs).flatMap { $0 < 60 ? m * 60 + $0 : nil } }
+        let valid = total.map(Limits.restSeconds.contains) == true
+        let save = { if let total, valid { model.update { $0.settings.restSeconds = total }; dismiss() } }
+        SheetFrame(title: "Custom rest", closeLabel: "Cancel") {
+            VStack(alignment: .leading, spacing: Space.s4) {
+                HStack(alignment: .top, spacing: Space.s3) {
+                    field("Minutes", $minutes, save)
+                    field("Seconds", $secs, save)
+                }
+                if !valid {
+                    Text("Enter \(restText(Limits.restSeconds.lowerBound)) to \(restText(Limits.restSeconds.upperBound)) min.")
+                        .type(.t14).foregroundStyle(Palette.danger)
+                }
+                Button("Save", action: save).buttonStyle(PrimaryButtonStyle()).disabled(!valid)
+            }
+            .padding(.top, Space.s3)
         }
+        .onAppear { minutes = String(seconds / 60); secs = String(seconds % 60) }
     }
-}
 
-private struct AccountSettings: View {
-    var body: some View {
-        Text("Sync with your account").font(.headline).foregroundStyle(Palette.text)
-        Text("Signing in to keep your iPhone and the website in step arrives in an upcoming build. Your workouts stay safe on this iPhone until then.")
-            .font(.subheadline).foregroundStyle(Palette.muted)
-        GlassList {
-            ListRow(icon: "arrow.triangle.2.circlepath.icloud", title: "Turn on sync", detail: "Coming soon") { EmptyView() }
-                .opacity(0.6)
+    private func field(_ label: String, _ text: Binding<String>, _ save: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(label).type(.t14).foregroundStyle(Palette.muted)
+            Field(placeholder: "0", text: text, label: label, limit: 2, keyboard: .numberPad, submit: save)
         }
     }
 }

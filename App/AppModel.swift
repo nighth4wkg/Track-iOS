@@ -107,6 +107,12 @@ final class AppModel {
         }
     }
 
+    /// Back to the first screen; the workouts stay on this iPhone.
+    func leaveLocal() {
+        mode = nil
+        UserDefaults.standard.removeObject(forKey: Self.modeKey)
+    }
+
     func choose(_ choice: StorageMode) {
         mode = choice
         UserDefaults.standard.set(choice.rawValue, forKey: Self.modeKey)

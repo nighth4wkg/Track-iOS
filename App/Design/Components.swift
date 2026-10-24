@@ -114,32 +114,6 @@ extension SectionHeading where Trailing == EmptyView {
     init(title: String, count: Int? = nil) { self.init(title: title, count: count) { EmptyView() } }
 }
 
-/// The website's select: the value and a chevron, opening the system menu (Liquid Glass).
-struct GlassMenu<Value: Hashable>: View {
-    let selection: Value
-    let options: [(Value, String)]
-    let onSelect: (Value) -> Void
-
-    var body: some View {
-        Menu {
-            ForEach(options.indices, id: \.self) { index in
-                let (value, label) = options[index]
-                Button { onSelect(value) } label: {
-                    if value == selection { Label(label, systemImage: "checkmark") } else { Text(label) }
-                }
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Text(options.first { $0.0 == selection }?.1 ?? "").lineLimit(1)
-                Image(systemName: "chevron.down").font(.caption.weight(.bold))
-            }
-            .font(.body).foregroundStyle(Palette.text)
-            .frame(minHeight: 40).contentShape(Rectangle())
-        }
-        .sensoryFeedback(.selection, trigger: selection)
-    }
-}
-
 /// A small muted heading over a group, as History's "This week" or "Sep 14 – 20".
 struct SmallHeader: View {
     let title: String
@@ -277,6 +251,8 @@ struct Seg<Value: Hashable>: View {
     let options: [(value: Value, text: String)]
     @Binding var value: Value
     var short = false
+    /// Small, inside a row (kg / lb, log sets).
+    var compact = false
     @Namespace private var knob
 
     var body: some View {
@@ -287,8 +263,8 @@ struct Seg<Value: Hashable>: View {
                     Text(short ? String(option.text.prefix(1)) : option.text)
                         .type(.t14).fontWeight(.semibold).lineLimit(1)
                         .foregroundStyle(on ? Palette.text : Palette.muted)
-                        .frame(maxWidth: .infinity, minHeight: Size.segment)
-                        .frame(minWidth: short ? Size.cell : nil)
+                        .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
+                        .frame(minWidth: short || compact ? Size.cell : nil)
                         .background {
                             if on { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: "knob", in: knob) }
                         }
@@ -301,10 +277,68 @@ struct Seg<Value: Hashable>: View {
         }
         .padding(Space.s1)
         .sunk(.pill)
-        .fixedSize(horizontal: short, vertical: false)
+        .fixedSize(horizontal: short || compact, vertical: false)
         .animation(.smooth(duration: Motion.fast), value: value)
         .sensoryFeedback(.selection, trigger: value)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
+    }
+}
+
+/// Rows on one card, as the PWA's .card of .row: a hairline between rows. Each row pads itself (Row does), so a
+/// whole row is its button.
+struct RowCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Group(subviews: content) { rows in
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    row.overlay(alignment: .top) { if index > 0 { Palette.hairline.frame(height: 1) } }
+                }
+            }
+        }
+        .raised()
+        .clipShape(Corner.card.shape)
+    }
+}
+
+/// A row, as the PWA's .row: its name, then what sits at its end; 16 all round, a row tall at least.
+struct Row<Trailing: View>: View {
+    let title: String
+    var tint = Palette.text
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: Space.s3) {
+            Text(title).type(.t16).foregroundStyle(tint).lineLimit(1)
+            Spacer(minLength: 0)
+            trailing
+        }
+        .padding(.horizontal, Space.s4)
+        .padding(.vertical, Space.s3)
+        .frame(minHeight: Size.row)
+        .contentShape(Rectangle())
+    }
+}
+
+extension Row where Trailing == RowValue {
+    /// A row with a value at its end ("1:30 min"), and a chevron when it opens something.
+    init(title: String, tint: Color = Palette.text, value: String, color: Color = Palette.muted, chevron: Bool = false) {
+        self.init(title: title, tint: tint) { RowValue(text: value, color: color, chevron: chevron) }
+    }
+}
+
+/// A row's end: a value in t14, and a chevron when the row opens something.
+struct RowValue: View {
+    let text: String
+    var color = Palette.muted
+    var chevron = false
+
+    var body: some View {
+        HStack(spacing: Space.s2) {
+            if !text.isEmpty { Text(text).type(.t14).monospacedDigit().foregroundStyle(color).lineLimit(1) }
+            if chevron { Image(systemName: "chevron.right").font(.system(size: IconSize.small, weight: .semibold)).foregroundStyle(Palette.muted) }
+        }
     }
 }

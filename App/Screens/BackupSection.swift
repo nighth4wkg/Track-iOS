@@ -16,7 +16,7 @@ struct BackupFile: Transferable {
     }
 }
 
-/// Settings → Your data: export a backup (Files, AirDrop, anywhere the share sheet goes) or restore one, including
+/// Settings → Data's backup rows: export a backup (Files, AirDrop, anywhere the share sheet goes) or restore one, including
 /// a backup from the website.
 struct BackupSection: View {
     @Environment(AppModel.self) private var model
@@ -27,36 +27,27 @@ struct BackupSection: View {
         // While the saved copy can't be read, the export is that file as it is (the website's recovery export), not
         // the empty app.
         if let unreadable = model.unreadableFile {
-            ShareLink(item: unreadable) {
-                ListRow(icon: "square.and.arrow.up", title: "Export unreadable data", detail: "Save the copy Track couldn’t read") { EmptyView() }
-                    .contentShape(Rectangle())
-            }
+            ShareLink(item: unreadable) { Row(title: "Export unreadable data", value: "The copy Track couldn’t read") }
             .buttonStyle(PressStyle())
         } else {
             ShareLink(item: BackupFile(training: model.training),
-                      preview: SharePreview("Track backup", image: Image(systemName: "doc"))) {
-                ListRow(icon: "square.and.arrow.up", title: "Export backup", detail: "Save a copy of everything as a file") { EmptyView() }
-                    .contentShape(Rectangle())
-            }
+                      preview: SharePreview("Track backup", image: Image(systemName: "doc"))) { Row(title: "Export backup", value: "JSON file") }
             .buttonStyle(PressStyle())
         }
-        Button { importing = true } label: {
-            ListRow(icon: "square.and.arrow.down", title: "Restore backup", detail: "Replace this iPhone’s data from a file") { EmptyView() }
-                .contentShape(Rectangle())
-        }
+        Button { importing = true } label: { Row(title: "Restore backup", value: "Replaces your data") }
         .buttonStyle(PressStyle())
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
             guard case .success(let url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             guard let data = try? Data(contentsOf: url), let backup = try? TrainingFile.decode(data), backup.isValid else {
-                model.show("This file is not a valid Track backup.")
+                model.show("Not a Track backup file.")
                 return
             }
             // Track's own dialog, with the website's wording.
             model.confirm = Confirm(title: "Restore this backup?",
-                                    message: "Replace current data with \(count(backup.splits.count, "split")) and \(count(backup.sessions.count, "session")). Export your current data first if you want to keep it.",
-                                    label: "Restore backup", destructive: true) {
+                                    message: "It has \(count(backup.sessions.count, "workout")) and \(count(backup.splits.count, "split")), and replaces everything in Track now.",
+                                    label: "Replace my data", destructive: true) {
                 model.restore(backup)
                 restored += 1
                 model.show("Backup restored")

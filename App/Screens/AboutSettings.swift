@@ -1,38 +1,27 @@
 import SafariServices
 import SwiftUI
 
-/// Settings → About: who made Track, where to report a problem, the privacy page and the version.
+/// Settings → About's rows: where to report a problem (tap to copy the name), the privacy page and the version.
 struct AboutSettings: View {
     @State private var copied = false
     @State private var privacy = false
     private static let discord = "n1ghthawq"
 
     var body: some View {
-        Text("A personal project").font(.headline).foregroundStyle(Palette.text)
-        Text("Track is purely vibe-coded: built with AI assistance and made for my own personal training. It’s shared as-is, so there may be rough edges.")
-            .font(.subheadline).foregroundStyle(Palette.muted)
-        GlassList {
+        RowCard {
             Button {
                 UIPasteboard.general.string = Self.discord
                 copied = true
-            } label: {
-                ListRow(icon: "bubble.left", title: "Found a problem?", detail: "Message \(Self.discord) on Discord") {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc").foregroundStyle(copied ? Palette.accent : Palette.muted)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(PressStyle())
-            .sensoryFeedback(.success, trigger: copied) { _, now in now }
+            } label: { Row(title: "Found a problem?", value: copied ? "Copied" : Self.discord) }
+                .buttonStyle(PressStyle())
+                .accessibilityLabel(copied ? "Discord username copied" : "Copy Discord username \(Self.discord)")
+                .sensoryFeedback(.success, trigger: copied) { _, now in now }
+                .task(id: copied) { if copied { try? await Task.sleep(for: .seconds(2)); copied = false } }
             // Inside Track, as iOS apps show a web page, rather than switching to Safari.
-            Button { privacy = true } label: {
-                ListRow(icon: "shield", title: "Privacy", detail: "What Track stores and how to delete it") {
-                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(PressStyle())
-            .sheet(isPresented: $privacy) { SafariView(url: URL(string: "https://trackk.pages.dev/privacy#iphone")!).ignoresSafeArea() }
-            ListRow(mark: true, title: "Track for iPhone", detail: "Version \(Self.version)") { EmptyView() }
+            Button { privacy = true } label: { Row(title: "Privacy", value: "", chevron: true) }
+                .buttonStyle(PressStyle())
+                .sheet(isPresented: $privacy) { SafariView(url: URL(string: "https://trackk.pages.dev/privacy#iphone")!).ignoresSafeArea() }
+            Row(title: "Version", value: Self.version)
         }
     }
 
