@@ -146,12 +146,14 @@ struct RoundButton: View {
 
 /// The PWA's Arrange mode (ArrangeRow and Grip): each row on its own card with a grip at its end. Drag the grip and
 /// the row follows the finger while the others slide aside to make room; let go and it moves that many places.
-struct ArrangeList<Item: Identifiable, Row: View>: View {
+struct ArrangeList<Item: Identifiable, Row: View, End: View>: View {
     let items: [Item]
     /// What the grip is read as: "Move Push".
     let name: (Item) -> String
     let onMove: (_ from: Int, _ to: Int) -> Void
     @ViewBuilder let row: (Item) -> Row
+    /// After the grip (a split's exercise: its trash).
+    @ViewBuilder var end: (Item) -> End
     @State private var held: Item.ID?
     @State private var drag: CGFloat = 0
     /// One row and the gap under it: how far a drag goes per place.
@@ -178,6 +180,7 @@ struct ArrangeList<Item: Identifiable, Row: View>: View {
                                 }
                             })
                         .accessibilityLabel("Move \(name(item))")
+                    end(item)
                 }
                 .padding(Space.s4)
                 .frame(minHeight: Size.control + Space.s4 * 2)
@@ -197,6 +200,12 @@ struct ArrangeList<Item: Identifiable, Row: View>: View {
         if steps > 0, index > from, index <= from + steps { return -step }
         if steps < 0, index < from, index >= from + steps { return step }
         return 0
+    }
+}
+
+extension ArrangeList where End == EmptyView {
+    init(items: [Item], name: @escaping (Item) -> String, onMove: @escaping (_ from: Int, _ to: Int) -> Void, @ViewBuilder row: @escaping (Item) -> Row) {
+        self.init(items: items, name: name, onMove: onMove, row: row, end: { _ in EmptyView() })
     }
 }
 

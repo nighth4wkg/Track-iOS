@@ -1,119 +1,113 @@
 import SwiftUI
 import TrackCore
 
-/// A split, as the website's split page: its name over its size, Start workout, "Your exercises" (swipe one left to
-/// remove it, hold and drag to move it), Add exercise, Resume while a workout is on, and Delete split. The pen turns
-/// editing on: Rename in place of its size, and ✎ (swap, asking first) and ✕ (remove) in place of each exercise’s set count.
+/// A split, as the PWA's: its name over its size with Edit, each exercise on a card (number, sets, last time's top
+/// set), Add exercise, Last time, and Start workout docked at the bottom. Editing renames it, moves exercises by the
+/// grip, removes them (asking first, then Undo) and offers Delete split.
 struct SplitPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let splitId: String
     @State private var picking = false
     @State private var editingOn = false
-    @State private var swapping: Exercise?
-    @State private var picked: (exercise: Exercise, name: String)?
+    @State private var name = ""
 
     var body: some View {
         if let split = model.training.splits.first(where: { $0.id == splitId }) {
             // Its workout is on: the split follows the workout, so changes belong there (here they'd be undone).
             let live = model.training.active?.splitId == split.id
             let editing = editingOn && !live
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(split.name).scaledFont(34, weight: .bold).foregroundStyle(Palette.text)
-                            // Rename takes the size line's place while editing (the slot as tall either way), so the
-                            // page below never moves.
-                            ZStack(alignment: .leading) {
-                                Group {
-                                    if split.exercises.isEmpty && !live {
-                                        Button("Tap to add exercises") { picking = true }.font(.body).foregroundStyle(Palette.accent)
-                                    } else {
-                                        Text(split.summary).font(.body).foregroundStyle(Palette.muted)
-                                    }
-                                }
-                                .opacity(editing ? 0 : 1).allowsHitTesting(!editing).accessibilityHidden(editing)
-                                if !live {
-                                    Button {
-                                        model.naming = Naming(title: "Rename split", name: split.name, problem: { model.splitNameTaken($0, except: splitId) }, action: "Save name") { name in model.update { $0.edit(splitId) { $0.name = name } } }
-                                    } label: {
-                                        // The line's height, with a 44pt tap area reaching into the space around it.
-                                        Label("Rename", systemImage: "pencil").frame(minHeight: 44).contentShape(Rectangle()).padding(.vertical, -11)
-                                    }
-                                    .buttonStyle(PressStyle()).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.muted)
-                                    .opacity(editing ? 1 : 0).allowsHitTesting(editing).accessibilityHidden(!editing)
-                                }
-                            }
-                        }
-                        Spacer()
-                        if !live {
-                            RoundButton(icon: editing ? "checkmark" : "pencil", label: editing ? "Done editing" : "Edit split") {
-                                withAnimation(.smooth(duration: Motion.standard)) { editingOn.toggle() }
-                            }
-                        }
-                    }
-                    if split.exercises.isEmpty {
-                        EmptyCard(icon: "dumbbell", title: "Build your session.", detail: "Search the exercise library to add your first movement.")
-                    } else {
-                        Button { model.start(split) } label: { Label("Start workout", systemImage: "play") }
-                            .buttonStyle(PrimaryButtonStyle()).disabled(model.training.active != nil)
-                        SmallHeader(title: "Your exercises")
-                        // While editing, ✕ removes, so the swipe is off, and one left open closes (or it shows a second Delete).
-                        NativeList(items: split.exercises, deleteLabel: "Remove", onDelete: live || editing ? nil : { remove($0, from: split) },
-                                   onMove: live ? nil : { from, to in model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } } },
-                                   resetKey: editing) { exercise in
-                            HStack(spacing: 8) {
-                                Text(exercise.name).foregroundStyle(Palette.text)
-                                Spacer()
-                                // ✎ ✕ take the set count's place, in a slot as wide in both modes: names keep their lines,
-                                // so rows never change height (the list re-measuring every row is what stuttered).
-                                ZStack(alignment: .trailing) {
-                                    Text(count(exercise.sets.count, "set")).font(.subheadline).foregroundStyle(Palette.muted)
-                                        .opacity(editing ? 0 : 1).accessibilityHidden(editing)
-                                    if !live {
-                                        HStack(spacing: 4) {
-                                            rowButton("arrow.left.arrow.right", "Swap \(exercise.name)", Palette.muted) { swapping = exercise }
-                                            rowButton("xmark", "Remove \(exercise.name)", Palette.dangerText) { remove(exercise, from: split) }
-                                        }
-                                        .opacity(editing ? 1 : 0).allowsHitTesting(editing).accessibilityHidden(!editing)
-                                    }
-                                }
-                            }
-                            .frame(minHeight: 28)
-                        }
-                    }
-                    if live {
-                        Text("This split’s workout is on. Change its exercises in the workout; the split keeps them.")
-                            .font(.footnote).foregroundStyle(Palette.muted)
-                    } else {
-                        Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }.buttonStyle(SecondaryButtonStyle())
-                    }
-                    if model.training.active != nil {
-                        Button { model.workoutOpen = true } label: { Text("Resume your active workout").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
-                    }
-                    Button { model.deleteSplit(split) } label: { Label("Delete split", systemImage: "trash").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.dangerText)
-                        .buttonStyle(PressStyle()).padding(.top, 24)
+            let last = model.training.latestSession(of: splitId)
+            let unit = model.training.settings.unit
+            SubPage(title: split.name, subtitle: split.summary) {
+                if !live {
+                    Button(editing ? "Done" : "Edit") { toggleEditing(split) }.buttonStyle(SecondaryButtonStyle(hug: true))
                 }
-                .padding(.horizontal, 16).padding(.bottom, 32)
-                .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
-                .animation(.smooth(duration: Motion.standard), value: split.exercises.map(\.id))
-                .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))
+            } content: {
+                if editing {
+                    VStack(alignment: .leading, spacing: Space.s2) {
+                        Text("Split name").type(.t14).foregroundStyle(Palette.muted)
+                        Field(placeholder: "Split name", text: $name, label: "Split name") { rename(split) }
+                    }
+                    .padding(.top, Space.s4)
+                }
+                Group {
+                    if split.exercises.isEmpty {
+                        Text("No exercises yet. Add the first one.").type(.t14).foregroundStyle(Palette.muted)
+                    } else if editing {
+                        ArrangeList(items: split.exercises, name: \.name, onMove: { from, to in
+                            model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } }
+                        }) { exercise in
+                            names(exercise)
+                        } end: { exercise in
+                            RoundButton(icon: "trash", label: "Remove \(exercise.name)") { remove(exercise) }
+                        }
+                    } else {
+                        VStack(spacing: Space.s3) {
+                            ForEach(Array(split.exercises.enumerated()), id: \.element.id) { index, exercise in
+                                HStack(spacing: Space.s3) {
+                                    Text("\(index + 1)").type(.t16).monospacedDigit().foregroundStyle(Palette.text)
+                                        .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                                    names(exercise)
+                                    Spacer(minLength: 0)
+                                    Text(topSet(exercise, last, unit)).type(.t14).monospacedDigit().foregroundStyle(Palette.text).lineLimit(1)
+                                }
+                                .padding(Space.s4)
+                                .raised()
+                            }
+                        }
+                    }
+                }
+                .padding(.top, Space.s4)
+                if live {
+                    Text("This split’s workout is on. Change its exercises in the workout; the split keeps them.")
+                        .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s3)
+                } else {
+                    Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }
+                        .buttonStyle(SecondaryButtonStyle()).padding(.top, Space.s3)
+                }
+                if editing {
+                    Button("Delete split") { model.deleteSplit(split) }.buttonStyle(SecondaryButtonStyle(danger: true)).padding(.top, Space.s6)
+                } else if let last, let finished = last.finishedAt {
+                    HStack(spacing: Space.s3) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Last time").type(.t14).foregroundStyle(Palette.muted)
+                            Text(Date(timeIntervalSince1970: Double(finished) / 1000).formatted(.gregorian.weekday(.wide).month(.abbreviated).day()))
+                                .type(.t16).foregroundStyle(Palette.text)
+                        }
+                        Spacer(minLength: 0)
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text("\(last.minutes) min")
+                            Text("\(weight(last.volume, unit)) \(unit.rawValue)")
+                        }
+                        .type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
+                    }
+                    .padding(Space.s4)
+                    .raised()
+                    .padding(.top, Space.s6)
+                }
+                // Room for the dock, so the last card scrolls clear of it.
+                if !editing { Color.clear.frame(height: Size.primary + Space.s4) }
             }
-            .background(Backdrop())
-            .navigationBarTitleDisplayMode(.inline) // no title in the bar: the page shows the name itself
+            .overlay(alignment: .bottom) {
+                if !editing {
+                    Button { if model.training.active == nil { model.start(split) } else { model.workoutOpen = true } } label: {
+                        Label(model.training.active == nil ? "Start workout" : "Workout in progress", systemImage: "play.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(split.exercises.isEmpty)
+                    .padding(.horizontal, Space.s4)
+                    .padding(.bottom, Space.s4)
+                    .frame(maxWidth: Measure.page)
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.smooth(duration: Motion.standard), value: editing)
+            .animation(.smooth(duration: Motion.standard), value: split.exercises.map(\.id))
+            .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))
             .sheet(isPresented: $picking) {
                 ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }
-            }
-            // The swap asks first once the picker has gone.
-            .sheet(item: $swapping, onDismiss: {
-                guard let picked else { return }
-                self.picked = nil
-                model.swap(picked.exercise, for: picked.name, inWorkout: false, splitId: splitId)
-            }) { exercise in
-                ExercisePicker(replacing: exercise.name) { picked = (exercise, $0) }
             }
         } else {
             // Deleted: back to Home.
@@ -121,20 +115,39 @@ struct SplitPage: View {
         }
     }
 
-    /// A row's ✎ or ✕: the row's height, with a 44pt tap area reaching into its padding.
-    private func rowButton(_ icon: String, _ label: String, _ tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon).font(.subheadline.weight(.semibold)).foregroundStyle(tint)
-                .frame(width: 36, height: 28).padding(.vertical, 8).contentShape(Rectangle()).padding(.vertical, -8)
+    private func names(_ exercise: Exercise) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
+            Text(count(exercise.sets.count, "set")).type(.t14).foregroundStyle(Palette.muted)
         }
-        .buttonStyle(PressStyle()).accessibilityLabel(label)
     }
 
-    private func remove(_ exercise: Exercise, from split: Split) {
-        model.confirm = Confirm(title: "Remove \(exercise.name)?",
-                                message: "Past workouts keep it.",
-                                label: "Remove exercise", destructive: true) {
-            model.update { $0.edit(splitId) { $0.exercises.removeAll { $0.id == exercise.id } } }
+    /// Last time's best set of this exercise in this split (by id or name), or New.
+    private func topSet(_ exercise: Exercise, _ last: Session?, _ unit: TrackCore.Settings.Unit) -> String {
+        let done = last?.exercises.first { $0.id == exercise.id || $0.name == exercise.name }?.sets.filter { $0.done && $0.isValid } ?? []
+        guard let best = done.max(by: { ($0.kg ?? 0, $0.reps ?? 0) < ($1.kg ?? 0, $1.reps ?? 0) }) else { return "New" }
+        return "\(TrainingSet.display(kg: best.kg ?? 0, unit: unit)) \(unit.rawValue) × \(best.reps ?? 0)"
+    }
+
+    private func toggleEditing(_ split: Split) {
+        if editingOn { rename(split) } else { name = split.name }
+        withAnimation(.smooth(duration: Motion.standard)) { editingOn.toggle() }
+    }
+
+    private func rename(_ split: Split) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty, trimmed != split.name { model.update { $0.edit(splitId) { $0.name = trimmed } } }
+    }
+
+    /// Asks first, then offers Undo, as every delete does.
+    private func remove(_ exercise: Exercise) {
+        model.confirm = Confirm(title: "Remove \(exercise.name)?", message: "Past workouts keep it.", label: "Remove", destructive: true) {
+            guard let index = model.training.splits.first(where: { $0.id == splitId })?.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
+            model.update { $0.edit(splitId) { $0.exercises.remove(at: index) } }
+            model.show("Exercise removed.") {
+                guard let owner = model.training.splits.first(where: { $0.id == splitId }), !owner.exercises.contains(where: { $0.id == exercise.id }) else { return }
+                model.update { $0.edit(splitId) { $0.exercises.insert(exercise, at: min(index, $0.exercises.count)) } }
+            }
         }
     }
 }

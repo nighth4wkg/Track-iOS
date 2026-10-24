@@ -100,7 +100,14 @@ extension AppModel {
 
     func deleteSplit(_ split: Split) {
         confirm = Confirm(title: "Delete \(split.name)?", message: "Its past workouts stay in History.", label: "Delete split",
-                          destructive: true) { [weak self] in self?.update { $0.splits.removeAll { $0.id == split.id } } }
+                          destructive: true) { [weak self] in
+            guard let self, let index = training.splits.firstIndex(where: { $0.id == split.id }) else { return }
+            update { $0.splits.remove(at: index) }
+            show("Split deleted.") { [weak self] in
+                guard let self, !training.splits.contains(where: { $0.id == split.id }) else { return }
+                update { $0.splits.insert(split, at: min(index, $0.splits.count)) }
+            }
+        }
     }
 
     func deleteWorkout(_ session: Session) {
