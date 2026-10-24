@@ -1,168 +1,130 @@
 import SwiftUI
 import TrackCore
 
-/// A finished workout, as the website's history dialog: its name and date, Exercises · Sets · Volume, the session
-/// note (add or edit it), each exercise's logged sets as a table, then Delete and Repeat workout.
+/// A finished workout, as the PWA's: its name over the day and minutes, Volume · Sets · Avg RIR tiles, each exercise
+/// (tap to see its sets), the note (saved when you leave it), then Repeat workout and Delete workout.
 struct HistoryDetail: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
     let session: Session
-    @State private var noteOpen = false
-    @State private var draft = ""
+    @State private var opened: String?
+    @State private var note = ""
+    @FocusState private var typing: Bool
 
     var body: some View {
         let unit = model.training.settings.unit
         let current = model.training.sessions.first { $0.id == session.id } ?? session
-        let exercises = current.exercises.map { exercise in
-            var logged = exercise
-            logged.sets = exercise.sets.filter { $0.done && $0.isValid }
-            return logged
-        }.filter { !$0.sets.isEmpty }
-        NavigationStack {
-            VStack(spacing: 0) {
-                header(current, exercises: exercises.count, unit: unit)
-                ScrollView {
-                    // Lazy: only the cards on screen are built as the sheet opens (an 18-exercise day took 256 ms to
-                    // its first frame on an iPhone 16, 180 ms lazily).
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        note(current)
-                        ForEach(exercises) { exercise in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(exercise.name).font(.body.weight(.semibold)).foregroundStyle(Palette.text)
-                                setRow("Set", "Weight (\(unit.rawValue))", "Reps", "RIR")
-                                ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
-                                    setRow("\(index + 1)" + (set.side.map { $0 == .left ? " L" : " R" } ?? ""),
-                                           TrainingSet.display(kg: set.kg, unit: unit), "\(set.reps ?? 0)", "\(set.rir ?? 0)", numbers: true)
-                                }
-                            }
-                            .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass()
-                        }
+        let sets = current.completedSets
+        let rir = sets.isEmpty ? 0 : Double(sets.reduce(0) { $0 + ($1.rir ?? 0) }) / Double(sets.count)
+        let day = Date(timeIntervalSince1970: Double(current.finishedAt ?? current.startedAt) / 1000)
+        SheetFrame(title: current.name, subtitle: "\(day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())) · \(current.minutes) min") {
+            HStack(spacing: Space.s3) {
+                tile("Volume", weight(current.volume, unit), unit.rawValue)
+                tile("Sets", "\(current.loggedCount)")
+                tile("Avg RIR", rir.formatted(.number.precision(.fractionLength(1))))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, Space.s4)
+            Text("Exercises").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6)
+            // Lazy: only the cards on screen are built as the sheet opens (an 18-exercise day took 256 ms to its first
+            // frame on an iPhone 16, 180 ms lazily).
+            LazyVStack(spacing: Space.s3) {
+                ForEach(current.exercises) { exercise in card(exercise, unit: unit) }
+            }
+            .padding(.top, Space.s2)
+            VStack(alignment: .leading, spacing: Space.s2) {
+                Text("Note").type(.t14).foregroundStyle(Palette.muted)
+                TextField("How did it go?", text: $note, axis: .vertical)
+                    .type(.t14).foregroundStyle(Palette.text).lineLimit(2...6)
+                    .focused($typing)
+                    .onChange(of: note) { _, value in if value.count > Limits.notes { note = String(value.prefix(Limits.notes)) } }
+            }
+            .padding(Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .raised()
+            .contentShape(Rectangle())
+            .onTapGesture { typing = true }
+            .padding(.top, Space.s6)
+            VStack(spacing: Space.s3) {
+                Button { repeatWorkout(current) } label: { Label("Repeat workout", systemImage: "play.fill") }.buttonStyle(PrimaryButtonStyle())
+                Button("Delete workout") { model.deleteWorkout(current) }.buttonStyle(SecondaryButtonStyle(danger: true))
+            }
+            .padding(.top, Space.s6)
+        }
+        .onAppear { note = current.notes ?? "" }
+        .onChange(of: typing) { _, now in if !now { save(current) } }
+        .onDisappear { save(current) }
+        .animation(.smooth(duration: Motion.standard), value: opened)
+    }
+
+    /// The exercise and its set count; open, a line per set: "1L", "60 kg × 8", "RIR 2".
+    private func card(_ exercise: Exercise, unit: TrackCore.Settings.Unit) -> some View {
+        let open = opened == exercise.id
+        let labels = exercise.setLabels
+        return VStack(alignment: .leading, spacing: 0) {
+            Button { opened = open ? nil : exercise.id } label: {
+                HStack(spacing: Space.s3) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
+                        Text(count(exercise.setCount, "set")).type(.t14).foregroundStyle(Palette.muted)
                     }
-                    .padding(16)
+                    Spacer(minLength: 0)
+                    Image(systemName: open ? "chevron.up" : "chevron.down").font(.system(size: IconSize.medium, weight: .semibold))
+                        .foregroundStyle(Palette.muted)
                 }
-                .background(Palette.background.opacity(0.32))
-                .scrollEdgeEffectStyle(.soft, for: .bottom) // a fade behind the buttons, never a band across the cards
-            }
-            .background(Backdrop())
-            // A bar holding a floating capsule, not an inset with a fill: the sets scroll under it. No full-width strip.
-            .safeAreaBar(edge: .bottom) {
-                HStack(spacing: 16) {
-                    // Red text, no fill: Repeat is the point here, as on the website.
-                    Button { model.deleteWorkout(current) } label: {
-                        Label("Delete", systemImage: "trash").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.dangerText)
-                            .padding(.horizontal, 16).frame(minHeight: 44).contentShape(Capsule())
-                    }
-                    .buttonStyle(PressStyle()).accessibilityLabel("Delete workout")
-                    Spacer()
-                    // While another workout is on, it says why instead of doing nothing.
-                    Button { model.training.active == nil ? model.repeatWorkout(current) : model.show("Finish or discard your current workout first.") } label: {
-                        Label("Repeat workout", systemImage: "play").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.primaryText)
-                            .padding(.horizontal, 16).frame(minHeight: 44).background(Capsule().fill(Palette.primary))
-                    }
-                    .buttonStyle(PressStyle()).opacity(model.training.active != nil ? 0.45 : 1)
-                }
-                // A floating glass capsule like the keyboard bar's, solid inside so the sets don't show through.
-                .padding(8).glass(radius: 30, fill: Palette.dialog)
-                .padding(.horizontal, 16).padding(.bottom, 8)
-            }
-            .toolbar(.hidden, for: .navigationBar)
-        }
-    }
-
-    /// The website's header: the name over the date, then Exercises · Sets · Volume as plain figures (volume in the
-    /// accent), over a hairline.
-    private func header(_ current: Session, exercises: Int, unit: TrackCore.Settings.Unit) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top) {
-                Text(current.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text)
-                Spacer()
-                RoundButton(icon: "xmark", label: "Close") { dismiss() }
-            }
-            Text(Date(timeIntervalSince1970: Double(current.finishedAt ?? current.startedAt) / 1000)
-                .formatted(.gregorian.weekday(.abbreviated).month(.abbreviated).day().year()))
-                .font(.subheadline).foregroundStyle(Palette.muted)
-            HStack(alignment: .top, spacing: 16) {
-                stat("Exercises", "\(exercises)")
-                stat("Sets", "\(current.loggedCount)")
-                stat("Volume", weight(current.volume, unit), small: unit.rawValue, accent: true).frame(minWidth: 120)
-            }
-            .padding(.top, 20)
-        }
-        .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 16) // clear of the sheet's grabber
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 1) }
-    }
-
-    private func stat(_ label: String, _ value: String, small: String? = nil, accent: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.caption).foregroundStyle(Palette.muted)
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(value).font(.title3.weight(.semibold)).monospacedDigit().foregroundStyle(accent ? Palette.accent : Palette.text)
-                if let small { Text(small).font(.caption).foregroundStyle(Palette.muted) }
-            }
-            .lineLimit(1).minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// One line of the sets table, as the website's: Set on the left, the numbers right-aligned, RIR muted.
-    private func setRow(_ set: String, _ kg: String, _ reps: String, _ rir: String, numbers: Bool = false) -> some View {
-        HStack(spacing: 8) {
-            Text(set).foregroundStyle(Palette.muted).frame(width: 44, alignment: .leading)
-            Text(kg).frame(minWidth: 64, maxWidth: .infinity, alignment: .trailing)
-            Text(reps).frame(maxWidth: .infinity, alignment: .trailing)
-            Text(rir).foregroundStyle(Palette.muted).fontWeight(.regular).frame(maxWidth: .infinity, alignment: .trailing)
-        }
-        .font(numbers ? .body.weight(.semibold) : .caption)
-        .monospacedDigit()
-        .foregroundStyle(numbers ? Palette.text : Palette.muted)
-        .frame(minHeight: numbers ? 32 : 20)
-    }
-
-    /// "Add a note" (or the note), opening a field with 500 characters, Cancel and Save note.
-    private func note(_ current: Session) -> some View {
-        let notes = current.notes ?? ""
-        return VStack(alignment: .leading, spacing: 10) {
-            Button {
-                if !noteOpen { draft = notes }
-                withAnimation(.smooth(duration: Motion.standard)) { noteOpen.toggle() }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "square.and.pencil").foregroundStyle(Palette.muted)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(notes.isEmpty ? "Add a note" : "Session note").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text)
-                        if !notes.isEmpty, !noteOpen { Text(notes).font(.subheadline).foregroundStyle(Palette.muted).lineLimit(1) }
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted).scaleEffect(y: noteOpen ? -1 : 1)
-                }
+                .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
+                .frame(minHeight: Size.row)
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressStyle())
-            if noteOpen {
-                TextField("How did this workout feel?", text: $draft, axis: .vertical)
-                    .lineLimit(3...6).padding(12)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
-                    .onChange(of: draft) { _, value in if value.count > Limits.notes { draft = String(value.prefix(Limits.notes)) } }
-                HStack {
-                    Text("\(draft.count)/\(Limits.notes)").font(.caption).foregroundStyle(Palette.muted)
-                    Spacer()
-                    Button { withAnimation(.smooth) { noteOpen = false } } label: { Text("Cancel").frame(minHeight: 44).contentShape(Rectangle()) }
-                        .foregroundStyle(Palette.text)
-                    Button {
-                        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                        model.update { training in
-                            guard let index = training.sessions.firstIndex(where: { $0.id == current.id }) else { return }
-                            training.sessions[index].notes = text.isEmpty ? nil : text
+            .accessibilityValue(open ? "Open" : "Closed")
+            if open {
+                VStack(spacing: Space.s2) {
+                    ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
+                        HStack(spacing: Space.s3) {
+                            Text(labels[index]).foregroundStyle(Palette.muted).frame(width: Space.s6)
+                            Text("\(TrainingSet.display(kg: set.kg ?? 0, unit: unit)) \(unit.rawValue) × \(set.reps ?? 0)").foregroundStyle(Palette.text)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("RIR \(set.rir ?? 0)").foregroundStyle(Palette.muted)
                         }
-                        withAnimation(.smooth) { noteOpen = false }
-                    } label: { Text("Save note").frame(minHeight: 44).contentShape(Rectangle()) }
-                    .fontWeight(.semibold).disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines) == notes)
+                        .type(.t14).monospacedDigit()
+                    }
                 }
-                .font(.subheadline)
+                .padding(.horizontal, Space.s4).padding(.bottom, Space.s3)
                 .transition(.opacity)
             }
         }
-        .padding(16).glass()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .raised()
+        .clipped()
+    }
+
+    private func tile(_ label: String, _ value: String, _ unit: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(label).type(.t14).foregroundStyle(Palette.muted)
+            HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
+                Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
+                if let unit { Text(unit).type(.t14).foregroundStyle(Palette.muted) }
+            }
+            .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .padding(Space.s3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .raised()
+    }
+
+    /// While another workout is on, it says why instead of doing nothing.
+    private func repeatWorkout(_ current: Session) {
+        if model.training.active == nil { model.repeatWorkout(current) } else { model.show("Finish or discard your current workout first.") }
+    }
+
+    private func save(_ current: Session) {
+        let text = String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.notes))
+        let notes: String? = text.isEmpty ? nil : text
+        guard notes != (model.training.sessions.first { $0.id == current.id }?.notes) else { return }
+        model.update { training in
+            guard let index = training.sessions.firstIndex(where: { $0.id == current.id }) else { return }
+            training.sessions[index].notes = notes
+        }
+        model.show("Session note saved")
     }
 }

@@ -46,7 +46,7 @@ struct WorkoutView: View {
                     .animation(.smooth(duration: Motion.quick), value: focus == nil)
             }
             .offset(x: pull + drag)
-            .shadow(color: .black.opacity(pull + drag > 0 ? 0.25 : 0), radius: Space.s5)
+            .shadow(color: .black.opacity(pull + drag > 0 ? 0.25 : 0), radius: Space.s4)
             .overlay(alignment: .leading) { edgeSwipe }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             // It stays built while it's left for later (MainView): opening starts it afresh, leaving ends the typing.

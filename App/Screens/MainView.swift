@@ -54,7 +54,7 @@ struct MainView: View {
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
-        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays().presentationDetents([.fraction(0.75), .large]) }
+        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
         .trackOverlays()
     }
 

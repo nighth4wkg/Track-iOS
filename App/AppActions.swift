@@ -124,10 +124,12 @@ extension AppModel {
     }
 
     func deleteWorkout(_ session: Session) {
-        confirm = Confirm(title: "Delete this workout?", message: "\(session.name) and its sets are removed from History, with its XP.",
+        confirm = Confirm(title: "Delete this workout?", message: "Its sets and XP go too. You can undo.",
                           label: "Delete workout", destructive: true) { [weak self] in
-            self?.history = nil
-            self?.update { $0.sessions.removeAll { $0.id == session.id } }
+            guard let self, let index = training.sessions.firstIndex(where: { $0.id == session.id }) else { return }
+            history = nil
+            update { $0.sessions.remove(at: index) }
+            show("Workout deleted.") { [weak self] in self?.update { $0.sessions.insert(session, at: min(index, $0.sessions.count)) } }
         }
     }
 }
