@@ -104,7 +104,7 @@ private struct NameCard: View {
             HStack(alignment: .top) {
                 Text(naming.title).font(.title3.weight(.bold)).foregroundStyle(Palette.text)
                 Spacer()
-                GlassCircleButton(icon: "xmark", label: "Close") { model.naming = nil }.padding(.top, -6).padding(.trailing, -6)
+                RoundButton(icon: "xmark", label: "Close") { model.naming = nil }.padding(.top, -6).padding(.trailing, -6)
             }
             Text(naming.message).font(.subheadline).foregroundStyle(Palette.muted)
             Text(naming.label).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).padding(.top, 6).accessibilityHidden(true) // read as the field's own name (a filled field had none)

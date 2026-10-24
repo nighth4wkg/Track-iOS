@@ -48,7 +48,7 @@ struct SplitPage: View {
                         }
                         Spacer()
                         if !live {
-                            GlassCircleButton(icon: editing ? "checkmark" : "pencil", label: editing ? "Done editing" : "Edit split") {
+                            RoundButton(icon: editing ? "checkmark" : "pencil", label: editing ? "Done editing" : "Edit split") {
                                 withAnimation(.smooth(duration: Motion.standard)) { editingOn.toggle() }
                             }
                         }

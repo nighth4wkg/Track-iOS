@@ -10,14 +10,13 @@ extension Palette {
 /// the ladder), and the closest win with the weight that gets it. Asks for bodyweight first.
 struct RankPage: View {
     @Environment(AppModel.self) private var model
-    @Binding var settingsOpen: Bool
     @State private var bodyweightText = ""
     @FocusState private var typing: Bool
 
     var body: some View {
         let training = model.training
         let unit = training.settings.unit
-        Page(title: "Rank", settingsOpen: $settingsOpen) {
+        Page(title: "Rank") {
             if let bodyweight = training.settings.bodyweight {
                 let choices = training.settings.lifts ?? [:]
                 let signature = choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")

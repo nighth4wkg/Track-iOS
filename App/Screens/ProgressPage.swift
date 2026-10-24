@@ -6,7 +6,6 @@ import TrackCore
 /// exercise's latest personal record (a row opens its workout).
 struct ProgressPage: View {
     @Environment(AppModel.self) private var model
-    @Binding var settingsOpen: Bool
     @State private var xpHelp = false
     @State private var quests = false
     @AppStorage("track.volumePeriod") private var period = Period.week
@@ -17,7 +16,7 @@ struct ProgressPage: View {
         let unit = training.settings.unit
         let change = model.derived("volume \(period) \(now / 60_000)") { $0.volumeChange(per: period, at: now) }
         let records = model.derived("latest records") { Array($0.latestRecords.prefix(5)) }
-        Page(title: "Progress", settingsOpen: $settingsOpen) {
+        Page(title: "Progress") {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {

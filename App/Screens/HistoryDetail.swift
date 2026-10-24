@@ -76,7 +76,7 @@ struct HistoryDetail: View {
             HStack(alignment: .top) {
                 Text(current.name).font(.title2.weight(.bold)).foregroundStyle(Palette.text)
                 Spacer()
-                GlassCircleButton(icon: "xmark", label: "Close") { dismiss() }
+                RoundButton(icon: "xmark", label: "Close") { dismiss() }
             }
             Text(Date(timeIntervalSince1970: Double(current.finishedAt ?? current.startedAt) / 1000)
                 .formatted(.gregorian.weekday(.abbreviated).month(.abbreviated).day().year()))

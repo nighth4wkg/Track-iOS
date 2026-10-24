@@ -57,9 +57,9 @@ struct MainView: View {
     @ViewBuilder private func page(_ tab: AppTab) -> some View {
         switch tab {
         case .home: HomeView(settingsOpen: $settingsOpen)
-        case .history: HistoryView(settingsOpen: $settingsOpen)
-        case .progress: ProgressPage(settingsOpen: $settingsOpen)
-        case .rank: RankPage(settingsOpen: $settingsOpen)
+        case .history: HistoryView()
+        case .progress: ProgressPage()
+        case .rank: RankPage()
         }
     }
 }

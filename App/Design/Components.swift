@@ -1,18 +1,19 @@
 import SwiftUI
 import TrackCore
 
-/// A tab's page, laid out as on the website: a muted line over a large title, then glass cards in one scrolling
-/// column, 16pt from the edges. Swipe sideways to the next or previous tab, as on the website. Above it, the
-/// navigation bar keeps iOS 26's Liquid Glass: the brand, the streak and Settings each in their own bubble.
+/// A tab's page, as the PWA's: its own header (on Home the brand and Settings, then the date over the title; on the
+/// others the title and one control), then cards in one scrolling column, 16 from the edges, clear of the nav pill.
+/// Swipe sideways to the next or previous tab. No navigation bar: the page draws its own header, as the PWA.
 struct Page<Content: View>: View {
     @Environment(AppModel.self) private var model
     let title: String
     var caption: String?
     /// A control beside the title, as History's filter.
     var accessory: AnyView?
-    /// Between the title and each card: the website's 16pt (Home's grid, 24pt).
-    var spacing: CGFloat = 16
-    @Binding var settingsOpen: Bool
+    /// Between the header and each card.
+    var spacing: CGFloat = Space.s4
+    /// Home only: the brand and Settings above the title.
+    var settingsOpen: Binding<Bool>?
     @ViewBuilder let content: Content
     @State private var position = ScrollPosition(edge: .top)
     @State private var shift: CGFloat = 0
@@ -20,19 +21,29 @@ struct Page<Content: View>: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                // The website's page: 24pt from the edges, a 32pt semibold title.
                 VStack(alignment: .leading, spacing: spacing) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if let caption { Text(caption).scaledFont(16).foregroundStyle(Palette.muted) }
-                        HStack {
-                            Text(title).scaledFont(32, weight: .semibold).foregroundStyle(Palette.text)
-                            Spacer()
-                            accessory
+                    VStack(alignment: .leading, spacing: Space.s2) {
+                        if let settingsOpen {
+                            HStack {
+                                Brand()
+                                Spacer()
+                                RoundButton(icon: "gearshape", label: "Settings") { settingsOpen.wrappedValue = true }
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            if let caption { Text(caption).type(.t14).foregroundStyle(Palette.muted) }
+                            HStack(spacing: Space.s3) {
+                                Text(title).type(.t32).foregroundStyle(Palette.text)
+                                Spacer()
+                                accessory
+                            }
+                            .frame(minHeight: Size.control)
                         }
                     }
                     content
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Space.s4)
+                .padding(.top, Space.s4)
                 .padding(.bottom, Size.nav + Space.s4 * 2)
                 .frame(maxWidth: Measure.page)
                 .frame(maxWidth: .infinity)
@@ -48,30 +59,7 @@ struct Page<Content: View>: View {
                 if AppTab.allCases.indices.contains(next) { model.tab = AppTab.allCases[next] }
             }))
             .background(Backdrop())
-            // No navigation title: the page shows its own, and a hidden one was read by VoiceOver (and named the
-            // back button of the pages pushed from here, "Ready to train" instead of Back).
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                let streak = model.derived("streak \(dayKey(nowMillis()))") { $0.weeklyStreak(at: nowMillis()) }
-                // The brand sits on the bar itself, as on the website: no glass bubble behind it.
-                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
-                // The streak shows once there is one: a 0 on day one reads as broken.
-                if streak > 0 { ToolbarSpacer(.fixed, placement: .topBarLeading) }
-                if streak > 0 { ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame").foregroundStyle(Palette.streak)
-                        Text("\(streak)").foregroundStyle(Palette.text)
-                    }
-                    .font(.subheadline.weight(.bold)).monospacedDigit().fixedSize()
-                    .padding(.horizontal, 6)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(streak == 1 ? "1-week training streak" : "\(streak)-week training streak")
-                } }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { settingsOpen = true } label: { Image(systemName: "gearshape").foregroundStyle(Palette.text) }
-                        .accessibilityLabel("Settings")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -162,20 +150,19 @@ struct SmallHeader: View {
 }
 
 /// A round icon button in Liquid Glass (iOS 26), or the Sheen glass before it.
-struct GlassCircleButton: View {
+struct RoundButton: View {
     let icon: String
     let label: String
     var active = false
     let action: () -> Void
 
     var body: some View {
-        let image = Image(systemName: icon).font(.body.weight(.semibold)).contentTransition(.symbolEffect(.replace))
-            .foregroundStyle(active ? Palette.accent : Palette.text)
-        if #available(iOS 26, *) {
-            Button(action: action) { image.frame(width: 32, height: 32) }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel(label)
-        } else {
-            Button(action: action) { image.frame(width: 44, height: 44).glass(radius: 22, fill: Palette.control, lifted: false) }
-                .buttonStyle(PressStyle()).accessibilityLabel(label)
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: IconSize.regular, weight: .semibold)).contentTransition(.symbolEffect(.replace))
+                .foregroundStyle(active ? Palette.accent : Palette.text)
+                .frame(width: Size.control, height: Size.control)
+                .raised(.control, .circle)
         }
+        .buttonStyle(PressStyle()).accessibilityLabel(label)
     }
 }

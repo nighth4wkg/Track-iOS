@@ -14,7 +14,7 @@ struct HomeView: View {
         let now = nowMillis()
         let nextId = training.active == nil ? training.nextSplit?.split.id : nil
         Page(title: training.active == nil ? "Ready to train" : "Keep going",
-             caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), spacing: 24, settingsOpen: $settingsOpen) {
+             caption: Date.now.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()), spacing: Space.s4, settingsOpen: $settingsOpen) {
             if let error = model.loadError {
                 Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(Palette.dangerText)
             }
@@ -24,7 +24,7 @@ struct HomeView: View {
                 UpNextCard(training: training, now: now)
             }
             SectionHeading(title: "Your splits") {
-                if !training.splits.isEmpty { GlassCircleButton(icon: "plus", label: "Create split", action: create) }
+                if !training.splits.isEmpty { RoundButton(icon: "plus", label: "Create split", action: create) }
             }
             if training.splits.isEmpty {
                 FirstSplitCard(create: create)

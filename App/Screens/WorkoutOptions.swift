@@ -15,7 +15,7 @@ struct WorkoutOptions: View {
             HStack(alignment: .top) {
                 Text("Workout options").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
                 Spacer()
-                GlassCircleButton(icon: "xmark", label: "Close") { dismiss() }.padding(.top, -6).padding(.trailing, -6)
+                RoundButton(icon: "xmark", label: "Close") { dismiss() }.padding(.top, -6).padding(.trailing, -6)
             }
             Text(active?.name ?? "").font(.subheadline).foregroundStyle(Palette.muted).padding(.bottom, 6)
             option(split != nil ? "Rename split" : "Rename workout", "pencil") {

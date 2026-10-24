@@ -104,18 +104,18 @@ enum Radius {
     static let small: CGFloat = 4, inner: CGFloat = 12, card: CGFloat = 18, sheet: CGFloat = 28
 }
 
-/// The shape a surface takes: a rounded box at one of the radii, a pill, or a circle.
+/// The shape a surface takes: a rounded box at one of the radii, a pill, or a circle (a circular corner as big as it
+/// can be: SwiftUI caps it at half the shorter side).
 enum Corner {
     case small, inner, card, sheet, pill, circle
 
-    var shape: AnyShape {
+    var shape: RoundedRectangle {
         switch self {
-        case .small: AnyShape(RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
-        case .inner: AnyShape(RoundedRectangle(cornerRadius: Radius.inner, style: .continuous))
-        case .card: AnyShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        case .sheet: AnyShape(RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
-        case .pill: AnyShape(Capsule())
-        case .circle: AnyShape(Circle())
+        case .small: RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
+        case .inner: RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
+        case .card: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        case .sheet: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous)
+        case .pill, .circle: RoundedRectangle(cornerRadius: .greatestFiniteMagnitude, style: .circular)
         }
     }
 }
@@ -131,6 +131,8 @@ enum TextStyle {
     var weight: Font.Weight {
         switch self { case .t12, .t16: .semibold; case .t14: .regular; case .t20, .t28, .t32: .bold }
     }
+    /// The large title sits a little tighter, as the PWA's t-32 (-0.01em).
+    var tracking: CGFloat { self == .t32 ? -size / 100 : 0 }
     var relative: Font.TextStyle {
         switch self { case .t12: .caption; case .t14: .subheadline; case .t16: .headline; case .t20: .title3; case .t28: .title; case .t32: .largeTitle }
     }
@@ -173,7 +175,7 @@ extension View {
     }
     /// One of the PWA's text styles.
     func type(_ style: TextStyle) -> some View {
-        modifier(ScaledFont(size: style.size, weight: style.weight, relativeTo: style.relative))
+        modifier(ScaledFont(size: style.size, weight: style.weight, relativeTo: style.relative)).tracking(style.tracking)
     }
 }
 
@@ -271,7 +273,7 @@ struct SecondaryButtonStyle: ButtonStyle {
 
 /// The Track mark: a barbell of five rounded bars (components/track-mark.tsx), never green.
 struct TrackMark: View {
-    var size: CGFloat = 22
+    var size: CGFloat = IconSize.logo
 
     var body: some View {
         Canvas { context, canvas in
@@ -286,12 +288,12 @@ struct TrackMark: View {
     }
 }
 
-/// The brand as in the website's top bar.
+/// The brand at the top of Home, as the PWA's: the mark beside "track".
 struct Brand: View {
     var body: some View {
-        HStack(spacing: 8) {
-            TrackMark()
-            Text("track").font(.title3.weight(.semibold)).tracking(-0.8)
+        HStack(spacing: Space.s2) {
+            TrackMark(size: IconSize.logo)
+            Text("track").type(.t20)
         }
         .foregroundStyle(Palette.text)
         .accessibilityElement(children: .ignore) // read once, as "Track" (the lowercase word inside was read too)

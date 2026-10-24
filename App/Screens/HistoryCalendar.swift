@@ -27,9 +27,9 @@ struct HistoryCalendar: View {
                         .font(.subheadline).foregroundStyle(Palette.muted)
                 }
                 Spacer()
-                GlassCircleButton(icon: "chevron.left", label: "Previous month") { step(-1) }
+                RoundButton(icon: "chevron.left", label: "Previous month") { step(-1) }
                     .disabled(month <= earliest).opacity(month <= earliest ? 0.4 : 1)
-                GlassCircleButton(icon: "chevron.right", label: "Next month") { step(1) }.disabled(isCurrent).opacity(isCurrent ? 0.4 : 1)
+                RoundButton(icon: "chevron.right", label: "Next month") { step(1) }.disabled(isCurrent).opacity(isCurrent ? 0.4 : 1)
             }
             HStack(spacing: 4) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in

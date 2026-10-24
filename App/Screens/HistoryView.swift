@@ -6,7 +6,6 @@ import TrackCore
 /// sets · time · volume and a PR chip when it broke a record; tap it for the workout, swipe it left for Delete.
 struct HistoryView: View {
     @Environment(AppModel.self) private var model
-    @Binding var settingsOpen: Bool
     @State private var query = ""
     @State private var month = HistoryCalendar.monthStart(.now)
     @State private var day: String?
@@ -24,7 +23,7 @@ struct HistoryView: View {
         let filtering = searching || day != nil || from != nil || to != nil
         let weeks = Dictionary(grouping: shown.prefix(shownCount)) { weekStart($0.finishedAt!) }.sorted { $0.key > $1.key }
         let recordSessions = model.derived("record sessions") { Set($0.improvements.map(\.after.sessionId)) }
-        Page(title: "History", accessory: all.isEmpty ? nil : AnyView(filterButton), settingsOpen: $settingsOpen) {
+        Page(title: "History", accessory: all.isEmpty ? nil : AnyView(filterButton)) {
             if !all.isEmpty {
                 search(filtering: filtering, label: "\(shown.count) of \(count(all.count, "workout"))")
                 if datesOpen { dateRange.transition(.opacity.combined(with: .move(edge: .top))) }
@@ -63,7 +62,7 @@ struct HistoryView: View {
     }
 
     private var filterButton: some View {
-        GlassCircleButton(icon: "line.3.horizontal.decrease", label: datesOpen ? "Hide date range" : "Filter by date",
+        RoundButton(icon: "line.3.horizontal.decrease", label: datesOpen ? "Hide date range" : "Filter by date",
                           active: from != nil || to != nil) { withAnimation(.smooth(duration: Motion.standard)) { datesOpen.toggle() } }
     }
 
