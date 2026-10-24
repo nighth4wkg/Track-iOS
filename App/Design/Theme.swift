@@ -105,7 +105,7 @@ enum Size {
 
 /// Icon sizes, as the PWA's ICON.
 enum IconSize {
-    static let small: CGFloat = 16, medium: CGFloat = 18, regular: CGFloat = 20, logo: CGFloat = 22
+    static let small: CGFloat = 16, medium: CGFloat = 18, regular: CGFloat = 20, logo: CGFloat = 22, emblem: CGFloat = 26
 }
 
 /// Corners, as the PWA.

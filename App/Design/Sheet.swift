@@ -49,6 +49,7 @@ struct Field: View {
     var limit = Limits.name
     /// A mark at its start, as the search's magnifier.
     var icon: String?
+    var keyboard = UIKeyboardType.default
     var submit: () -> Void = {}
     @FocusState private var focused: Bool
 
@@ -57,6 +58,7 @@ struct Field: View {
             if let icon { Image(systemName: icon).font(.system(size: IconSize.medium)).foregroundStyle(Palette.muted).accessibilityHidden(true) }
             TextField(label, text: $text, prompt: Text(placeholder).foregroundStyle(Palette.placeholder))
                 .focused($focused)
+                .keyboardType(keyboard)
                 .submitLabel(.done)
                 .onSubmit(submit)
                 .scaledFont(TextStyle.t16.size)

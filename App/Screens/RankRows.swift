@@ -1,91 +1,143 @@
 import SwiftUI
 import TrackCore
 
-/// A muscle: its rank, a bar toward the next, and (tapped open) the lift it's ranked on, what reaches the next, and the
-/// exercises counting toward it.
+/// A muscle on its own card, as the PWA's: its name and rank, a bar toward the next, how far that is (or what to log);
+/// tapped open, its best lift beside what reaches the next rank, and the exercises counting toward it.
 struct MuscleRow: View {
     let rank: MuscleRank
     let unit: TrackCore.Settings.Unit
     let names: [CountedName]
     @State private var open = false
 
+    /// What to log to rank a muscle that has nothing yet.
+    private static let hints: [Muscle: String] = [
+        .chest: "Log a bench press", .back: "Log a row or pulldown", .shoulders: "Log an overhead press",
+        .arms: "Log a curl or pushdown", .legs: "Log a squat or leg press",
+    ]
+
     var body: some View {
         let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
-        let text = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
-        VStack(alignment: .leading, spacing: 10) {
-            // The header is the row's button; what opens under it (the exercise chips) is outside it.
+        let opens = rank.best != nil || !names.isEmpty
+        VStack(alignment: .leading, spacing: 0) {
             Button { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } label: {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(rank.muscle.rawValue).font(.headline).foregroundStyle(Palette.text)
-                        Spacer()
-                        Text(rank.best == nil ? "Unranked" : rank.name).font(.subheadline.weight(.bold)).foregroundStyle(text)
-                        Image(systemName: "chevron.down").font(.caption.weight(.bold)).foregroundStyle(Palette.muted)
-                            .scaleEffect(y: open ? -1 : 1)
+                VStack(alignment: .leading, spacing: Space.s2) {
+                    HStack(spacing: Space.s2) {
+                        Text(rank.muscle.rawValue).type(.t16).foregroundStyle(Palette.text).lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(rank.best == nil ? "Unranked" : rank.name).type(.t14).fontWeight(.semibold).foregroundStyle(color)
+                        if opens {
+                            Image(systemName: "chevron.down").font(.system(size: IconSize.small, weight: .semibold)).foregroundStyle(Palette.muted)
+                                .rotationEffect(.degrees(open ? 180 : 0))
+                        }
                     }
-                    RankBar(progress: rank.progress, color: color)
-                    Text(rank.best == nil ? "Log a \(rank.muscle.rawValue.lowercased()) lift to rank it" : toGo(rank.rank, rank.progress))
-                        .font(.subheadline).foregroundStyle(Palette.muted)
+                    RankBar(progress: rank.best == nil ? 0 : rank.progress, color: color)
+                    Text(rank.best == nil ? Self.hints[rank.muscle] ?? "" : toGo(rank.rank, rank.progress)).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
                 }
+                .padding(Space.s4)
+                .frame(minHeight: Size.row)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityValue(open ? "Open" : "Closed")
+            .disabled(!opens)
+            .accessibilityLabel("\(rank.muscle.rawValue): \(rank.best == nil ? "Unranked" : rank.name)")
+            .accessibilityValue(opens ? (open ? "Open" : "Closed") : "")
             .sensoryFeedback(.selection, trigger: open)
             if open {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Space.s4) {
                     if let best = rank.best {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Best: \(best.exercise), \(liftWeight(best.kg, best.kind, unit)) × \(best.reps)")
-                            if let next = rank.next { Text("Next: \(liftWeight(next.kg, best.kind, unit, target: true)) × \(next.reps)") }
+                        HStack(alignment: .top, spacing: Space.s3) {
+                            stat("Best", Palette.muted, "\(liftWeight(best.kg, best.kind, unit)) × \(best.reps)", best.exercise)
+                            if let next = rank.next {
+                                stat("For \(Ranks.names[rank.rank + 1])", Palette.ranks[rank.rank + 1], "\(liftWeight(next.kg, best.kind, unit, target: true)) × \(next.reps)", "Same lift, same reps")
+                            }
                         }
-                        .font(.footnote).foregroundStyle(Palette.text)
                     }
                     if !names.isEmpty { RankCounts(label: "Counts here", rows: names) }
                 }
+                .padding(.vertical, Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .overlay(alignment: .top) { Palette.hairline.frame(height: 1) }
+                .padding(.horizontal, Space.s4)
+                .transition(.opacity)
             }
         }
-        .padding(.vertical, 4)
+        .raised()
+    }
+
+    private func stat(_ label: String, _ color: Color, _ value: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(label).type(.t12).foregroundStyle(color)
+            Text(value).type(.t16).monospacedDigit().foregroundStyle(Palette.text)
+            Text(detail).type(.t12).foregroundStyle(Palette.muted).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-/// Exercises as glass chips (the website's rank-counts.tsx); tapping one opens the menu of where it counts: automatic,
-/// a rank group, or nowhere.
+/// Exercises as chips (the PWA's Chips); tapping one opens where it counts: automatically, one muscle, or nowhere.
 struct RankCounts: View {
-    @Environment(AppModel.self) private var model
     let label: String
     let rows: [CountedName]
+    @State private var choosing: CountedName?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label).font(.caption.weight(.semibold)).foregroundStyle(Palette.muted)
-            FlowLayout(spacing: 8) { ForEach(rows, id: \.key) { chip($0) } }
-        }
-    }
-
-    private func chip(_ row: CountedName) -> some View {
-        let current = row.chosen ? row.groups.first ?? LiftTable.none : ""
-        let options = [("", "Automatic: \(row.auto.isEmpty ? "not counted" : row.auto.joined(separator: ", "))")]
-            + LiftTable.groups.map { ($0, $0) } + [(LiftTable.none, "Doesn't count")]
-        return Menu {
-            ForEach(options.indices, id: \.self) { index in
-                let (value, title) = options[index]
-                Button { choose(row, value) } label: {
-                    if value == current { Label(title, systemImage: "checkmark") } else { Text(title) }
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(label).type(.t12).foregroundStyle(Palette.muted)
+            FlowLayout(spacing: Space.s2) {
+                ForEach(rows, id: \.key) { row in
+                    Button { choosing = row } label: {
+                        Text(row.name).type(.t14).fontWeight(.semibold).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
+                            .padding(.horizontal, Space.s3).padding(.vertical, Space.s1)
+                            .frame(minHeight: Size.compact).raised(.control, .pill)
+                    }
+                    .buttonStyle(PressStyle())
+                    .accessibilityLabel("\(row.name): choose where it counts")
                 }
             }
-        } label: {
-            Text(row.name).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
-                .padding(.horizontal, 16).frame(minHeight: 44).glass(radius: 22, fill: Palette.control, lifted: false)
         }
-        .accessibilityLabel("\(row.name) counts for")
-        .accessibilityValue(options.first { $0.0 == current }?.1 ?? "")
+        .sheet(item: $choosing) { CountsFor(row: $0) }
+    }
+}
+
+extension CountedName: Identifiable {
+    public var id: String { key }
+}
+
+/// Where an exercise counts, on a sheet: automatic (what its name says), one muscle, or nowhere.
+private struct CountsFor: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let row: CountedName
+
+    var body: some View {
+        let current = row.chosen ? row.groups.first ?? LiftTable.none : ""
+        let options = [(value: "", text: "Automatic: \(row.auto.isEmpty ? "not counted" : row.auto.joined(separator: ", "))")]
+            + LiftTable.groups.map { (value: $0, text: $0) } + [(value: LiftTable.none, text: "Doesn’t count")]
+        SheetFrame(title: row.name, subtitle: "Counts toward") {
+            VStack(spacing: 0) {
+                ForEach(options, id: \.value) { option in
+                    Button { choose(option.value) } label: {
+                        HStack(spacing: Space.s3) {
+                            Text(option.text).type(.t16).foregroundStyle(Palette.text).lineLimit(1)
+                            Spacer(minLength: 0)
+                            if option.value == current {
+                                Image(systemName: "checkmark").font(.system(size: IconSize.medium, weight: .semibold)).foregroundStyle(Palette.accent)
+                            }
+                        }
+                        .padding(Space.s4).frame(minHeight: Size.row).contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressStyle())
+                    .accessibilityAddTraits(option.value == current ? .isSelected : [])
+                    .overlay(alignment: .top) { if option.value != options[0].value { Palette.hairline.frame(height: 1) } }
+                }
+            }
+            .raised()
+            .padding(.top, Space.s3)
+        }
     }
 
-    /// Picking the one group it counts toward on its own is automatic: nothing to save.
-    private func choose(_ row: CountedName, _ value: String) {
+    /// Picking the one muscle it counts toward on its own is automatic: nothing to save.
+    private func choose(_ value: String) {
         let choice: String? = value.isEmpty || row.auto == [value] ? nil : value
         let lifts = model.training.settings.lifts ?? [:]
         if choice != nil, lifts[row.key] == nil, lifts.count >= Limits.liftChoices {
@@ -97,5 +149,6 @@ struct RankCounts: View {
             lifts[row.key] = choice
             training.settings.lifts = lifts
         }
+        dismiss()
     }
 }

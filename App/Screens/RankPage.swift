@@ -2,134 +2,151 @@ import SwiftUI
 import TrackCore
 
 extension Palette {
-    /// Starter, Novice, Solid, Strong, Elite, as the PWA's --rank-0 to --rank-4: bars, the medal and their text.
+    /// Starter, Novice, Solid, Strong, Elite, as the PWA's --rank-0 to --rank-4: bars, the emblem and their text.
     static let ranks: [Color] = [Color(hex: 0xA9B0B6), Color(hex: 0x5AA7EC), Color(hex: 0x4CC38A), Color(hex: 0xE8A93A), Color(hex: 0xB287F5)]
 }
 
-/// Rank: each muscle ranked from its strongest lift relative to bodyweight, the overall rank (the average place on
-/// the ladder), and the closest win with the weight that gets it. Asks for bodyweight first.
+/// Rank, as the PWA's: each muscle ranked from its best lift relative to bodyweight, the overall rank (the average
+/// place on the ladder) and the closest win. Asks for bodyweight first; the bodyweight button changes it.
 struct RankPage: View {
     @Environment(AppModel.self) private var model
-    @State private var bodyweightText = ""
-    @FocusState private var typing: Bool
+    @State private var editing = false
 
     var body: some View {
         let training = model.training
         let unit = training.settings.unit
-        Page(title: "Rank") {
-            if let bodyweight = training.settings.bodyweight {
+        let bodyweight = training.settings.bodyweight
+        Page(title: "Rank", accessory: bodyweight.map { kg in
+            AnyView(Button("\(TrainingSet.display(kg: kg, unit: unit)) \(unit.rawValue)") { editing = true }
+                .buttonStyle(SecondaryButtonStyle(hug: true)).monospacedDigit()
+                .accessibilityLabel("Bodyweight \(TrainingSet.display(kg: kg, unit: unit)) \(unit.rawValue), edit"))
+        }) {
+            if let bodyweight {
                 let choices = training.settings.lifts ?? [:]
                 let signature = choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")
                 let ranks = model.derived("ranks \(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
-                let ranked = ranks.filter { $0.best != nil }
-                // A muscle at the top rank counts as that rank: its progress of 1 only fills its bar.
-                let top = Double(Ranks.names.count - 1)
-                let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + min(top, Double($1.rank) + $1.progress) } / Double(ranked.count)
-                let overall = min(Ranks.names.count - 1, Int(score))
-                overallCard(ranked.isEmpty ? nil : overall, progress: score - Double(overall), bodyweight: bodyweight, unit: unit,
-                            basis: ranked.isEmpty || ranked.count == ranks.count ? nil : "Based on \(ranked.count) of \(count(ranks.count, "muscle"))")
-                if let closest = ranked.filter({ $0.next != nil }).max(by: { $0.progress < $1.progress }), let next = closest.next, let best = closest.best {
-                    // The rank up that's nearest, and the one lift that gets it.
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Nearest rank up").font(.subheadline).foregroundStyle(Palette.muted)
-                        Text("\(closest.muscle.rawValue) → \(Ranks.names[closest.rank + 1])").font(.headline).foregroundStyle(Palette.ranks[closest.rank + 1])
-                        Text("Lift \(liftWeight(next.kg, best.kind, unit, target: true)) × \(next.reps) on \(best.exercise)")
-                            .font(.subheadline).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
-                }
                 let counted = model.derived("counted \(signature)") { $0.countedNames(choices: choices) }
-                GlassList {
-                    ForEach(ranks, id: \.muscle) { rank in
-                        MuscleRow(rank: rank, unit: unit, names: counted.filter { $0.groups.contains(rank.muscle.rawValue) })
+                VStack(alignment: .leading, spacing: 0) {
+                    OverallCard(ranks: ranks, unit: unit)
+                    Text("Muscles").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6)
+                    VStack(spacing: Space.s3) {
+                        ForEach(ranks, id: \.muscle) { rank in
+                            MuscleRow(rank: rank, unit: unit, names: counted.filter { $0.groups.contains(rank.muscle.rawValue) })
+                        }
+                        // Apart only when it needs you: names Track doesn't know, and ones you chose not to count.
+                        let uncounted = counted.filter { $0.groups.isEmpty && (!$0.known || $0.chosen) }
+                        if !uncounted.isEmpty {
+                            RankCounts(label: "Not counted", rows: uncounted).padding(Space.s4).frame(maxWidth: .infinity, alignment: .leading).raised()
+                        }
                     }
-                }
-                // Apart only when it needs you: names it doesn't know, and ones you chose not to count.
-                let uncounted = counted.filter { $0.groups.isEmpty && (!$0.known || $0.chosen) }
-                if !uncounted.isEmpty {
-                    RankCounts(label: "Not counted", rows: uncounted).frame(maxWidth: .infinity, alignment: .leading).padding(16).glass()
+                    .padding(.top, Space.s2)
                 }
             } else {
-                setup(unit: unit)
+                VStack(alignment: .leading, spacing: 0) {
+                    Image(systemName: "rosette").font(.system(size: IconSize.regular, weight: .semibold)).foregroundStyle(Palette.accent)
+                        .frame(width: Size.tile, height: Size.tile).raised(.control, .inner).accessibilityHidden(true)
+                    Text("Unlock your ranks").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s3)
+                    Text("Ranks compare your best lifts with your bodyweight.").type(.t14).foregroundStyle(Palette.muted)
+                    BodyweightForm {}.padding(.top, Space.s4)
+                }
+                .padding(Space.s4)
+                .raised()
             }
         }
+        .sheet(isPresented: $editing) {
+            SheetFrame(title: "Bodyweight", closeLabel: "Cancel") { BodyweightForm { editing = false }.padding(.top, Space.s3) }
+        }
     }
+}
 
-    private func overallCard(_ overall: Int?, progress: Double, bodyweight: Double, unit: TrackCore.Settings.Unit, basis: String?) -> some View {
-        let color = overall.map { Palette.ranks[$0] } ?? Palette.muted
-        let text = overall.map { Palette.ranks[$0] } ?? Palette.muted
-        return VStack(spacing: 8) {
-            Image(systemName: "medal.fill").font(.system(size: 34, weight: .semibold)).foregroundStyle(.white)
-                .frame(width: 72, height: 72)
-                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(LinearGradient(colors: [color, color.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                .glass(radius: 20, fill: .clear, lifted: false)
-            Text("Overall").font(.subheadline).foregroundStyle(Palette.muted).padding(.top, 4)
-            Text(overall.map { Ranks.names[$0] } ?? "Unranked").font(.largeTitle.weight(.bold)).foregroundStyle(text)
-            Text(overall.map { toGo($0, progress) } ?? "Log a lift to get ranked").font(.subheadline).foregroundStyle(Palette.muted)
-            if let basis { Text(basis).font(.caption).foregroundStyle(Palette.muted) }
-            HStack(spacing: 6) {
-                ForEach(Ranks.names.indices, id: \.self) { index in
-                    VStack(spacing: 6) {
-                        RankBar(progress: overall.map { index < $0 || index == Ranks.names.count - 1 && index == $0 ? 1 : index == $0 ? progress : 0 } ?? 0, color: Palette.ranks[index])
-                        Text(Ranks.names[index]).font(.caption2.weight(index == overall ? .bold : .regular))
-                            .foregroundStyle(index == overall ? Palette.ranks[index] : Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
+/// The overall rank: the emblem in its colour beside the rank and how far to the next, the ladder of five bars, and
+/// the closest win with the lift that gets it.
+private struct OverallCard: View {
+    let ranks: [MuscleRank]
+    let unit: TrackCore.Settings.Unit
+
+    var body: some View {
+        let ranked = ranks.filter { $0.best != nil }
+        let top = Ranks.names.count - 1
+        let score = ranked.isEmpty ? 0 : ranked.reduce(0) { $0 + min(Double(top), Double($1.rank) + $1.progress) } / Double(ranked.count)
+        let overall = min(top, Int(score))
+        let part = overall == top ? 1 : score - Double(overall)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Space.s4) {
+                Image(systemName: "rosette").font(.system(size: IconSize.emblem, weight: .semibold))
+                    .foregroundStyle(ranked.isEmpty ? Palette.muted : Palette.ranks[overall])
+                    .frame(width: Size.emblem, height: Size.emblem).raised(.control, .circle).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Overall").type(.t14).foregroundStyle(Palette.muted)
+                    if ranked.isEmpty {
+                        Text("Unranked").type(.t20).foregroundStyle(Palette.text)
+                        Text("Log a lift to get ranked").type(.t14).foregroundStyle(Palette.muted)
+                    } else {
+                        Text(Ranks.names[overall]).type(.t28).foregroundStyle(Palette.ranks[overall])
+                        Text(toGo(overall, part)).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                        if ranked.count < ranks.count {
+                            Text("Based on \(ranked.count) of \(ranks.count) muscles").type(.t12).foregroundStyle(Palette.muted).lineLimit(1)
+                        }
                     }
                 }
             }
-            .padding(.top, 8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(20)
-        .glass()
-        .overlay(alignment: .topTrailing) {
-            Button { editBodyweight(bodyweight, unit) } label: {
-                Label("\(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue)", systemImage: "pencil")
-                    .font(.caption.weight(.bold)).monospacedDigit().foregroundStyle(Palette.text)
-                    .padding(.horizontal, 10).frame(minHeight: 32).glass(radius: 16, fill: Palette.control, lifted: false)
-                    .frame(minHeight: 44).contentShape(Rectangle())
+            // The ladder: full below your rank, filling through yours (the top rank is full), empty above.
+            HStack(spacing: Space.s1) {
+                ForEach(Ranks.names.indices, id: \.self) { index in
+                    RankBar(progress: ranked.isEmpty || index > overall ? 0 : index < overall ? 1 : part, color: Palette.ranks[index])
+                }
             }
-            .buttonStyle(PressStyle()).padding(14)
-            .accessibilityLabel("Bodyweight \(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue). Change")
-        }
-    }
-
-    private func setup(unit: TrackCore.Settings.Unit) -> some View {
-        let valid = TrainingSet.kilograms(from: bodyweightText, unit: unit).map { Limits.bodyweight.contains($0) } == true
-        return VStack(spacing: 12) {
-            Image(systemName: "medal").font(.system(size: 30, weight: .semibold)).foregroundStyle(Palette.text)
-                .frame(width: 64, height: 64).glass(radius: 18, fill: Palette.control, lifted: false)
-            Text("Unlock your ranks").font(.title3.weight(.bold)).foregroundStyle(Palette.text)
-            Text("Add your bodyweight to rank each muscle.").font(.subheadline).foregroundStyle(Palette.muted)
-            HStack(spacing: 8) {
-                TextField("Bodyweight", text: $bodyweightText).keyboardType(.decimalPad).focused($typing)
-                    .font(.body.weight(.semibold)).multilineTextAlignment(.center)
-                    .frame(minHeight: 48).background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.input))
-                Text(unit.rawValue).foregroundStyle(Palette.muted)
+            .padding(.top, Space.s4)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(ranked.isEmpty ? "No ranked lifts yet" : "\(Ranks.names[overall]), \(Int(part * 100))% to the next rank")
+            HStack(spacing: Space.s1) {
+                ForEach(Ranks.names.indices, id: \.self) { index in
+                    Text(Ranks.names[index]).type(.t12).lineLimit(1).minimumScaleFactor(0.8)
+                        .foregroundStyle(!ranked.isEmpty && index == overall ? Palette.ranks[index] : Palette.muted)
+                        .frame(maxWidth: .infinity)
+                }
             }
-            .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { typing = false }.fontWeight(.semibold) } }
-            if !valid, !bodyweightText.isEmpty {
-                Text("Enter a bodyweight from \(Limits.wholeRange(Limits.bodyweight, unit)).").font(.caption).foregroundStyle(Palette.dangerText)
+            .padding(.top, Space.s2)
+            .accessibilityHidden(true)
+            if let win = ranked.filter({ $0.next != nil }).max(by: { $0.progress < $1.progress }), let next = win.next, let best = win.best {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Closest win: \(win.muscle.rawValue) to \(Ranks.names[win.rank + 1])").type(.t14).foregroundStyle(Palette.muted)
+                    Text("\(liftWeight(next.kg, best.kind, unit, target: true)) × \(next.reps) on \(best.exercise)").type(.t16).foregroundStyle(Palette.text)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, Space.s3)
+                .overlay(alignment: .top) { Palette.hairline.frame(height: 1) }
+                .padding(.top, Space.s3)
             }
-            Button("Save") { save(unit) }.buttonStyle(PrimaryButtonStyle()).disabled(!valid)
         }
-        .padding(24).frame(maxWidth: .infinity).glass()
+        .padding(Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .raised()
     }
+}
 
-    /// Changing the bodyweight later, in Track's dialog.
-    private func editBodyweight(_ bodyweight: Double, _ unit: TrackCore.Settings.Unit) {
-        let valid = { (text: String) in TrainingSet.kilograms(from: text, unit: unit).flatMap { Limits.bodyweight.contains($0) ? $0 : nil } }
-        model.naming = Naming(title: "Your bodyweight", message: "Ranks compare your lifts with it.",
-                              name: TrainingSet.display(kg: bodyweight, unit: unit), label: "Bodyweight (\(unit.rawValue))", placeholder: unit == .kg ? "e.g. 72" : "e.g. 160", number: true,
-                              problem: { valid($0) == nil ? "Enter a bodyweight from \(Limits.wholeRange(Limits.bodyweight, unit))." : nil }, action: "Save") { text in
-            guard let kg = valid(text) else { return }
-            withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
+/// Bodyweight, as the PWA's form: the field full width and Save under it.
+struct BodyweightForm: View {
+    @Environment(AppModel.self) private var model
+    let done: () -> Void
+    @State private var text = ""
+
+    var body: some View {
+        let unit = model.training.settings.unit
+        let kg = TrainingSet.kilograms(from: text, unit: unit).flatMap { Limits.bodyweight.contains($0) ? $0 : nil }
+        let save = {
+            guard let kg else { return }
+            model.update { $0.settings.bodyweight = kg }
+            done()
         }
-    }
-
-    private func save(_ unit: TrackCore.Settings.Unit) {
-        guard let kg = TrainingSet.kilograms(from: bodyweightText, unit: unit), Limits.bodyweight.contains(kg) else { return }
-        typing = false
-        withAnimation(.smooth) { model.update { $0.settings.bodyweight = kg } }
+        VStack(alignment: .leading, spacing: Space.s4) {
+            Field(placeholder: "Bodyweight in \(unit.rawValue)", text: $text, label: "Your bodyweight in \(unit.rawValue)", keyboard: .decimalPad, submit: save)
+            if kg == nil, !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                Text("Enter \(Limits.wholeRange(Limits.bodyweight, unit)).").type(.t14).foregroundStyle(Palette.danger)
+            }
+            Button("Save", action: save).buttonStyle(PrimaryButtonStyle()).disabled(kg == nil)
+        }
+        .onAppear { text = model.training.settings.bodyweight.map { TrainingSet.display(kg: $0, unit: unit) } ?? "" }
     }
 }
 
@@ -144,9 +161,11 @@ func liftWeight(_ kg: Double, _ kind: LoadKind, _ unit: TrackCore.Settings.Unit,
     return shown <= 0 ? "Bodyweight" : "BW \(kind == .assisted ? "−" : "+") \(value)"
 }
 
-/// "5% left to Strong", or the top.
+/// "8% left to Strong" (counting down keeps the goal close, never 0% short of it), "Just reached Strong", or the top.
 func toGo(_ rank: Int, _ progress: Double) -> String {
-    rank >= Ranks.names.count - 1 ? "Top rank" : "\(max(1, Int(((1 - progress) * 100).rounded(.up))))% left to \(Ranks.names[rank + 1])"
+    rank >= Ranks.names.count - 1 ? "Top rank"
+        : progress < 0.01 ? "Just reached \(Ranks.names[rank])"
+        : "\(max(1, Int(((1 - progress) * 100).rounded(.up))))% left to \(Ranks.names[rank + 1])"
 }
 
 /// A rank bar: the track with the rank's colour filled to its progress.
