@@ -9,6 +9,7 @@ struct HomeView: View {
     @Binding var settingsOpen: Bool
     @State private var open: String?
     @State private var arranging = false
+    @State private var naming = false
 
     var body: some View {
         let training = model.training
@@ -27,6 +28,12 @@ struct HomeView: View {
         }
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
         .onChange(of: training.splits.count) { _, count in if count < 2 { arranging = false } }
+        .sheet(isPresented: $naming) {
+            NewSplitSheet { split in
+                model.update { $0.splits.append(split) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { open = split.id }
+            }
+        }
     }
 
     private func splits(_ training: Training) -> some View {
@@ -59,13 +66,7 @@ struct HomeView: View {
         }
     }
 
-    private func create() {
-        model.naming = Naming(title: "New split", problem: { model.splitNameTaken($0) }, action: "Create") { name in
-            let split = Split(name: name)
-            model.update { $0.splits.append(split) }
-            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { open = split.id }
-        }
-    }
+    private func create() { naming = true }
 }
 
 /// A split's tile, name and size, as a row on Home and in Arrange.
@@ -115,6 +116,55 @@ private struct SplitCard: View {
         }
         .raised()
         .swipeToArm($armed)
+    }
+}
+
+/// New split, as the PWA's: a name and Create, or one of the starter templates.
+private struct NewSplitSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let created: (Split) -> Void
+    @State private var name = ""
+
+    var body: some View {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let problem = trimmed.isEmpty ? nil : model.splitNameTaken(trimmed)
+        let save = { if !trimmed.isEmpty, problem == nil { create(Split(name: trimmed)) } }
+        SheetFrame(title: "New split", closeLabel: "Cancel") {
+            VStack(alignment: .leading, spacing: Space.s4) {
+                Field(placeholder: "Name, like Push A", text: $name, label: "Split name", submit: save)
+                if let problem { Text(problem).type(.t14).foregroundStyle(Palette.danger) }
+                Button("Create", action: save).buttonStyle(PrimaryButtonStyle()).disabled(trimmed.isEmpty || problem != nil)
+            }
+            .padding(.top, Space.s3)
+            Text("Or start from a template").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
+            VStack(spacing: 0) {
+                ForEach(SplitTemplate.all) { template in
+                    Button { create(template.makeSplit()) } label: {
+                        HStack(spacing: Space.s3) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(template.name).type(.t16).foregroundStyle(Palette.text)
+                                Text(template.exercises.joined(separator: ", ")).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "plus").font(.system(size: IconSize.medium, weight: .semibold)).foregroundStyle(Palette.muted)
+                        }
+                        .padding(Space.s4)
+                        .frame(minHeight: Size.row)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressStyle())
+                    .overlay(alignment: .top) { if template.id != SplitTemplate.all.first?.id { Palette.hairline.frame(height: 1) } }
+                }
+            }
+            .raised()
+            .padding(.top, Space.s2)
+        }
+    }
+
+    private func create(_ split: Split) {
+        dismiss()
+        created(split)
     }
 }
 

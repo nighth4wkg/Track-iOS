@@ -279,12 +279,15 @@ struct SecondaryButtonStyle: ButtonStyle {
     var danger = false
     /// Beside or in place of the main button, it takes the main button's height.
     var height = Size.control
+    /// As wide as its label (a sheet's Done), not the row.
+    var hug = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .type(.t16)
             .foregroundStyle(danger ? Palette.danger : Palette.text)
-            .frame(maxWidth: .infinity, minHeight: height)
+            .padding(.horizontal, hug ? Space.s4 : 0)
+            .frame(maxWidth: hug ? nil : .infinity, minHeight: height)
             .raised(.control, .pill)
             .scaleEffect(configuration.isPressed ? Motion.press : 1)
             .animation(.smooth(duration: Motion.fast), value: configuration.isPressed)
