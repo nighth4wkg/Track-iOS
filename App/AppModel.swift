@@ -81,8 +81,8 @@ final class AppModel {
     /// The open workout fully covers the tabs (not sliding in or pulled aside), so they needn't be drawn under it.
     var workoutCovers = false
     var finished: Finished?
-    /// The level bar's XP before and after the last finished workout, for its fill on Progress.
-    var xpFill: (from: Int, to: Int)?
+    /// Pages pushed over the tabs (a split, a lift): the nav pill hides while any is up, as on the PWA's bare pages.
+    var pushed = 0
     /// The finished workout open in its detail sheet.
     var history: Session?
 

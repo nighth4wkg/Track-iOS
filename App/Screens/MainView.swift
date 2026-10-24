@@ -23,7 +23,11 @@ struct MainView: View {
                     page(tab).opacity(on ? 1 : 0).allowsHitTesting(on).accessibilityHidden(!on)
                 }
             }
-            .overlay(alignment: .bottom) { NavPill().ignoresSafeArea(.container, edges: .bottom) }
+            .overlay(alignment: .bottom) {
+                NavPill().ignoresSafeArea(.container, edges: .bottom)
+                    .opacity(model.pushed > 0 ? 0 : 1).allowsHitTesting(model.pushed == 0)
+                    .animation(.smooth(duration: Motion.fast), value: model.pushed > 0)
+            }
             .onChange(of: model.tab) { _, tab in built.insert(tab) }
             // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
             .id(model.day)

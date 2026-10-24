@@ -84,6 +84,10 @@ enum Size {
     static let navWidth: CGFloat = 344
     /// A small segment button.
     static let compact: CGFloat = 32
+    /// A segment button (Progress's measures).
+    static let segment: CGFloat = 36
+    /// One bar of a chart.
+    static let chartBar: CGFloat = 10
     /// The Rank emblem and the sign-in mark.
     static let emblem: CGFloat = 56
     /// A progress bar.

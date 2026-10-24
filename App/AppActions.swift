@@ -82,7 +82,6 @@ extension AppModel {
         let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0, choices: choices) } ?? []
         workoutOpen = false
         tab = .progress
-        xpFill = (before.total, after.total)
         finished = Finished(id: session.id, xp: after.total - before.total, level: after.level, leveledUp: after.level > before.level,
                             rankUps: zip(ranksBefore, ranksAfter).filter { $1.best != nil && $1.rank > $0.rank }.map { "\($1.muscle.rawValue) → \($1.name)" })
     }

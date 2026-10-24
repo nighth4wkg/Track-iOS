@@ -45,6 +45,22 @@ final class MetricsTests: XCTestCase {
         XCTAssertEqual(sessions.volumeChange(per: .month, at: at(2026, 9, 30), calendar: calendar).volume, 9300)
     }
 
+    func testBarsAndTalliesFollowThePwa() {
+        let sessions = [workout(at(2026, 9, 22), kg: 100), workout(at(2026, 9, 29), sets: 2), workout(at(2026, 9, 30))]
+        let week = sessions.bars(of: .sets, per: .week, at: at(2026, 9, 30), calendar: calendar)
+        XCTAssertEqual(week.map(\.label).joined(), "MTWTFSS")
+        XCTAssertEqual(week.map(\.now), [0, 2, 3, 0, 0, 0, 0], "Thursday on is still ahead")
+        XCTAssertEqual(week[1].last, 3, "last Tuesday beside this one")
+        XCTAssertEqual(week.firstIndex(where: \.today), 2)
+        XCTAssertEqual(sessions.bars(of: .workouts, per: .month, at: at(2026, 9, 30), calendar: calendar).map(\.label), ["1", "8", "15", "22", "29"])
+        XCTAssertEqual(sessions.change(of: .workouts, per: .week, at: at(2026, 9, 30), calendar: calendar).change, 100)
+        XCTAssertEqual(sessions.personalRecords.first?.kg, 100)
+        let maxes = sessions.oneRepMaxes(of: "Bench Press", per: .week, calendar: calendar)
+        let epley: Double = 1 + 10.0 / 30
+        XCTAssertEqual(maxes.map(\.value), [100 * epley, 50 * epley], "one point a week, oldest first")
+        XCTAssertEqual(sessions.entries(of: "Bench Press").first?.sets.count, 3, "newest first")
+    }
+
     func testLevelsFollowTheDailyCap() {
         XCTAssertEqual(Experience.requirement(for: 1), 100)
         XCTAssertEqual(Experience.requirement(for: 9), 300)

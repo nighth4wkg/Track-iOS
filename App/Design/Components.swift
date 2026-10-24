@@ -225,3 +225,86 @@ struct ArrangeList<Item: Identifiable, Row: View>: View {
         return 0
     }
 }
+
+/// A page pushed over a tab, as the PWA's bare pages: the back button beside its title (and a line under it), one
+/// control at the end, then its cards. The nav pill steps aside while it's up.
+struct SubPage<Content: View, Trailing: View>: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let title: String
+    var subtitle: String?
+    @ViewBuilder var trailing: Trailing
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: Space.s3) {
+                    RoundButton(icon: "chevron.left", label: "Back") { dismiss() }
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(title).type(.t20).foregroundStyle(Palette.text).lineLimit(1)
+                        if let subtitle { Text(subtitle).type(.t14).foregroundStyle(Palette.muted).lineLimit(1) }
+                    }
+                    .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
+                    trailing
+                }
+                content
+            }
+            .padding(.horizontal, Space.s4)
+            .padding(.top, Space.s4)
+            .padding(.bottom, Space.s6)
+            .frame(maxWidth: Measure.page)
+            .frame(maxWidth: .infinity)
+        }
+        .background(Backdrop())
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear { model.pushed += 1 }
+        .onDisappear { model.pushed -= 1 }
+    }
+}
+
+extension SubPage where Trailing == EmptyView {
+    init(title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title: title, subtitle: subtitle, trailing: { EmptyView() }, content: content)
+    }
+}
+
+/// A row of choices, as the PWA's Seg: a SUNK pill track with a raised knob that slides under the chosen one. Short
+/// shows only each choice's first letter (D W M), still read out in full.
+struct Seg<Value: Hashable>: View {
+    let label: String
+    let options: [(value: Value, text: String)]
+    @Binding var value: Value
+    var short = false
+    @Namespace private var knob
+
+    var body: some View {
+        HStack(spacing: Space.s1) {
+            ForEach(options, id: \.value) { option in
+                let on = option.value == value
+                Button { value = option.value } label: {
+                    Text(short ? String(option.text.prefix(1)) : option.text)
+                        .type(.t14).fontWeight(.semibold).lineLimit(1)
+                        .foregroundStyle(on ? Palette.text : Palette.muted)
+                        .frame(maxWidth: .infinity, minHeight: Size.segment)
+                        .frame(minWidth: short ? Size.cell : nil)
+                        .background {
+                            if on { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: "knob", in: knob) }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(option.text)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(Space.s1)
+        .sunk(.pill)
+        .fixedSize(horizontal: short, vertical: false)
+        .animation(.smooth(duration: Motion.fast), value: value)
+        .sensoryFeedback(.selection, trigger: value)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+}
