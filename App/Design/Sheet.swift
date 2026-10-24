@@ -8,6 +8,8 @@ struct SheetFrame<Content: View>: View {
     let title: String
     var subtitle: String?
     var closeLabel = "Done"
+    /// Full height whatever it holds, as the PWA's tall sheet (the picker: filtering mustn't resize it).
+    var tall = false
     @ViewBuilder let content: Content
     @State private var height: CGFloat = 0
 
@@ -33,7 +35,7 @@ struct SheetFrame<Content: View>: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .presentationDetents(height > 0 ? [.height(height)] : [.large])
+        .presentationDetents(height > 0 && !tall ? [.height(height)] : [.large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(Radius.sheet)
         .presentationBackground { LinearGradient(colors: Surface.sheet.shade, startPoint: .top, endPoint: .bottom) }

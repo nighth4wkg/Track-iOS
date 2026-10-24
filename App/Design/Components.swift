@@ -262,35 +262,45 @@ struct Seg<Value: Hashable>: View {
     var short = false
     /// Small, inside a row (kg / lb, log sets).
     var compact = false
+    /// Wrapped into rows of this many, as the PWA's .seg.wrap (the picker's muscles).
+    var columns: Int?
     @Namespace private var knob
 
     var body: some View {
-        HStack(spacing: Space.s1) {
-            ForEach(options, id: \.value) { option in
-                let on = option.value == value
-                Button { value = option.value } label: {
-                    Text(short ? String(option.text.prefix(1)) : option.text)
-                        .type(.t14).fontWeight(.semibold).lineLimit(1)
-                        .foregroundStyle(on ? Palette.text : Palette.muted)
-                        .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
-                        .frame(minWidth: short || compact ? Size.cell : nil)
-                        .background {
-                            if on { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: "knob", in: knob) }
-                        }
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(option.text)
-                .accessibilityAddTraits(on ? .isSelected : [])
+        Group {
+            if let columns {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s1), count: columns), spacing: Space.s1) { buttons }
+            } else {
+                HStack(spacing: Space.s1) { buttons }
             }
         }
         .padding(Space.s1)
-        .sunk(.pill)
+        .sunk(columns == nil ? .pill : .card)
         .fixedSize(horizontal: short || compact, vertical: false)
         .animation(.smooth(duration: Motion.fast), value: value)
         .sensoryFeedback(.selection, trigger: value)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
+    }
+
+    @ViewBuilder private var buttons: some View {
+        ForEach(options, id: \.value) { option in
+            let on = option.value == value
+            Button { value = option.value } label: {
+                Text(short ? String(option.text.prefix(1)) : option.text)
+                    .type(.t14).fontWeight(.semibold).lineLimit(1)
+                    .foregroundStyle(on ? Palette.text : Palette.muted)
+                    .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
+                    .frame(minWidth: short || compact ? Size.cell : nil)
+                    .background {
+                        if on { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: "knob", in: knob) }
+                    }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(option.text)
+            .accessibilityAddTraits(on ? .isSelected : [])
+        }
     }
 }
 

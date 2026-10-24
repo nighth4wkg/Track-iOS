@@ -1,59 +1,65 @@
 import SwiftUI
 import TrackCore
 
-/// "How XP works", as the website's explainer: the five rules, then what the latest workout earned.
+/// "How XP works", as the PWA's: your level and its bar, the rules, then what the latest workout earned. Every number
+/// comes from the XP rules, so the text can't drift from them.
 struct XpHelp: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    private let rules = [
+    private static let dailyCap = Experience.dailyStart + Experience.perSet * Experience.dailySetCap
+    private static let rules = [
         ("First set of the day", "+\(Experience.dailyStart) XP", "Starts each training day."),
-        ("Each extra set", "+\(Experience.perSet) XP", "Up to \(Experience.dailyStart + Experience.perSet * Experience.dailySetCap) XP a day from training."),
+        ("Each extra set", "+\(Experience.perSet) XP", "Up to \(dailyCap) XP a day. L + R is one set."),
         ("Achievements", "Bonus XP", "Paid once, on top of the daily limit."),
-        ("Levels", "100–300 XP", "Each level needs 50 XP more, up to 300."),
-        ("Rest days", "No loss", "XP never drops for resting. Deleting a workout removes its XP."),
+        ("Levels", "\(Experience.requirement(for: 1))–\(Experience.maxRequirement) XP",
+         "+\(Experience.requirement(for: 2) - Experience.requirement(for: 1)) XP per level."),
+        ("Rest days", "No loss", "Resting never costs XP."),
     ]
 
     var body: some View {
-        let latestReward = Experience.rewards(of: model.training.sessions).last
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Progress that grows with your training.").font(.subheadline).foregroundStyle(Palette.muted)
-                    GlassList {
-                        ForEach(rules.indices, id: \.self) { index in row(rules[index].0, rules[index].1, rules[index].2) }
-                        if let (latest, training) = latestReward {
-                            let quest = (latest.questAwards ?? []).reduce(0) { $0 + $1.xp }
-                            row("Latest workout", "+\(training + quest) XP", "\(training) training + \(quest) achievements")
-                        }
-                    }
+        let sessions = model.training.sessions
+        let level = Experience.progress(of: sessions)
+        let latest = Experience.rewards(of: sessions).last
+        SheetFrame(title: "How XP works") {
+            VStack(alignment: .leading, spacing: Space.s2) {
+                HStack {
+                    Text("Level \(level.level)").type(.t16).foregroundStyle(Palette.text)
+                    Spacer(minLength: Space.s2)
+                    Text("\(level.current)/\(level.required) XP").type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                 }
-                .padding(16)
+                RankBar(progress: Double(level.current) / Double(max(1, level.required)), color: Palette.accent)
+                    .accessibilityLabel("Level \(level.level + 1) progress")
             }
-            .background(Backdrop())
-            .navigationTitle("How XP works")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
+            .padding(Space.s4)
+            .raised()
+            .padding(.top, Space.s3)
+            RowCard {
+                ForEach(Self.rules, id: \.0) { rule in row(rule.0, rule.1, rule.2) }
+                if let (session, training) = latest {
+                    let bonus = (session.questAwards ?? []).reduce(0) { $0 + $1.xp }
+                    row("Latest workout", "+\(training + bonus) XP", "\(training) training + \(bonus) achievements")
                 }
             }
+            .padding(.top, Space.s3)
         }
     }
 
     private func row(_ rule: String, _ value: String, _ detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(rule).font(.headline).foregroundStyle(Palette.text)
-                Spacer()
-                Text(value).font(.headline).monospacedDigit().foregroundStyle(Palette.accent)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Space.s3) {
+                Text(rule).type(.t16).foregroundStyle(Palette.text)
+                Spacer(minLength: 0)
+                Text(value).type(.t14).monospacedDigit().foregroundStyle(Palette.accent)
             }
-            Text(detail).font(.subheadline).foregroundStyle(Palette.muted)
+            Text(detail).type(.t14).foregroundStyle(Palette.muted)
         }
+        .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
+        .frame(maxWidth: .infinity, minHeight: Size.row, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
-/// Every achievement, as the website's list: done or not, what it asks, its difficulty and XP, and the workout that
-/// earned it.
+/// Every achievement, as the PWA's: how many are done, then each with a tile (✓ once done), what it asks, its XP and
+/// difficulty, and the workout that earned it.
 struct QuestList: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -61,51 +67,38 @@ struct QuestList: View {
     var body: some View {
         let sessions = model.training.sessions
         let awards = sessions.questAwards
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("\(awards.count) of \(Quest.all.count) completed · Quest XP is awarded once, outside the \(Experience.dailyStart + Experience.perSet * Experience.dailySetCap) XP daily training cap.")
-                        .font(.subheadline).foregroundStyle(Palette.muted)
-                    GlassList {
-                        ForEach(Array(Quest.all.enumerated()), id: \.element.id) { index, quest in
-                            let award = awards[quest.id]
-                            HStack(alignment: .top, spacing: 12) {
-                                Image(systemName: award == nil ? "rosette" : "checkmark").font(.body.weight(.bold))
-                                    .foregroundStyle(award == nil ? Palette.muted : Palette.primaryText)
-                                    .frame(width: 40, height: 40)
-                                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(award == nil ? Palette.control : Palette.primary))
-                                VStack(alignment: .leading, spacing: 3) {
-                                    HStack {
-                                        Text(quest.title).font(.headline).foregroundStyle(Palette.text)
-                                        Spacer()
-                                        Text("\(award == nil ? "" : "+")\(quest.xp) XP").font(.subheadline.weight(.bold))
-                                            .foregroundStyle(award == nil ? Palette.muted : Palette.accent)
-                                    }
-                                    Text(quest.description).font(.subheadline).foregroundStyle(Palette.muted)
-                                    Text("\(award == nil ? "Incomplete" : "Completed") · \(quest.difficulty) · Level \(index + 1)")
-                                        .font(.caption).foregroundStyle(Palette.muted)
-                                    if let award, let session = sessions.first(where: { $0.id == award.sessionId }) {
-                                        Button { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { model.history = session } } label: {
-                                            Label("View earning workout", systemImage: "arrow.up.right").labelStyle(TrailingIcon())
-                                        }
-                                        .font(.caption.weight(.semibold)).foregroundStyle(Palette.accent).padding(.top, 2)
-                                    }
+        let cap = Experience.dailyStart + Experience.perSet * Experience.dailySetCap
+        SheetFrame(title: "Achievements", tall: true) {
+            Text("\(awards.count) of \(Quest.all.count) completed. Achievement XP is paid once, outside the \(cap) XP daily training limit.")
+                .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
+            RowCard {
+                ForEach(Quest.all) { quest in
+                    let award = awards[quest.id]
+                    HStack(alignment: .top, spacing: Space.s3) {
+                        Image(systemName: award == nil ? "rosette" : "checkmark").font(.system(size: IconSize.medium, weight: .bold))
+                            .foregroundStyle(award == nil ? Palette.muted : Palette.primaryText)
+                            .frame(width: Size.tile, height: Size.tile)
+                            .raised(award == nil ? .control : .green, .inner)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(quest.title).type(.t16).foregroundStyle(Palette.text)
+                            Text(quest.description).type(.t14).foregroundStyle(Palette.muted)
+                            Text("\(Text("\(award == nil ? "" : "+")\(quest.xp) XP").foregroundStyle(award == nil ? Palette.muted : Palette.accent)) · \(quest.difficulty)")
+                                .type(.t12).foregroundStyle(Palette.muted)
+                            if let award, let session = sessions.first(where: { $0.id == award.sessionId }) {
+                                Button { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + Motion.sheetAway) { model.history = session } } label: {
+                                    Label("View the workout", systemImage: "chevron.right").labelStyle(TrailingIcon())
+                                        .type(.t14).foregroundStyle(Palette.accent)
+                                        .frame(minHeight: Size.control).contentShape(Rectangle())
                                 }
+                                .buttonStyle(PressStyle())
                             }
-                            .opacity(award == nil ? 0.75 : 1)
                         }
+                        Spacer(minLength: 0)
                     }
-                }
-                .padding(16)
-            }
-            .background(Backdrop())
-            .navigationTitle("Achievements")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
+                    .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
                 }
             }
+            .padding(.top, Space.s4)
         }
     }
 }

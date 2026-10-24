@@ -45,8 +45,9 @@ extension AppModel {
         update { $0.active?.exercises.remove(at: index) }
         show("Exercise removed.") { [weak self] in
             self?.update { training in
-                guard training.active?.id == sessionId, !(training.active?.exercises.contains { $0.id == exercise.id } ?? true) else { return }
-                training.active?.exercises.insert(exercise, at: min(index, training.active?.exercises.count ?? 0))
+                guard var active = training.active, active.id == sessionId, !active.exercises.contains(where: { $0.id == exercise.id }) else { return }
+                active.exercises.insert(exercise, at: min(index, active.exercises.count))
+                training.active = active
             }
         }
     }

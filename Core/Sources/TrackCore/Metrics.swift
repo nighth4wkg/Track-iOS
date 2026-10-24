@@ -177,7 +177,8 @@ public enum Experience {
     public static let dailyStart = 20, perSet = 5, dailySetCap = 12
 
     /// XP to go from this level to the next: attainable early, asking for consistency later.
-    public static func requirement(for level: Int) -> Int { Swift.min(300, 100 + 50 * Swift.max(0, level - 1)) }
+    public static let maxRequirement = 300
+    public static func requirement(for level: Int) -> Int { Swift.min(maxRequirement, 100 + 50 * Swift.max(0, level - 1)) }
 
     public struct Progress: Equatable, Sendable {
         public var total = 0, current = 0, level = 1

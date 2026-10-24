@@ -116,12 +116,12 @@ struct CompletionView: View {
 
 /// "View workout ↗": the icon after the title.
 struct TrailingIcon: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View { HStack(spacing: 4) { configuration.title; configuration.icon } }
+    func makeBody(configuration: Configuration) -> some View { HStack(spacing: Space.s1) { configuration.title; configuration.icon } }
 }
 
 /// Chips that wrap onto as many lines as they need, each at most a line wide (a long one wraps its text).
 struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
+    var spacing = Space.s2
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity

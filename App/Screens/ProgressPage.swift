@@ -51,7 +51,7 @@ struct ProgressPage: View {
             }
             .navigationDestination(item: $lift) { LiftPage(name: $0) }
         }
-        .sheet(isPresented: $xpHelp) { XpHelp().presentationDetents([.medium, .large]) }
+        .sheet(isPresented: $xpHelp) { XpHelp() }
         .sheet(isPresented: $quests) { QuestList().trackOverlays() }
     }
 

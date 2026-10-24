@@ -31,92 +31,108 @@ enum Catalog {
     }
 }
 
-/// Adding an exercise, as the website's picker: "Add an exercise", a search, the library or the matches (with how
-/// many), a + on each, more on request, and your own name when it isn't in the library. Given `replacing`, it's
-/// "Edit an exercise": what's picked takes that exercise's place and keeps its sets.
+/// Adding an exercise, as the PWA's picker: a search, the muscle filter, a name typed that isn't in the library (to
+/// add as it is), your 3 most recent, then the library or the matches, 30 at a time. Adding keeps it open for the
+/// next, each added one ticked. Given `replacing`, it's "Swap exercise": what's picked takes that one's place.
 struct ExercisePicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
-    @State private var shown = 50
+    @State private var group = "All"
+    @State private var shown = Self.page
+    @State private var added: [String] = []
+    /// Each name's muscles, worked out once per opening (a reference, so filling it redraws nothing).
+    @State private var groups = Groups()
     var replacing: String? = nil
     let onPick: (String) -> Void
+    private static let page = 30
 
     var body: some View {
         let usage = model.derived("usage") { sessions in
             sessions.reduce(into: [String: Int]()) { usage, session in for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
         }
-        let results = Catalog.search(query, usage: usage)
+        let recent = model.derived("recent") { sessions in
+            var seen = Set<String>()
+            return sessions.sorted { ($0.finishedAt ?? 0) > ($1.finishedAt ?? 0) }.flatMap { $0.exercises.map(\.name) }
+                .filter { seen.insert($0).inserted }.prefix(3).map { $0 }
+        }
+        let choices = model.training.settings.lifts ?? [:]
+        let matches = Catalog.search(query, usage: usage)
+        let results = group == "All" ? matches : matches.filter { groups.of($0, choices).contains(group) }
         let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
-        let custom = !typed.isEmpty && !results.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
-        return NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(replacing.map { "Pick what replaces \($0). Its sets stay as they are." } ?? "Find a movement or add your own.").font(.subheadline).foregroundStyle(Palette.muted)
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
-                        TextField("Search exercises…", text: $query).submitLabel(.done)
-                            .onSubmit { if let first = results.first { pick(first) } else if custom { pick(typed) } }
-                        if !query.isEmpty {
-                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted).frame(width: 44, height: 44).contentShape(Rectangle()) }
-                                .accessibilityLabel("Clear search")
-                        }
-                    }
-                    .padding(.horizontal, 14).frame(minHeight: 48)
-                    .glass(radius: 14, fill: Palette.input, lifted: false)
-                    HStack {
-                        Text(query.isEmpty ? "Exercise library" : "Matches")
-                        Spacer()
-                        Text(results.isEmpty ? "No exercises" : "Showing \(min(shown, results.count)) of \(results.count)")
-                    }
-                    .font(.caption.weight(.semibold)).foregroundStyle(Palette.muted)
-                    if results.isEmpty {
-                        Text("No matching exercises.").font(.subheadline).foregroundStyle(Palette.muted).padding(.vertical, 8)
-                    } else {
-                        GlassList {
-                            ForEach(results.prefix(shown), id: \.self) { name in
-                                Button { pick(name) } label: {
-                                    HStack {
-                                        Text(name).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
-                                        Spacer()
-                                        if let times = usage[name] { Text(count(times, "time")).font(.caption).foregroundStyle(Palette.muted) }
-                                        Image(systemName: "plus").font(.body.weight(.semibold)).foregroundStyle(Palette.accent)
-                                    }
-                                    .frame(minHeight: 44).contentShape(Rectangle())
-                                    .padding(.vertical, -6) // a 44pt tap area, into the row's padding, at the same look
-                                }
-                                .buttonStyle(PressStyle())
-                                .accessibilityLabel("\(verb) \(name)")
-                            }
-                        }
-                        if results.count > shown {
-                            Button("Show more") { shown += 50 }.buttonStyle(SecondaryButtonStyle())
-                        }
-                    }
-                    if custom {
-                        Button { pick(typed) } label: { Label("\(verb) “\(typed.prefix(50))” as your own", systemImage: "plus") }
-                            .buttonStyle(SecondaryButtonStyle())
-                    }
-                }
-                .padding(16)
+        let custom = !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
+        SheetFrame(title: replacing == nil ? "Add exercise" : "Swap exercise",
+                   subtitle: replacing ?? (added.isEmpty ? nil : "\(added.count) added"), tall: true) {
+            Field(placeholder: "Search exercises", text: $query, label: "Search exercises", icon: "magnifyingglass",
+                  submit: { if custom { pick(typed) } else if let first = results.first { pick(first) } })
+                .padding(.top, Space.s3)
+            Seg(label: "Muscle", options: (["All"] + LiftTable.groups).map { (value: $0, text: $0) }, value: $group, columns: 3)
+                .padding(.top, Space.s3)
+            if custom {
+                RowCard { row(typed, choices) }.padding(.top, Space.s4)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .background(Backdrop())
-            .navigationTitle(replacing == nil ? "Add an exercise" : "Edit an exercise")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark").foregroundStyle(Palette.text) }.accessibilityLabel("Close")
-                }
+            if query.isEmpty, group == "All", !recent.isEmpty {
+                Text("Recent").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
+                RowCard { ForEach(recent, id: \.self) { row($0, choices) } }.padding(.top, Space.s2)
             }
-            .onChange(of: query) { shown = 50 }
+            Text(query.isEmpty ? "All exercises" : count(results.count, "result")).type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
+            if !results.isEmpty {
+                RowCard { ForEach(results.prefix(shown), id: \.self) { row($0, choices) } }.padding(.top, Space.s2)
+            }
+            if results.count > shown {
+                Button("Show more") { shown += Self.page }.buttonStyle(SecondaryButtonStyle()).padding(.top, Space.s3)
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .onChange(of: query) { shown = Self.page }
+        .onChange(of: group) { shown = Self.page }
+        // Filled once the sheet is up, so neither the opening nor the first filter tap waits for it.
+        .task {
+            try? await Task.sleep(for: .seconds(Motion.screen))
+            for name in Catalog.names { _ = groups.of(name, choices) }
         }
     }
 
-    private var verb: String { replacing == nil ? "Add" : "Use" }
+    /// The name over its muscle ("Added" in green once added), and + (✓ once added).
+    private func row(_ name: String, _ choices: [String: String]) -> some View {
+        let isAdded = added.contains(name)
+        return HStack(spacing: Space.s3) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
+                Text(isAdded ? "Added" : groups.of(name, choices).first ?? "Exercise").type(.t14)
+                    .foregroundStyle(isAdded ? Palette.accent : Palette.muted)
+            }
+            Spacer(minLength: 0)
+            Button { pick(name) } label: {
+                Image(systemName: isAdded ? "checkmark" : "plus").font(.system(size: IconSize.medium, weight: .bold))
+                    .foregroundStyle(isAdded ? Palette.primaryText : Palette.text)
+                    .frame(width: Size.control, height: Size.control)
+                    .raised(isAdded ? .green : .control, .inner)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(PressStyle())
+            .accessibilityLabel("\(replacing == nil ? "Add" : "Use") \(name)")
+            .sensoryFeedback(.impact(weight: .light), trigger: isAdded) { _, now in now }
+        }
+        .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
+        .frame(minHeight: Size.row)
+    }
 
     private func pick(_ name: String) {
-        onPick(String(name.prefix(Limits.name)))
-        dismiss()
+        let name = String(name.prefix(Limits.name))
+        onPick(name)
+        if replacing != nil { dismiss() } else { withAnimation(.smooth(duration: Motion.fast)) { added.append(name) } }
+    }
+}
+
+/// Names' muscles, looked up once each.
+private final class Groups {
+    private var map: [String: [String]] = [:]
+
+    func of(_ name: String, _ choices: [String: String]) -> [String] {
+        if let known = map[name] { return known }
+        let found = LiftTable.ranking(for: name, choices: choices)?.groups ?? []
+        map[name] = found
+        return found
     }
 }
