@@ -22,67 +22,19 @@ struct WorkoutView: View {
     @State private var focus: String?
 
     var body: some View {
-        if let active = model.training.active {
-            let fields = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
-            let done = active.exercises.doneCount, planned = active.exercises.plannedCount
-            let expanded = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
-                ?? (active.exercises.first { $0.doneCount < $0.setCount } ?? active.exercises.first)?.id
-            let previous = model.derived("previous \(active.splitId)") { $0.filter { $0.splitId == active.splitId }.max { ($0.finishedAt ?? 0) < ($1.finishedAt ?? 0) } }
-            let unit = model.training.settings.unit
-            let bests = model.bests
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    header(active, done: done, planned: planned)
-                    RankBar(progress: Double(done) / Double(max(1, planned)), color: Palette.accent)
-                        .padding(.top, Space.s3)
-                        .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
-                    if arranging {
-                        ArrangeList(items: active.exercises, name: \.name, onMove: { from, to in
-                            model.update { training in
-                                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
-                                training.active?.exercises = moved
-                            }
-                        }) { exercise in
-                            HStack(spacing: Space.s3) {
-                                Text("\((active.exercises.firstIndex { $0.id == exercise.id } ?? 0) + 1)").type(.t16).monospacedDigit()
-                                    .foregroundStyle(Palette.text).frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
-                                VStack(alignment: .leading, spacing: 0) {
-                                    Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
-                                    Text(ExerciseCard.detail(exercise, previous, unit)).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
-                                }
-                            }
-                        }
-                        .padding(.top, Space.s4)
-                        .transition(.opacity)
-                    } else {
-                        VStack(spacing: Space.s3) {
-                            ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
-                                ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
-                                             autoLog: model.training.settings.logSets != .manual, bests: bests,
-                                             last: previous?.exercises.first { $0.id == exercise.id || $0.name == exercise.name },
-                                             restSeconds: model.training.settings.restSeconds,
-                                             muscle: LiftTable.ranking(for: exercise.name, choices: model.training.settings.lifts ?? [:])?.groups.first ?? "Exercise",
-                                             focus: $focus,
-                                             focusHere: focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil },
-                                             onOpen: { withAnimation(.smooth(duration: Motion.standard)) { opened = exercise.id } },
-                                             onOptions: { sheet = .exercise(exercise.id) })
-                                    .equatable()
-                            }
-                            Button { sheet = .add } label: { Label("Add exercise", systemImage: "plus") }
-                                .buttonStyle(SecondaryButtonStyle())
-                                .id("bottom")
-                        }
-                        .padding(.top, Space.s4)
-                        .transition(.opacity)
-                    }
-                }
-                .padding(.horizontal, Space.s4).padding(.top, Space.s4).padding(.bottom, Space.s6)
-                .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
-                .animation(.smooth(duration: Motion.standard), value: active.exercises.map(\.id))
-                .animation(.smooth(duration: Motion.standard), value: expanded)
-                .animation(.smooth(duration: Motion.standard), value: arranging)
-                .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
-            }
+        if let active = model.training.active { page(active) }
+    }
+
+    private func page(_ active: Session) -> some View {
+        let fields: [String] = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
+        let expanded: String? = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
+            ?? (active.exercises.first { $0.doneCount < $0.setCount } ?? active.exercises.first)?.id
+        let expandedDone: Bool? = active.exercises.first { $0.id == expanded }.map { $0.doneCount == $0.setCount }
+        let splitId = active.splitId
+        let previous: Session? = model.derived("previous \(splitId)") { sessions in
+            sessions.filter { $0.splitId == splitId }.max { ($0.finishedAt ?? 0) < ($1.finishedAt ?? 0) }
+        }
+        return ScrollView { content(active, expanded: expanded, previous: previous) }
             .scrollDismissesKeyboard(.interactively)
             .setKeyboard($focus)
             .background(Backdrop())
@@ -105,7 +57,7 @@ struct WorkoutView: View {
                 withAnimation(.smooth(duration: Motion.standard)) { opened = exercise.id }
             }
             // A card whose last set just got done hands over to the next with sets to do (the keyboard goes with it).
-            .onChange(of: active.exercises.first { $0.id == expanded }.map { $0.doneCount == $0.setCount }) { was, now in
+            .onChange(of: expandedDone) { was, now in
                 guard was == false, now == true else { return }
                 withAnimation(.smooth(duration: Motion.standard)) { opened = nil }
                 focus = nil
@@ -116,19 +68,79 @@ struct WorkoutView: View {
             }
             .task(id: model.workoutOpen) { try? await Task.sleep(for: .seconds(Motion.screen + 0.1)); if model.workoutOpen, !Task.isCancelled { model.workoutCovers = true } }
             .task { await FrameLog.driveNext(fields) { focus = $0 } }
-            .sheet(item: $sheet, onDismiss: swapPicked) { kind in
-                Group {
-                    switch kind {
-                    case .add: ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
-                    case .swap(let exercise): ExercisePicker(replacing: exercise.name) { picked = (exercise, $0) }
-                    case .workout: WorkoutOptions(arrange: { sheet = nil; withAnimation(.smooth(duration: Motion.standard)) { arranging = true } },
-                                                  rename: { sheet = .rename })
-                    case .rename: RenameWorkout()
-                    case .exercise(let id): ExerciseOptions(exerciseId: id, swap: { sheet = .swap($0) })
-                    }
-                }
-                .trackOverlays()
+            .sheet(item: $sheet, onDismiss: swapPicked) { sheetView($0).trackOverlays() }
+    }
+
+    /// The header, the progress bar, then the cards (or the list being arranged) and Add exercise.
+    private func content(_ active: Session, expanded: String?, previous: Session?) -> some View {
+        let done = active.exercises.doneCount, planned = active.exercises.plannedCount
+        let unit = model.training.settings.unit
+        return VStack(alignment: .leading, spacing: 0) {
+            header(active, done: done, planned: planned)
+            RankBar(progress: Double(done) / Double(max(1, planned)), color: Palette.accent)
+                .padding(.top, Space.s3)
+                .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
+            if arranging {
+                arrangeList(active, previous: previous, unit: unit).padding(.top, Space.s4).transition(.opacity)
+            } else {
+                cards(active, expanded: expanded, previous: previous, unit: unit).padding(.top, Space.s4).transition(.opacity)
             }
+        }
+        .padding(.horizontal, Space.s4).padding(.top, Space.s4).padding(.bottom, Space.s6)
+        .frame(maxWidth: Measure.page).frame(maxWidth: .infinity)
+        .animation(.smooth(duration: Motion.standard), value: active.exercises.map(\.id))
+        .animation(.smooth(duration: Motion.standard), value: expanded)
+        .animation(.smooth(duration: Motion.standard), value: arranging)
+        .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
+    }
+
+    private func arrangeList(_ active: Session, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
+        ArrangeList(items: active.exercises, name: \.name, onMove: { from, to in
+            model.update { training in
+                guard let moved = training.active?.exercises.moved(from, to: to) else { return }
+                training.active?.exercises = moved
+            }
+        }) { exercise in
+            HStack(spacing: Space.s3) {
+                Text("\((active.exercises.firstIndex { $0.id == exercise.id } ?? 0) + 1)").type(.t16).monospacedDigit()
+                    .foregroundStyle(Palette.text).frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
+                    Text(ExerciseCard.detail(exercise, previous, unit)).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private func cards(_ active: Session, expanded: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
+        let settings = model.training.settings
+        let bests = model.bests
+        return VStack(spacing: Space.s3) {
+            ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
+                let muscle: String = LiftTable.ranking(for: exercise.name, choices: settings.lifts ?? [:])?.groups.first ?? "Exercise"
+                let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
+                ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
+                             autoLog: settings.logSets != .manual, bests: bests,
+                             last: previous?.exercises.first { $0.id == exercise.id || $0.name == exercise.name },
+                             restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
+                             onOpen: { withAnimation(.smooth(duration: Motion.standard)) { opened = exercise.id } },
+                             onOptions: { sheet = .exercise(exercise.id) })
+                    .equatable()
+            }
+            Button { sheet = .add } label: { Label("Add exercise", systemImage: "plus") }
+                .buttonStyle(SecondaryButtonStyle())
+                .id("bottom")
+        }
+    }
+
+    @ViewBuilder private func sheetView(_ kind: WorkoutSheet) -> some View {
+        switch kind {
+        case .add: ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }
+        case .swap(let exercise): ExercisePicker(replacing: exercise.name) { picked = (exercise, $0) }
+        case .workout: WorkoutOptions(arrange: { sheet = nil; withAnimation(.smooth(duration: Motion.standard)) { arranging = true } },
+                                      rename: { sheet = .rename })
+        case .rename: RenameWorkout()
+        case .exercise(let id): ExerciseOptions(exerciseId: id, swap: { sheet = .swap($0) })
         }
     }
 

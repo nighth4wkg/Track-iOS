@@ -99,6 +99,8 @@ enum Size {
     /// Home's week ring, and its stroke.
     static let weekRing: CGFloat = 88
     static let ringStroke: CGFloat = 8
+    /// The level ring on Workout complete.
+    static let levelRing: CGFloat = 96
     /// The rest timer's ring and its line.
     static let restRing: CGFloat = 36
     static let restStroke: CGFloat = 4
