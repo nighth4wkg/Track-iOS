@@ -43,11 +43,13 @@ private struct SheetBox<Content: View>: View {
     @State private var finger = Finger()
     @State private var pulling = false
     @State private var height: CGFloat = 0
+    /// Let go past this share of its height (or flicked as far), it closes: the PWA's CLOSE_DRAG.
+    private static let closeShare = 0.4
 
     var body: some View {
         VStack(spacing: 0) {
             Capsule().fill(Palette.handle).frame(width: Size.handle.width, height: Size.handle.height)
-                .frame(maxWidth: .infinity).padding(.top, Space.s2 + 2).padding(.bottom, Space.s3)
+                .frame(maxWidth: .infinity).padding(.top, Size.handleTop).padding(.bottom, Space.s3)
                 .contentShape(Rectangle())
                 .gesture(drag)
                 .accessibilityHidden(true)
@@ -89,9 +91,9 @@ private struct SheetBox<Content: View>: View {
             }
             .onEnded { value in
                 let down = max(0, value.translation.height)
-                finger.y = 0
+                finger.speed = value.velocity.height
                 pulling = false
-                if down > height * 0.4 || value.predictedEndTranslation.height - value.translation.height > height * 0.4 { close() }
+                if down > height * Self.closeShare || value.predictedEndTranslation.height - value.translation.height > height * Self.closeShare { close() }
             })
     }
 }

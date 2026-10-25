@@ -77,6 +77,8 @@ enum Size {
     static let chartBar: CGFloat = 10
     static let dot: CGFloat = 5
     static let handle = CGSize(width: 40, height: 5)
+    /// Room above a sheet's handle (the PWA's .overlay top padding).
+    static let handleTop: CGFloat = 10
     static let chart: CGFloat = 96
     /// The narrowest a side-by-side tile gets.
     static let tileMin: CGFloat = 160
@@ -94,6 +96,12 @@ enum Rings {
 
 enum IconSize {
     static let small: CGFloat = 16, medium: CGFloat = 18, regular: CGFloat = 20, logo: CGFloat = 22, emblem: CGFloat = 26
+}
+
+enum Motion {
+    /// The PWA's --motion-fast (s): a dragged thing let go short of its goal slides back this long (the only motion
+    /// so far).
+    static let fast = 0.16
 }
 
 enum Radius {

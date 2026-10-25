@@ -307,9 +307,11 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                                 if held != item.id { held = item.id }
                                 if crossed != steps { steps = crossed }
                             }
-                            .onEnded { _ in
+                            .onEnded { value in
+                                // In its new place, it slides in from where the finger left it.
+                                finger.y -= CGFloat(steps) * step
+                                finger.speed = value.velocity.height
                                 if steps != 0 { onMove(index, index + steps) }
-                                finger.y = 0
                                 held = nil
                                 steps = 0
                             })
@@ -348,18 +350,35 @@ extension ArrangeList where End == EmptyView {
 /// Where a finger has dragged something to. Touches only write it; the dragged view reads it once per screen refresh
 /// (follow), as iOS's own scroll views do. Redrawn on each touch instead, a touch landing late in a frame missed it,
 /// and a slow drag moved every other frame.
-final class Finger { var y: CGFloat = 0 }
+final class Finger {
+    var y: CGFloat = 0
+    /// How fast it was moving when let go (pt/s), so the slide back carries on at that speed.
+    var speed: CGFloat = 0
+}
 
 extension View {
-    /// Moves this view down by the finger's drag, every screen refresh while `on`.
+    /// Moves this view down by the finger's drag, every screen refresh while `on`. Let go, it slides from where the
+    /// finger left it (`finger.y`, set to what's left over) back into its place.
     func follow(_ finger: Finger, while on: Bool) -> some View { modifier(Follow(finger: finger, on: on)) }
 }
 
 private struct Follow: ViewModifier {
     let finger: Finger
     let on: Bool
+    @State private var settle: CGFloat = 0
+
     func body(content: Content) -> some View {
-        TimelineView(.animation(paused: !on)) { _ in content.offset(y: on ? finger.y : 0) }
+        TimelineView(.animation(paused: !on)) { _ in content.offset(y: on ? finger.y : settle) }
+            .onChange(of: on) { _, now in
+                guard !now else { return }
+                settle = finger.y
+                let speed = finger.speed
+                finger.y = 0
+                finger.speed = 0
+                guard settle != 0 else { return }
+                // A spring's starting speed is a share of the distance it covers per second.
+                withAnimation(.interpolatingSpring(duration: Motion.fast, bounce: 0, initialVelocity: speed / -settle)) { settle = 0 }
+            }
     }
 }
 
