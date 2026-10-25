@@ -51,7 +51,6 @@ struct HistoryView: View {
                 Button("Clear") { query = ""; from = ""; to = "" }.buttonStyle(SecondaryButtonStyle(hug: true))
             }
         }
-        .frame(minHeight: Size.control)
         if results.isEmpty {
             Text(model.training.sessions.finished.isEmpty ? "Finish a workout and it shows up here." : "No workouts match. Try another name or date.")
                 .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
@@ -93,7 +92,7 @@ private struct DateField: View {
             .accessibilityLabel("\(label), \(day?.formatted(.gregorian.month(.wide).day().year()) ?? "any day")")
             // On the app's own sheet: a popover sized the graphical calendar to a sliver on iPhone.
             .sheet(isPresented: $picking) {
-                SheetFrame(title: label) {
+                SheetFrame(title: label, steady: true) {
                     DatePicker(label, selection: Binding(get: { day ?? min(max(range.lowerBound, .now), range.upperBound) },
                                                          set: { key = dayKey(millis($0)); picking = false }),
                                in: range, displayedComponents: .date)

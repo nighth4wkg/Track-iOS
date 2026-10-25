@@ -10,6 +10,9 @@ struct SheetFrame<Content: View>: View {
     var closeLabel = "Done"
     /// Full height whatever it holds, as the PWA's tall sheet (the picker: filtering mustn't resize it).
     var tall = false
+    /// Grows to fit but never shrinks back, so content that changes height as you use it (a calendar's 5- and 6-week
+    /// months) doesn't resize the sheet on every change.
+    var steady = false
     @ViewBuilder let content: Content
     @State private var height: CGFloat = 0
 
@@ -32,7 +35,7 @@ struct SheetFrame<Content: View>: View {
             .padding(.bottom, Space.s4)
             .frame(maxWidth: Measure.page)
             .frame(maxWidth: .infinity)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = steady ? max(height, $0) : $0 }
         }
         .scrollBounceBehavior(.basedOnSize)
         .presentationDetents(height > 0 && !tall ? [.height(height)] : [.large])
