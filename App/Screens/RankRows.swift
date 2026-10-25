@@ -126,7 +126,7 @@ private struct CountsFor: View {
                         }
                         .padding(Space.s4).frame(minHeight: Size.row).contentShape(Rectangle())
                     }
-                    .buttonStyle(PressStyle())
+                    .buttonStyle(RowPressStyle())
                     .accessibilityAddTraits(option.value == current ? .isSelected : [])
                     .overlay(alignment: .top) { if option.value != options[0].value { Palette.hairline.frame(height: 1) } }
                 }

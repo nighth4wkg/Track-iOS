@@ -13,14 +13,14 @@ struct WorkoutOptions: View {
         SheetFrame(title: active?.name ?? "Workout") {
             RowCard {
                 Button(action: arrange) { Row(title: "Arrange exercises", value: "", chevron: true) }
-                    .buttonStyle(PressStyle()).disabled((active?.exercises.count ?? 0) < 2)
-                Button(action: rename) { Row(title: "Rename workout", value: "", chevron: true) }.buttonStyle(PressStyle())
+                    .buttonStyle(RowPressStyle()).disabled((active?.exercises.count ?? 0) < 2)
+                Button(action: rename) { Row(title: "Rename workout", value: "", chevron: true) }.buttonStyle(RowPressStyle())
                 Row(title: "Weight unit") {
                     Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
                         value: Binding(get: { model.training.settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)
                 }
                 Button { dismiss(); model.discard() } label: { Row(title: "Discard workout", tint: Palette.danger) { EmptyView() } }
-                    .buttonStyle(PressStyle())
+                    .buttonStyle(RowPressStyle())
             }
             .padding(.top, Space.s3)
         }
@@ -70,9 +70,9 @@ struct ExerciseOptions: View {
             let sides = switch exercise.startingSide { case nil: "Both"; case .left?: "Left first"; case .right?: "Right first" }
             SheetFrame(title: exercise.name) {
                 RowCard {
-                    Button { swap(exercise) } label: { Row(title: "Swap exercise", value: "", chevron: true) }.buttonStyle(PressStyle())
+                    Button { swap(exercise) } label: { Row(title: "Swap exercise", value: "", chevron: true) }.buttonStyle(RowPressStyle())
                     Button { model.update { $0.updateActive(exercise: exerciseId) { $0 = $0.cyclingSides() } } } label: { Row(title: "Sides", value: sides) }
-                        .buttonStyle(PressStyle())
+                        .buttonStyle(RowPressStyle())
                         .accessibilityLabel("Sides: \(sides). Change")
                         .sensoryFeedback(.selection, trigger: sides)
                 }
@@ -81,9 +81,9 @@ struct ExerciseOptions: View {
                     Button { if let last = exercise.setGroups.last?.first { model.removeSet(last.id, in: exerciseId) } } label: {
                         Row(title: "Remove last set") { EmptyView() }
                     }
-                    .buttonStyle(PressStyle()).disabled(exercise.setCount < 2)
+                    .buttonStyle(RowPressStyle()).disabled(exercise.setCount < 2)
                     Button { dismiss(); model.removeExercise(exercise) } label: { Row(title: "Remove exercise", tint: Palette.danger) { EmptyView() } }
-                        .buttonStyle(PressStyle())
+                        .buttonStyle(RowPressStyle())
                 }
                 .padding(.top, Space.s3)
             }

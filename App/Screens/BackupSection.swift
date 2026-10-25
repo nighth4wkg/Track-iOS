@@ -28,14 +28,14 @@ struct BackupSection: View {
         // the empty app.
         if let unreadable = model.unreadableFile {
             ShareLink(item: unreadable) { Row(title: "Export unreadable data", value: "The copy Track couldn’t read") }
-            .buttonStyle(PressStyle())
+            .buttonStyle(RowPressStyle())
         } else {
             ShareLink(item: BackupFile(training: model.training),
                       preview: SharePreview("Track backup", image: Image(systemName: "doc"))) { Row(title: "Export backup", value: "JSON file") }
-            .buttonStyle(PressStyle())
+            .buttonStyle(RowPressStyle())
         }
         Button { importing = true } label: { Row(title: "Restore backup", value: "Replaces your data") }
-        .buttonStyle(PressStyle())
+        .buttonStyle(RowPressStyle())
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
             guard case .success(let url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()

@@ -13,13 +13,13 @@ struct AboutSettings: View {
                 UIPasteboard.general.string = Self.discord
                 copied = true
             } label: { Row(title: "Found a problem?", value: copied ? "Copied" : Self.discord) }
-                .buttonStyle(PressStyle())
+                .buttonStyle(RowPressStyle())
                 .accessibilityLabel(copied ? "Discord username copied" : "Copy Discord username \(Self.discord)")
                 .sensoryFeedback(.success, trigger: copied) { _, now in now }
                 .task(id: copied) { if copied { try? await Task.sleep(for: .seconds(2)); copied = false } }
             // Inside Track, as iOS apps show a web page, rather than switching to Safari.
             Button { privacy = true } label: { Row(title: "Privacy", value: "", chevron: true) }
-                .buttonStyle(PressStyle())
+                .buttonStyle(RowPressStyle())
                 .sheet(isPresented: $privacy) { SafariView(url: URL(string: "https://trackk.pages.dev/privacy#iphone")!).ignoresSafeArea() }
             Row(title: "Version", value: Self.version)
         }

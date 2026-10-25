@@ -48,7 +48,7 @@ struct Page<Content: View>: View {
                 .frame(maxWidth: Measure.page)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
-                .opacity(1 - Double(abs(shift)) / 12)
+                .opacity(1 - Double(abs(shift) / Space.s3))
             }
             .scrollPosition($position)
             .onAppear(perform: arrive)
@@ -69,8 +69,8 @@ struct Page<Content: View>: View {
         guard model.arrivedTab != model.tab else { return }
         model.arrivedTab = model.tab
         position.scrollTo(edge: .top)
-        shift = 12 * model.tabStep
-        DispatchQueue.main.async { withAnimation(.easeOut(duration: Motion.fast)) { shift = 0 } }
+        shift = Space.s3 * model.tabStep
+        DispatchQueue.main.async { withAnimation(.smooth(duration: Motion.fast)) { shift = 0 } }
     }
 }
 

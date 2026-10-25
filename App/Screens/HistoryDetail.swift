@@ -75,7 +75,7 @@ struct HistoryDetail: View {
                 .frame(minHeight: Size.row)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(PressStyle())
+            .buttonStyle(RowPressStyle())
             .accessibilityValue(open ? "Open" : "Closed")
             if open {
                 VStack(spacing: Space.s2) {

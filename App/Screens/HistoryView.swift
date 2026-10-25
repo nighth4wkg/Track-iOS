@@ -56,7 +56,7 @@ struct HistoryView: View {
         } else {
             LazyVStack(spacing: Space.s3) {
                 ForEach(results.prefix(shown)) { session in
-                    Button { model.history = session } label: { HistoryRow(session: session, unit: unit) }.buttonStyle(PressStyle())
+                    Button { model.history = session } label: { HistoryRow(session: session, unit: unit) }.buttonStyle(RowPressStyle())
                 }
             }
             .padding(.top, Space.s2)

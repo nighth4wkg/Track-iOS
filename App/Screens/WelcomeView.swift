@@ -53,3 +53,12 @@ struct PressStyle: ButtonStyle {
             .animation(.smooth(duration: Motion.fast), value: configuration.isPressed)
     }
 }
+
+/// A whole row as the button, as the PWA's button.row: it doesn't shrink, its row lights a faint wash while pressed.
+struct RowPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Palette.wash : .clear)
+            .animation(.smooth(duration: Motion.fast), value: configuration.isPressed)
+    }
+}

@@ -7,13 +7,15 @@ import TrackCore
 struct RestCapsule: View {
     @Environment(AppModel.self) private var model
     var compact = false
+    /// How often the time redraws; the ring runs down evenly between.
+    private static let tick: TimeInterval = 0.5
     @State private var ended = 0
 
     var body: some View {
         let until = model.training.restUntil
         Group {
             if let until {
-                TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                TimelineView(.periodic(from: .now, by: Self.tick)) { context in
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))
                     if left > 0 {
@@ -56,7 +58,7 @@ struct RestCapsule: View {
             ZStack {
                 Circle().stroke(Palette.input, lineWidth: Size.restStroke)
                 Circle().trim(from: 0, to: min(1, left / total)).stroke(Palette.primary, style: StrokeStyle(lineWidth: Size.restStroke, lineCap: .round))
-                    .rotationEffect(.degrees(-90)).animation(.linear(duration: 0.5), value: left)
+                    .rotationEffect(.degrees(-90)).animation(.linear(duration: Self.tick), value: left)
             }
             .frame(width: Size.restRing, height: Size.restRing)
             Text(clock(left)).type(.t20).monospacedDigit().foregroundStyle(Palette.text)

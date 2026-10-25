@@ -107,7 +107,7 @@ private struct SplitCard: View {
                 .frame(minHeight: Size.control + Space.s4 * 2)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(PressStyle())
+            .buttonStyle(RowPressStyle()) // as the PWA's split row: no shrink
             if armed {
                 RoundButton(icon: "trash", label: "Delete \(split.name)", tint: Palette.danger) { armed = false; model.deleteSplit(split) }
                     .padding(.trailing, Space.s4)
@@ -153,7 +153,7 @@ private struct NewSplitSheet: View {
                         .frame(minHeight: Size.row)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(PressStyle())
+                    .buttonStyle(RowPressStyle())
                     .overlay(alignment: .top) { if template.id != SplitTemplate.all.first?.id { Palette.hairline.frame(height: 1) } }
                 }
             }

@@ -27,7 +27,7 @@ struct SettingsView: View {
                             value: Binding(get: { settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)
                     }
                     Button { resting = .list } label: { Row(title: "Rest timer", value: "\(restText(settings.restSeconds)) min", chevron: true) }
-                        .buttonStyle(PressStyle())
+                        .buttonStyle(RowPressStyle())
                     Row(title: "Log sets") {
                         Seg(label: "Log sets", options: [(value: TrackCore.Settings.LogSets.auto, text: "Auto"), (value: .manual, text: "Tap")],
                             value: Binding(get: { settings.logSets ?? .auto }, set: { mode in model.update { $0.settings.logSets = mode } }), compact: true)
@@ -45,7 +45,7 @@ struct SettingsView: View {
                 }
                 section("Account") {
                     Row(title: "Signed in", value: "Local only")
-                    Button { model.leaveLocal() } label: { Row(title: "Leave local mode") { EmptyView() } }.buttonStyle(PressStyle())
+                    Button { model.leaveLocal() } label: { Row(title: "Leave local mode") { EmptyView() } }.buttonStyle(RowPressStyle())
                 }
                 Text("About").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
                 VStack(alignment: .leading, spacing: Space.s2) {
@@ -121,7 +121,7 @@ private struct RestList: View {
                     Button { model.update { $0.settings.restSeconds = seconds }; dismiss() } label: {
                         Row(title: "\(restText(seconds)) min") { if seconds == current { Check() } }
                     }
-                    .buttonStyle(PressStyle())
+                    .buttonStyle(RowPressStyle())
                     .accessibilityAddTraits(seconds == current ? .isSelected : [])
                 }
                 Button(action: custom) {
@@ -129,7 +129,7 @@ private struct RestList: View {
                         if Self.presets.contains(current) { RowValue(text: "", chevron: true) } else { RowValue(text: "\(restText(current)) min"); Check() }
                     }
                 }
-                .buttonStyle(PressStyle())
+                .buttonStyle(RowPressStyle())
             }
             .padding(.top, Space.s3)
         }
