@@ -69,7 +69,10 @@ struct MainView: View {
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
-        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
+        .sheet(item: $model.history) { session in
+            // shortcut: -sheetPlain test switch (60 Hz pass): the sheet with only its title, to tell iOS's cost from ours.
+            if Probe.has("-sheetPlain") { SheetFrame(title: session.name) { EmptyView() } } else { HistoryDetail(session: session).trackOverlays() }
+        }
         .trackOverlays(nav: !navHidden && !model.workoutOpen)
     }
 

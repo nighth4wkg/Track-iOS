@@ -7,6 +7,7 @@ import os
 /// millisecond for a second after each PerfDrive action and logs where its busy time went (device log "Track probe").
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
+    static func has(_ flag: String) -> Bool { args.contains(flag) }
 }
 
 final class Sampler: Thread, @unchecked Sendable {
@@ -119,5 +120,17 @@ final class Sampler: Thread, @unchecked Sendable {
         for (k, v) in line(images, 12) { log.log("probe \(action, privacy: .public) self \(v) \(k, privacy: .public)") }
         for (k, v) in line(frames, 60) { log.log("probe \(action, privacy: .public) incl \(v) \(String(k.prefix(300)), privacy: .public)") }
         for (k, v) in line(ours, 40) { log.log("probe \(action, privacy: .public) ours \(v) \(String(k.prefix(300)), privacy: .public)") }
+        // Whole paths, leaf first (Apple's own names are hidden on the phone, so their images stand in): who drew.
+        var chains: [String: Int] = [:]
+        for stack in busy {
+            var parts: [String] = []
+            for frame in stack {
+                let part = frame.symbol == "<redacted>" || frame.symbol == "?" ? frame.image : "\(frame.image)`\(frame.symbol.prefix(60))"
+                if parts.last != part { parts.append(part) }
+                if parts.count == 14 { break }
+            }
+            chains[parts.joined(separator: " < "), default: 0] += 1
+        }
+        for (k, v) in line(chains, 12) { log.log("probe \(action, privacy: .public) chain \(v) \(String(k.prefix(900)), privacy: .public)") }
     }
 }

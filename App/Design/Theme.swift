@@ -121,6 +121,12 @@ enum Corner {
         case .pill, .circle: Rounded(radius: nil)
         }
     }
+
+    /// shortcut: -nativeShape test switch (60 Hz pass): iOS's own rounded box, which it draws without a custom path.
+    var native: RoundedRectangle {
+        let radius = shape.radius
+        return RoundedRectangle(cornerRadius: radius ?? .greatestFiniteMagnitude, style: radius == nil ? .circular : .continuous)
+    }
 }
 
 /// A box with continuous corners at a radius, or fully round ends (a pill, or a circle when square) when it has none.
@@ -205,10 +211,6 @@ struct Backdrop: View {
     var body: some View { Palette.background.ignoresSafeArea() }
 }
 
-/// shortcut: -oldLook brings back the card shadow and tab arrival from before the 60 Hz smoothness pass, to measure
-/// both on one install; remove once measured.
-enum LookTest { static let old = ProcessInfo.processInfo.arguments.contains("-oldLook") }
-
 /// RAISED: the surface's shade, a light line along its top edge over a hairline, and a small soft shadow. The shadow
 /// is drawn from the shape (not the content), so it needs no offscreen pass.
 struct Raised: ViewModifier {
@@ -216,22 +218,19 @@ struct Raised: ViewModifier {
     let corner: Corner
 
     func body(content: Content) -> some View {
-        let shape = corner.shape
+        if Probe.has("-nativeShape") { paint(content, corner.native) } else { paint(content, corner.shape) }
+    }
+
+    private func paint(_ content: Content, _ shape: some InsettableShape) -> some View {
         let edge = shape.strokeBorder(LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
                                                              .init(color: .white.opacity(0.04), location: 0.12)],
                                                      startPoint: .top, endPoint: .bottom), lineWidth: 1)
         content.background {
-            if LookTest.old {
-                shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
-                    .overlay(edge)
-                    .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
-            } else {
-                // The shadow on the bare shape, before the edge goes on: cast by the fill and its edge together, it was
-                // worked out offscreen on every frame a card moved.
-                shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
-                    .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
-                    .overlay(edge)
-            }
+            // The shadow on the bare shape, before the edge goes on: cast by the fill and its edge together, it was
+            // worked out offscreen on every frame a card moved.
+            shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
+                .shadow(color: Probe.has("-noShadow") ? .clear : .black.opacity(0.45), radius: 4, y: 3)
+                .overlay(edge)
         }
     }
 }
@@ -242,9 +241,12 @@ struct Sunk: ViewModifier {
     var ring: Color?
 
     func body(content: Content) -> some View {
-        let shape = corner.shape
+        if Probe.has("-nativeShape") { paint(content, corner.native) } else { paint(content, corner.shape) }
+    }
+
+    private func paint(_ content: Content, _ shape: some InsettableShape) -> some View {
         content.background {
-            shape.fill(Palette.input.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1)))
+            shape.fill(Probe.has("-noInner") ? AnyShapeStyle(Palette.input) : AnyShapeStyle(Palette.input.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1))))
                 .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
         }
     }

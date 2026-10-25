@@ -49,10 +49,9 @@ struct Page<Content: View>: View {
                 .frame(maxWidth: Measure.page)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
-                // Slides only: fading the whole page made it one offscreen layer, repainted every frame of the slide.
-                .opacity(LookTest.old ? 1 - Double(abs(shift) / Space.s3) : 1)
             }
             .scrollPosition($position)
+            .scrollEdgeEffectHidden(Probe.has("-noEdge"))
             .onAppear(perform: arrive)
             .scrollDismissesKeyboard(.interactively)
             .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
