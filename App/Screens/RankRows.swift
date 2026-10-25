@@ -64,6 +64,8 @@ struct MuscleRow: View {
                 .transition(.opacity)
             }
         }
+        // Its inside clipped to the card (the PWA's overflow: hidden): a closing card's fading inside stays in it.
+        .clipShape(Corner.card.shape)
         .raised()
         .perfHook("rank.row") { muscle in if muscle == rank.muscle.rawValue { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } }
     }

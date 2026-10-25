@@ -104,6 +104,8 @@ struct HistoryDetail: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // Its inside clipped to the card: a closing card's fading sets stay in it.
+        .clipShape(Corner.card.shape)
         .raised()
     }
 
