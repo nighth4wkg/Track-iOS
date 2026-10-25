@@ -35,17 +35,19 @@ import TrackCore
     /// The picker's: ["group", name], ["query", text] or ["pick", name].
     static let filter = Notification.Name("perf.filter")
 
-    /// -perfWork, only with -dryRun (nothing saved; the data is put back at the end): a workout from the first split,
+    /// -perfWork, only with -dryRun (nothing saved; the data is put back at the end): the workout going, else one from the first split,
     /// a card opened and back, the first exercise's sets ticked (rest starts), the picker opened, its muscle filter
     /// switched quickly (twice, faster the second time), a search typed and cleared, two exercises added, the picker
     /// closed, the workout left, back, left.
     private static func work(_ model: AppModel) async {
         try? await Task.sleep(for: .seconds(4))
-        guard model.training.active == nil, let split = model.training.splits.first else { return }
+        // A workout already going is opened as it is (still only in memory) instead of starting one.
+        let going = model.training.active
+        guard let split = going.map({ Split(id: $0.splitId, name: $0.name, exercises: $0.exercises) }) ?? model.training.splits.first else { return }
         let before = model.training
         let post = { (name: Notification.Name, object: Any?) in NotificationCenter.default.post(name: name, object: object) }
         let exercises = { model.training.active?.exercises ?? [] }
-        var steps: [(String, Double, () -> Void)] = [("open workout", 2.5, { model.start(split) })]
+        var steps: [(String, Double, () -> Void)] = [("open workout", 2.5, { if going == nil { model.start(split) } else { model.workoutOpen = true } })]
         steps += [("open second card", 1.5, { post(card, exercises().dropFirst().first?.id) }), ("open first card", 1.5, { post(card, exercises().first?.id) })]
         steps += (0..<(split.exercises.first?.sets.count ?? 0)).map { index in
             ("tick set \(index + 1)", 1.2, { if let first = exercises().first, first.sets.indices.contains(index) { model.toggle(set: first.sets[index].id, in: first.id) } })
