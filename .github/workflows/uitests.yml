@@ -8,6 +8,9 @@ on:
       only:
         description: 'Run just these tests (e.g. TrackUITests/PerfTour)'
         default: ''
+      phone:
+        description: 'On this iPhone, by name start (e.g. "iPhone SE" for the narrowest screen); newest Pro if empty'
+        default: ''
   push:
     branches: [main]
     paths: ['App/**', 'Widgets/**', 'UITests/**', 'Core/Sources/**', 'project.yml', '.github/workflows/uitests.yml']
@@ -32,9 +35,9 @@ jobs:
           udid=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
           devices = json.load(sys.stdin)["devices"]
-          phones = [(runtime, d) for runtime, list_ in devices.items() if "iOS" in runtime for d in list_ if d["name"].startswith("iPhone")]
+          phones = [(runtime, d) for runtime, list_ in devices.items() if "iOS" in runtime for d in list_ if d["name"].startswith(sys.argv[1] or "iPhone")]
           phones.sort(key=lambda p: (p[0], "Pro" in p[1]["name"] and "Max" not in p[1]["name"]))
-          print(phones[-1][1]["udid"])')
+          print(phones[-1][1]["udid"])' "${{ inputs.phone }}")
           xcrun simctl boot "$udid"
           echo "UDID=$udid" >> "$GITHUB_ENV"
       - name: Build for testing

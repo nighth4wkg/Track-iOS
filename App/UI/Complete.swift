@@ -3,7 +3,7 @@ import TrackCore
 
 /// After Finish (the PWA's Complete): "Nice workout!" over its name and day, the XP card (the level ring, +XP, Level up,
 /// what's left to the next level and its bar), Duration · Volume · Streak tiles, each exercise's best set (new records
-/// marked), and Continue docked at the bottom.
+/// marked), and Continue docked at the bottom, back to Home as the PWA.
 struct CompleteScreen: View {
     @Environment(AppModel.self) private var model
     let finished: Finished
@@ -48,7 +48,7 @@ struct CompleteScreen: View {
                 Color.clear.frame(height: Size.primary + Space.s4 - homeIndicator)
             }
             .overlay(alignment: .bottom) {
-                Button("Continue") { model.finished = nil }.buttonStyle(PrimaryStyle())
+                Button("Continue") { model.finished = nil; model.go(.home) }.buttonStyle(PrimaryStyle())
                     .padding(.horizontal, Space.s4)
                     .frame(maxWidth: Size.column)
                     .floatingBottom()
@@ -58,7 +58,7 @@ struct CompleteScreen: View {
         } else {
             DeepPage {
                 Text("Workout saved.").type(.t16).foregroundStyle(Palette.text)
-                Button("Continue") { model.finished = nil }.buttonStyle(PrimaryStyle()).padding(.top, Space.s4)
+                Button("Continue") { model.finished = nil; model.go(.home) }.buttonStyle(PrimaryStyle()).padding(.top, Space.s4)
             }
         }
     }
