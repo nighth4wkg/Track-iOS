@@ -64,7 +64,8 @@ struct WorkoutView: View {
             // As the PWA's moveOn: a set done in a card with more to do shows its next set; the card's last set hands over
             // to the next card with sets to do (also one opened by hand; the keyboard goes with it) and the page glides to
             // it, or after the last one up to Finish.
-            .onChange(of: active.exercises.map(\.doneCount)) { was, now in
+            // Each side counts here (as the PWA's, per set id): L done shows R next.
+            .onChange(of: active.exercises.map { $0.sets.filter(\.done).count }) { was, now in
                 guard was.count == now.count, let index = now.indices.first(where: { now[$0] > was[$0] }) else { return }
                 let card = active.exercises[index]
                 if let set = card.sets.first(where: { !$0.done }) {
@@ -113,8 +114,8 @@ struct WorkoutView: View {
         .animation(.smooth(duration: Motion.standard), value: expanded)
         .animation(.smooth(duration: Motion.standard), value: arranging)
         .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
-        // A set done (or undone): here, as the PWA's, since the last set's row closes with its card before it could.
-        .sensoryFeedback(trigger: done) { was, now in now > was ? .impact(weight: .medium) : .selection }
+        // A set done (or undone), each side of a pair too: here, as the PWA's, since the last set's row closes with its card before it could.
+        .sensoryFeedback(trigger: active.exercises.reduce(0) { $0 + $1.sets.filter(\.done).count }) { was, now in now > was ? .impact(weight: .medium) : .selection }
     }
 
     private func arrangeList(_ active: Session, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {

@@ -43,7 +43,8 @@ struct NavPill: View {
             Color.clear.raised(.control, .pill)
                 .frame(width: cell, height: Size.nav - Space.s1 * 2)
                 .offset(x: dragX ?? spot(near ?? chosen))
-                .animation(dragX == nil ? .smooth(duration: Motion.fast) : nil, value: dragX ?? spot(near ?? chosen))
+                // It glides when the tab changes; the pill being laid out (its width found at launch) just places it.
+                .animation(dragX == nil ? .smooth(duration: Motion.fast) : nil, value: near ?? chosen)
         }
         .raised(.nav, .pill)
         .contentShape(Capsule())

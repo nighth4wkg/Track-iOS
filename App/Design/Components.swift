@@ -61,6 +61,7 @@ struct Page<Content: View>: View {
             }))
             .background(Backdrop())
             .toolbar(.hidden, for: .navigationBar)
+            .toolbarVisibility(.hidden, for: .tabBar)
         }
     }
 
@@ -193,6 +194,7 @@ struct SubPage<Content: View, Trailing: View>: View {
         }
         .background(Backdrop())
         .toolbar(.hidden, for: .navigationBar)
+        .toolbarVisibility(.hidden, for: .tabBar) // a pushed page mustn't bring iOS's tab bar back
     }
 }
 
@@ -240,7 +242,8 @@ struct Seg<Value: Hashable>: View {
                 Color.clear.raised(.control, .pill)
                     .frame(width: cell.width, height: cell.height)
                     .offset(x: (dragAt ?? cell.origin).x, y: (dragAt ?? cell.origin).y)
-                    .animation(dragAt == nil ? .smooth(duration: Motion.fast) : nil, value: dragAt ?? cell.origin)
+                    // It glides when the choice changes; its track being laid out (first, or resized) just places it.
+                    .animation(dragAt == nil ? .smooth(duration: Motion.fast) : nil, value: shown)
             }
         }
         .coordinateSpace(.named(Self.space))

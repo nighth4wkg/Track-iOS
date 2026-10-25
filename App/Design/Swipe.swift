@@ -133,3 +133,14 @@ struct SwipeToArm: ViewModifier {
 extension View {
     func swipeToArm(_ armed: Binding<Bool>) -> some View { modifier(SwipeToArm(armed: armed)) }
 }
+
+/// The edge swipe back on every pushed page (a split, a lift): iOS turns it off when the bar is hidden, as all of
+/// Track's pages hide it for their own back button. It may start whenever there's a page to go back to.
+extension UINavigationController: @retroactive UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
+    }
+
+    public func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool { viewControllers.count > 1 }
+}

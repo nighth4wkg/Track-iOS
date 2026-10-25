@@ -69,7 +69,8 @@ struct HistoryView: View {
     }
 }
 
-/// From or To: the day as the app writes dates ("Oct 24, 2026", or "Any day") on a SUNK field; tap it for a calendar.
+/// From or To: the day as the app writes dates ("Oct 24, 2026", or "Any day") on a SUNK field; tap it for a calendar
+/// on a sheet (choosing a day closes it).
 private struct DateField: View {
     let label: String
     @Binding var key: String
@@ -90,14 +91,18 @@ private struct DateField: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(label), \(day?.formatted(.gregorian.month(.wide).day().year()) ?? "any day")")
-            .popover(isPresented: $picking) {
-                DatePicker(label, selection: Binding(get: { day ?? min(max(range.lowerBound, .now), range.upperBound) },
-                                                     set: { key = dayKey(millis($0)); picking = false }),
-                           in: range, displayedComponents: .date)
-                    .datePickerStyle(.graphical)
-                    .environment(\.calendar, Calendars.local)
-                    .padding(Space.s4)
-                    .presentationCompactAdaptation(.popover)
+            // On the app's own sheet: a popover sized the graphical calendar to a sliver on iPhone.
+            .sheet(isPresented: $picking) {
+                SheetFrame(title: label) {
+                    DatePicker(label, selection: Binding(get: { day ?? min(max(range.lowerBound, .now), range.upperBound) },
+                                                         set: { key = dayKey(millis($0)); picking = false }),
+                               in: range, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .tint(Palette.accent)
+                        .environment(\.calendar, Calendars.local)
+                        .padding(.top, Space.s3)
+                }
             }
         }
         .frame(maxWidth: .infinity)

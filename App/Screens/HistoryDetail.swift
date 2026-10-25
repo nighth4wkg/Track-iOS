@@ -2,7 +2,7 @@ import SwiftUI
 import TrackCore
 
 /// A finished workout, as the PWA's: its name over the day and minutes, Volume · Sets · Avg RIR tiles, each exercise
-/// (tap to see its sets), the note (saved when you leave it), then Repeat workout and Delete workout.
+/// (tap to see its sets), the note (saved when you leave it, or tap its Done), then Repeat workout and Delete workout.
 struct HistoryDetail: View {
     @Environment(AppModel.self) private var model
     let session: Session
@@ -32,7 +32,16 @@ struct HistoryDetail: View {
             }
             .padding(.top, Space.s2)
             VStack(alignment: .leading, spacing: Space.s2) {
-                Text("Note").type(.t14).foregroundStyle(Palette.muted)
+                // Done shows while typing (as the PWA's), so leaving the note, and saving it, is a tap, not a guess.
+                HStack {
+                    Text("Note").foregroundStyle(Palette.muted)
+                    Spacer(minLength: 0)
+                    if typing {
+                        Button("Done") { typing = false }.fontWeight(.semibold).foregroundStyle(Palette.accent)
+                            .buttonStyle(.plain).contentShape(Rectangle().inset(by: -Space.s3))
+                    }
+                }
+                .type(.t14)
                 TextField("How did it go?", text: $note, axis: .vertical)
                     .type(.t14).foregroundStyle(Palette.text).lineLimit(2...6)
                     .focused($typing)

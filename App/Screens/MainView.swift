@@ -12,23 +12,32 @@ struct MainView: View {
     @State private var workoutShown = false
     /// Tabs built so far: each is built on its first visit and kept, so coming back is instant and keeps its place.
     @State private var built: Set<AppTab> = [.home]
+    /// The keyboard is up: the nav pill steps aside rather than riding up on it.
+    @State private var keyboard = false
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
         @Bindable var model = model
         let covered = model.pushed.contains(model.tab)
+        let navHidden = covered || keyboard
         ZStack {
-            ZStack {
-                ForEach(AppTab.allCases.filter(built.contains), id: \.self) { tab in
-                    let on = tab == model.tab
-                    page(tab).opacity(on ? 1 : 0).allowsHitTesting(on).accessibilityHidden(!on)
+            // iOS's own tabs with their bar hidden (the pill is the bar): each keeps its state, but only the one on
+            // screen is in the window, so the others aren't laid out again as the keyboard or safe area changes.
+            TabView(selection: $model.tab) {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    Group { if built.contains(tab) { page(tab) } else { Backdrop() } }
+                        .toolbarVisibility(.hidden, for: .tabBar)
+                        .tag(tab)
                 }
             }
             .overlay(alignment: .bottom) {
                 NavPill()
-                    .opacity(covered ? 0 : 1).allowsHitTesting(!covered)
-                    .animation(.smooth(duration: Motion.fast), value: covered)
+                    .opacity(navHidden ? 0 : 1).allowsHitTesting(!navHidden)
+                    .animation(.smooth(duration: Motion.fast), value: navHidden)
+                    .ignoresSafeArea(.keyboard)
             }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
             .onChange(of: model.tab) { _, tab in built.insert(tab) }
             // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
             .id(model.day)
@@ -61,7 +70,7 @@ struct MainView: View {
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
         .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
-        .trackOverlays(nav: !covered && !model.workoutOpen)
+        .trackOverlays(nav: !navHidden && !model.workoutOpen)
     }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {
