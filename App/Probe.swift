@@ -18,7 +18,7 @@ extension View {
 
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
-    static let noShadow = has("-noShadow"), noEdge = has("-noEdge")
+    static let noShadow = has("-noShadow"), noEdge = has("-noEdge"), edgeOld = has("-edgeOld")
     static func has(_ flag: String) -> Bool { args.contains(flag) }
 }
 

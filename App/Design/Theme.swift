@@ -204,9 +204,14 @@ struct Raised: ViewModifier {
 
     func body(content: Content) -> some View {
         let shape = corner.shape
-        let edge = shape.strokeBorder(LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
-                                                             .init(color: .white.opacity(0.04), location: 0.12)],
-                                                     startPoint: .top, endPoint: .bottom), lineWidth: 1)
+        let fade = LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
+                                          .init(color: .white.opacity(0.04), location: 0.12)],
+                                  startPoint: .top, endPoint: .bottom)
+        // A plain line faded by a gradient mask: stroked with the gradient itself, the edge was drawn on the CPU each
+        // time a card changed size (a filter tap in the picker: 25-40 ms).
+        let edge = Group {
+            if Probe.edgeOld { shape.strokeBorder(fade, lineWidth: 1) } else { shape.strokeBorder(.white, lineWidth: 1).mask(fade) }
+        }
         content.background {
             // The shadow on the bare shape, before the edge goes on: cast by the fill and its edge together, it was
             // worked out offscreen on every frame a card moved.
