@@ -21,6 +21,9 @@ struct NavPill: View {
         let chosen = Self.tabs.firstIndex { $0.tab == model.tab } ?? 0
         let cell = max(0, (width - Space.s1 * CGFloat(Self.tabs.count + 1)) / CGFloat(Self.tabs.count))
         let spot = { (index: Int) in Space.s1 + CGFloat(index) * (cell + Space.s1) }
+        // The knob's place under the finger, kept on the pill, and the tab nearest it.
+        let place = { (drag: DragGesture.Value) in min(max(drag.location.x - cell / 2, spot(0)), spot(Self.tabs.count - 1)) }
+        let nearest = { (x: CGFloat) in Int(((x - Space.s1) / (cell + Space.s1)).rounded()) }
         HStack(spacing: Space.s1) {
             ForEach(Array(Self.tabs.enumerated()), id: \.element.tab) { index, item in
                 let on = index == (near ?? chosen)
@@ -52,13 +55,15 @@ struct NavPill: View {
             .onChanged { drag in
                 guard cell > 0 else { return }
                 // Sideways past a small step claims it as a drag; until then it's a press on the tab below.
-                let x = min(max(drag.location.x - cell / 2, spot(0)), spot(Self.tabs.count - 1))
+                let x = place(drag)
                 if dragX != nil || abs(drag.translation.width) >= Space.s2 { dragX = x }
-                let index = Int(((x - Space.s1) / (cell + Space.s1)).rounded())
+                let index = nearest(x)
                 if near != index { near = index }
             }
-            .onEnded { _ in
-                if let near { model.tab = Self.tabs[near].tab }
+            .onEnded { drag in
+                // A press held back until the finger lifts (a row's swipe below waiting to see if it moves, as on Home at
+                // launch) ends without a change: the tab under the finger still counts.
+                if cell > 0 { model.tab = Self.tabs[near ?? nearest(place(drag))].tab }
                 withAnimation(.smooth(duration: Motion.fast)) { dragX = nil; near = nil }
             })
         .sensoryFeedback(.selection, trigger: near) { old, now in old != nil && now != nil }
