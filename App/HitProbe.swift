@@ -8,6 +8,9 @@ import os
 @MainActor enum HitProbe {
     private static let logger = Logger(subsystem: "Track", category: "hits")
 
+    static func on(_ argument: String) -> Bool { ProcessInfo.processInfo.arguments.contains(argument) }
+    static func note(_ text: String) { logger.log("\(text, privacy: .public)") }
+
     static func install() {
         let arguments = ProcessInfo.processInfo.arguments
         guard arguments.contains("-hitProbe") || arguments.contains("-hideTabBar"),

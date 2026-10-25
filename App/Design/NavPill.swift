@@ -12,6 +12,8 @@ struct NavPill: View {
     @State private var near: Int?
     /// The knob's place while dragged; nil sits it on its tab.
     @State private var dragX: CGFloat?
+    /// Off when it's placed by the one hosting it (HitProbe's -pillHost).
+    var floats = true
 
     private static let tabs: [(tab: AppTab, label: String, icon: String)] = [
         (.home, "Home", "house"), (.history, "History", "calendar"), (.progress, "Progress", "chart.bar"), (.rank, "Rank", "rosette"),
@@ -53,6 +55,7 @@ struct NavPill: View {
         .contentShape(Capsule())
         .gesture(DragGesture(minimumDistance: 0)
             .onChanged { drag in
+                if near == nil { HitProbe.note("pill change \(Int(drag.location.x)) cell \(Int(cell))") }
                 guard cell > 0 else { return }
                 // Sideways past a small step claims it as a drag; until then it's a press on the tab below.
                 let x = place(drag)
@@ -61,6 +64,7 @@ struct NavPill: View {
                 if near != index { near = index }
             }
             .onEnded { drag in
+                HitProbe.note("pill end near \(String(describing: near))")
                 // A press held back until the finger lifts (a row's swipe below waiting to see if it moves, as on Home at
                 // launch) ends without a change: the tab under the finger still counts.
                 if cell > 0 { model.tab = Self.tabs[near ?? nearest(place(drag))].tab }
@@ -70,7 +74,7 @@ struct NavPill: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .frame(maxWidth: Size.navWidth)
         .padding(.horizontal, Space.s4)
-        .floatingBottom()
+        .padding(.bottom, floats ? Space.s4 - homeIndicator : 0)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Main")
     }

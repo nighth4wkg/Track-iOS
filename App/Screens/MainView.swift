@@ -23,15 +23,9 @@ struct MainView: View {
         ZStack {
             // iOS's own tabs with their bar hidden (the pill is the bar): each keeps its state, but only the one on
             // screen is in the window, so the others aren't laid out again as the keyboard or safe area changes.
-            TabView(selection: $model.tab) {
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    Group { if built.contains(tab) { page(tab) } else { Backdrop() } }
-                        .toolbarVisibility(.hidden, for: .tabBar)
-                        .tag(tab)
-                }
-            }
+            tabs
             .overlay(alignment: .bottom) {
-                NavPill()
+                pill
                     .opacity(navHidden ? 0 : 1).allowsHitTesting(!navHidden)
                     .animation(.smooth(duration: Motion.fast), value: navHidden)
                     .ignoresSafeArea(.keyboard)
@@ -73,6 +67,34 @@ struct MainView: View {
         .trackOverlays(nav: !navHidden && !model.workoutOpen)
     }
 
+    // shortcut: -noTabView / -pillHost are HitProbe's test switches for the pill dead at launch; remove with it.
+    @ViewBuilder private var tabs: some View {
+        @Bindable var model = model
+        if HitProbe.on("-noTabView") {
+            ZStack {
+                ForEach(AppTab.allCases.filter(built.contains), id: \.self) { tab in
+                    page(tab).opacity(tab == model.tab ? 1 : 0).allowsHitTesting(tab == model.tab)
+                }
+            }
+        } else {
+            TabView(selection: $model.tab) {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    Group { if built.contains(tab) { page(tab) } else { Backdrop() } }
+                        .toolbarVisibility(.hidden, for: .tabBar)
+                        .tag(tab)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var pill: some View {
+        if HitProbe.on("-pillHost") {
+            HostedPill(model: model).padding(.bottom, Space.s4 - homeIndicator)
+        } else {
+            NavPill()
+        }
+    }
+
     @ViewBuilder private func page(_ tab: AppTab) -> some View {
         switch tab {
         case .home: HomeView(settingsOpen: $settingsOpen)
@@ -80,5 +102,23 @@ struct MainView: View {
         case .progress: ProgressPage()
         case .rank: RankPage()
         }
+    }
+}
+
+/// The nav pill in its own hosting view, so its touches are its own and not routed through the tabs' host.
+private struct HostedPill: UIViewControllerRepresentable {
+    let model: AppModel
+
+    func makeUIViewController(context: Context) -> UIHostingController<AnyView> {
+        let host = UIHostingController(rootView: AnyView(NavPill(floats: false).environment(model)))
+        host.view.backgroundColor = .clear
+        host.safeAreaRegions = []
+        return host
+    }
+
+    func updateUIViewController(_ host: UIHostingController<AnyView>, context: Context) {}
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiViewController host: UIHostingController<AnyView>, context: Context) -> CGSize? {
+        host.sizeThatFits(in: CGSize(width: proposal.width ?? .infinity, height: .infinity))
     }
 }
