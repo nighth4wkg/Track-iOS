@@ -188,13 +188,16 @@ struct Raised: ViewModifier {
 
     func body(content: Content) -> some View {
         let shape = corner.shape
-        // A plain line faded by a mask: a gradient stroke is drawn on the CPU.
+        let shade = LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom)
         let fade = LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
                                           .init(color: .white.opacity(0.04), location: 0.12)], startPoint: .top, endPoint: .bottom)
+        // The edge line as three plain fills (shade, the fading white over it, the shade again 1 pt in): no mask or
+        // stroke, so no offscreen pass per card.
         content.background {
-            shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
+            shape.fill(shade)
                 .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
-                .overlay(shape.strokeBorder(.white, lineWidth: 1).mask(fade))
+                .overlay(shape.fill(fade))
+                .overlay(shape.inset(by: 1).fill(shade))
         }
     }
 }
