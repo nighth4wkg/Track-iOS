@@ -20,7 +20,7 @@ struct TrackApp: App {
             }
             .environment(model)
             .tint(Palette.accent)
-            .onAppear { DialogWindow.install(model); TestSeed.apply(model); FrameLog.install() }
+            .onAppear { DialogWindow.install(model); TestSeed.apply(model); FrameLog.install(); HitProbe.install() }
             .task { await PerfDrive.run(model) }
             // The rest Live Activity: back to the workout in progress.
             .onOpenURL { url in if url.host == "workout", model.training.active != nil { model.workoutOpen = true } }
