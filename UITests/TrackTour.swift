@@ -17,121 +17,68 @@ final class TrackTour: XCTestCase {
 
     override func tearDown() { XCTAssertEqual(missing, [], "steps the tour couldn't do") }
 
+    /// Every screen of the recoded app, each kept as a screenshot: Home, a workout (keypad, every set ticked, the
+    /// picker, an exercise's options), the recap, History and a past workout, Progress and a lift, Rank, Settings, a split.
     func testTour() {
         snap("home")
         app.swipeUp(); snap("home-scrolled"); app.swipeDown()
 
-        // A workout, from the start.
-        tap(app.buttons["Start workout"].firstMatch, "Start workout")
-        snap("start-0.1s", after: 0.1); snap("start-settled", after: 1)
-        let rir1 = app.buttons["Bench Press set 1 RIR"]
-        tap(rir1, "set 1 RIR"); snap("rir-tapped-not-logged", after: 1)
-        app.typeKeys("2"); snap("rir-typed", after: 0.1); snap("rir-saved", after: 1)
-        allowNotificationsIfAsked(); snap("resting")
-        tap(app.buttons["Bench Press set 1 reps"], "set 1 reps")
-        app.typeKeys("9"); snap("logged-set-edited", after: 1)
-        tap(app.buttons["Done"].firstMatch, "keyboard Done"); snap("keyboard-gone")
-        for n in 2...3 { tap(check("Bench Press set \(n)"), "✓ set \(n)"); snap("ticked-\(n)", after: 0.15) }
-        snap("bench-folded", after: 1)
-        XCTAssertFalse(check("Bench Press set 3").isHittable, "a folded card hides its sets"); snap("untick-folded-card", after: 0.6)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press' AND NOT label CONTAINS 'set'")).firstMatch, "open folded card"); snap("folded-opened", after: 0.6)
-        tap(check("Bench Press set 3"), "untick set 3"); snap("unticked", after: 0.8)
-        tap(check("Bench Press set 3"), "retick set 3"); snap("reticked", after: 1)
-
-        let next = app.buttons.matching(NSPredicate(format: "label ENDSWITH 'set 1 RIR' AND NOT label BEGINSWITH 'Bench'")).firstMatch
-        if next.waitForExistence(timeout: 3) {
-            next.swipeLeft(); snap("set-delete-armed", after: 0.5); next.swipeRight(); snap("set-delete-disarmed", after: 0.5)
-        }
-        tap(app.buttons["Add set"].firstMatch, "Add set"); snap("set-added", after: 0.6)
-        app.swipeUp(); snap("workout-scrolled"); app.swipeUp(); snap("workout-bottom")
-        tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH 'workout options'")).firstMatch, "workout options")
-        snap("workout-options", after: 0.8); tap(app.buttons["Close"].firstMatch, "close options"); snap("options-closed", after: 0.8)
-
-        app.swipeDown(); app.swipeDown(); snap("workout-top")
-        // Swipe Bench Press for Edit, pick another exercise: it takes Bench Press's place with the same sets.
-        let bench = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press' AND NOT label CONTAINS 'set'")).firstMatch
-        if bench.waitForExistence(timeout: 3) { bench.swipeLeft(); snap("exercise-swiped", after: 0.5) }
-        tap(app.buttons["Edit"].firstMatch, "Edit exercise"); snap("edit-picker", after: 0.8)
-        // One not already in the workout, so the drag below still finds its two exercises by name.
-        let names = ["Bench Press", "Lat pulldown", "Overhead Press", "Barbell curl", "Back squat"].map { "Use " + $0 }
-        let use = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use ' AND NOT (label IN %@)", names)).firstMatch
-        let picked = use.waitForExistence(timeout: 3) ? String(use.label.dropFirst(4)) : ""
-        tap(use, "Use another exercise"); snap("swap-confirm", after: 1)
-        tap(app.buttons["dialog-action"], "confirm swap"); snap("exercise-replaced", after: 1)
-        print("TOUR replaced: \(picked) shown \(app.staticTexts[picked].exists) bench gone \(!app.staticTexts["Bench Press"].exists)")
-        let lat = app.descendants(matching: .any)["Lat pulldown"].firstMatch, press = app.descendants(matching: .any)["Overhead Press"].firstMatch
-        if lat.waitForExistence(timeout: 3), press.exists {
-            lat.press(forDuration: 1.2, thenDragTo: press, withVelocity: .slow, thenHoldForDuration: 0.8)
-            snap("dropped-0.1s", after: 0.1); snap("dropped-settled", after: 1)
-            print("TOUR order: \(app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Lat pulldown", "Overhead Press"])).allElementsBoundByIndex.map { "\($0.label)@\(Int($0.frame.minY))" })")
-        } else { missing.append("drag"); print("TOUR missing: drag") }
-        tap(app.buttons["keep-for-later"], "Keep for later"); snap("home-in-progress", after: 1)
-        tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Resume workout'")).firstMatch, "Resume"); snap("resumed", after: 1)
-        tap(app.buttons["Finish workout"].firstMatch, "Finish workout"); snap("finish-confirm", after: 0.6)
-        tap(app.buttons["dialog-action"], "confirm finish"); snap("recap", after: 1.5)
+        tap(app.buttons["Start workout"].firstMatch, "Start workout"); snap("workout", after: 1)
+        tap(app.buttons["Reps in reserve, Set 1"].firstMatch, "set 1 RIR"); snap("keypad", after: 0.8)
+        tap(app.buttons["Done"].firstMatch, "keypad Done"); snap("keypad-gone", after: 0.6)
+        tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("picker", after: 1)
+        app.swipeUp(); snap("picker-scrolled"); dismissSheet()
+        tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH ' options'")).firstMatch, "exercise options")
+        snap("exercise-options", after: 0.8); dismissSheet()
+        tickEverySet(); snap("all-ticked", after: 1)
+        tap(app.buttons["Finish workout"].firstMatch, "Finish"); snap("recap", after: 1.5)
         app.swipeUp(); snap("recap-scrolled")
-        tap(app.buttons["Continue"].firstMatch, "Continue"); snap("progress", after: 1)
+        tap(app.buttons["Continue"].firstMatch, "Continue"); snap("home-after", after: 1)
 
-        // The tabs.
-        for period in ["Day", "Month", "Week"] { tap(app.buttons[period].firstMatch, period); snap("progress-\(period.prefix(1))", after: 0.6) }
-        app.swipeUp(); snap("progress-scrolled"); app.swipeDown()
-        tap(app.tabBars.buttons["Rank"], "Rank"); snap("rank", after: 0.8)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bodyweight'")).firstMatch, "bodyweight"); snap("bodyweight", after: 0.8)
-        tap(app.buttons["Close"].firstMatch, "close bodyweight")
-        app.swipeUp(); snap("rank-scrolled")
-        // Open Legs, move its first exercise to Not counted, then back to automatic.
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Legs'")).firstMatch, "Legs"); snap("rank-legs-open", after: 0.8)
-        app.swipeUp()
-        let chip = app.buttons.matching(NSPredicate(format: "label ENDSWITH 'counts for'")).firstMatch
-        let chipLabel = chip.waitForExistence(timeout: 4) ? chip.label : "counts for"
-        tap(chip, "counts-for chip"); snap("rank-counts-for-menu", after: 0.8)
-        tap(app.buttons["Doesn't count"].firstMatch, "Doesn't count"); snap("rank-not-counted", after: 0.8)
-        app.swipeUp()
-        tap(app.buttons[chipLabel].firstMatch, "not-counted chip")
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Automatic'")).firstMatch, "Automatic"); snap("rank-counted-again", after: 0.8)
-        app.swipeDown(); app.swipeDown()
-        tap(app.tabBars.buttons["History"], "History"); snap("history", after: 0.8)
-        tap(app.buttons["Filter by date"].firstMatch, "date filter"); snap("history-filter", after: 0.8)
-        tap(app.buttons["Any"].firstMatch, "From: Any"); snap("history-from-date", after: 0.8)
-        tap(app.buttons["Hide date range"].firstMatch, "hide dates"); snap("history-filter-hidden", after: 0.8)
-        tap(app.staticTexts["FBEOD"].exists ? app.staticTexts["FBEOD"].firstMatch : app.staticTexts["Full body"].firstMatch, "a workout")
-        snap("detail", after: 1); app.swipeUp(); snap("detail-large", after: 0.8)
-        tap(app.buttons["Close"].firstMatch, "close detail"); snap("history-again", after: 0.8)
+        tap(app.buttons["History"].firstMatch, "History"); snap("history", after: 0.8)
         app.swipeUp(); snap("history-scrolled"); app.swipeDown()
+        tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Full body'")).firstMatch, "a past workout"); snap("session", after: 1)
+        app.swipeUp(); snap("session-scrolled"); tap(app.buttons["Back"].firstMatch, "back from session")
 
-        // Settings.
+        tap(app.buttons["Progress"].firstMatch, "Progress"); snap("progress", after: 0.8)
+        app.swipeUp(); snap("progress-scrolled")
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press'")).firstMatch, "a lift"); snap("lift", after: 1)
+        app.swipeUp(); snap("lift-scrolled"); tap(app.buttons["Back"].firstMatch, "back from lift")
+
+        tap(app.buttons["Rank"].firstMatch, "Rank"); snap("rank", after: 0.8)
+        app.swipeUp(); snap("rank-scrolled"); app.swipeDown()
+
+        tap(app.buttons["Home"].firstMatch, "Home")
         tap(app.buttons["Settings"].firstMatch, "Settings"); snap("settings", after: 0.8)
-        for tab in ["Data", "Account", "About", "Training"] { tap(app.buttons[tab].firstMatch, tab); snap("settings-\(tab)", after: 0.5) }
-        tap(app.buttons["System"].firstMatch, "appearance menu"); tap(app.buttons["Light"].firstMatch, "Light")
-        snap("settings-light", after: 0.8)
-        tap(app.buttons["Light"].firstMatch, "appearance menu"); tap(app.buttons["Dark"].firstMatch, "Dark")
-        tap(app.buttons["Close"].firstMatch, "close settings")
+        app.swipeUp(); snap("settings-scrolled"); app.swipeUp(); snap("settings-bottom")
+        tap(app.buttons["Done"].firstMatch, "Settings Done")
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Upper'")).firstMatch, "a split"); snap("split", after: 1)
+        app.swipeUp(); snap("split-scrolled"); tap(app.buttons["Back"].firstMatch, "back from split"); snap("home-end", after: 0.6)
+    }
 
-        // A new split.
-        tap(app.tabBars.buttons["Home"], "Home")
-        tap(app.buttons["Create split"].firstMatch, "Create split"); snap("create-split", after: 0.8)
-        app.typeText("Legs"); tap(app.buttons["dialog-action"], "create"); snap("split-page", after: 1)
-        tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("library", after: 1)
-        tap(app.textFields["Search exercises…"], "search"); app.typeText("squat"); snap("library-search", after: 0.6)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add '")).firstMatch, "add an exercise"); snap("split-with-exercise", after: 0.8)
-        // Editing it: Rename, ✎ and ✕ in place of the set count; ✎ swaps the exercise, asking first. Started with the
-        // row swiped open: its Delete must go (✕ removes now), and the row keeps its height.
-        let exerciseRow = app.cells.firstMatch, height = exerciseRow.frame.height
-        let start = app.buttons["Start workout"].firstMatch, startY = start.frame.minY
-        exerciseRow.swipeLeft(); snap("split-row-swiped", after: 0.5)
-        tap(app.buttons["Edit split"].firstMatch, "Edit split"); snap("split-editing-0.1s", after: 0.1); snap("split-editing", after: 0.8)
-        XCTAssertFalse(app.buttons["Remove"].exists, "the swipe's Delete stays beside ✕")
-        print("TOUR row height \(height) → \(exerciseRow.frame.height); Start workout y \(startY) → \(start.frame.minY)")
-        XCTAssertEqual(exerciseRow.frame.height, height, accuracy: 0.5)
-        XCTAssertEqual(start.frame.minY, startY, accuracy: 0.5, "Rename takes the size line's place: nothing moves")
-        XCTAssertTrue(app.buttons["Rename"].isHittable)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Swap '")).firstMatch, "Swap exercise"); snap("split-swap-picker", after: 0.8)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use '")).firstMatch, "Use another"); snap("split-swap-confirm", after: 1)
-        tap(app.buttons["dialog-action"], "confirm split swap"); snap("split-swapped", after: 0.8)
-        tap(app.buttons["Done editing"].firstMatch, "Done editing"); snap("split-edit-done-0.1s", after: 0.1); snap("split-edit-done", after: 0.8)
-        tap(app.navigationBars.buttons.firstMatch, "back"); snap("home-new-split", after: 0.8)
-        let row = app.cells.containing(.staticText, identifier: "Legs").firstMatch
-        if row.waitForExistence(timeout: 3) { row.swipeLeft(); snap("split-swiped", after: 0.5) }
+    /// Ticks every set, opening each closed exercise in turn, as Finish needs (test data only).
+    private func tickEverySet() {
+        let mark = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Mark ' AND label ENDSWITH ' done'")).firstMatch
+        let closed = app.buttons.matching(NSPredicate(format: "value == 'Closed'")).firstMatch
+        var asked = false
+        for _ in 0..<60 {
+            if mark.exists {
+                if !mark.isHittable { app.swipeUp() }
+                mark.tap()
+                if !asked { allowNotificationsIfAsked(); asked = true }
+            } else if closed.exists {
+                if !closed.isHittable { app.swipeUp() }
+                closed.tap()
+            } else { return }
+        }
+        missing.append("tick every set"); print("TOUR missing: tick every set")
+    }
+
+    /// A tap outside the top sheet, as a person closes it.
+    private func dismissSheet() {
+        let outside = app.descendants(matching: .any)["Dismiss"].firstMatch
+        if outside.waitForExistence(timeout: 2) { outside.tap() } else { app.swipeDown() }
+        Thread.sleep(forTimeInterval: 0.6)
     }
 
     /// A first install, in light mode with pounds and ✓-only logging: the welcome, every empty screen, a template,
