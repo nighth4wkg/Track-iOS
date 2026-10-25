@@ -58,6 +58,12 @@ public func periodStart(_ time: Int, _ period: Period, calendar: Calendar = Cale
     }
 }
 
+/// Whole days, weeks or months from one time's span to another's, the empty ones between included.
+public func periods(from start: Int, to end: Int, _ period: Period, calendar: Calendar = Calendars.local) -> Int {
+    calendar.dateComponents([period.component], from: date(periodStart(start, period, calendar: calendar)),
+                            to: date(periodStart(end, period, calendar: calendar))).value(for: period.component) ?? 0
+}
+
 extension TrainingSet {
     /// Epley: weight × (1 + reps / 30), the estimate the app has always shown.
     public var estimate: Double { (kg ?? 0) * (1 + Double(reps ?? 0) / 30) }

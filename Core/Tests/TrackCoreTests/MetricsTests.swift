@@ -28,6 +28,12 @@ final class MetricsTests: XCTestCase {
         XCTAssertEqual(dayKey(at(2026, 10, 2), calendar: calendar), "2026-10-02")
     }
 
+    func testPeriodsBetweenCountTheEmptyOnes() {
+        XCTAssertEqual(periods(from: at(2026, 9, 9), to: at(2026, 10, 25), .week, calendar: calendar), 6, "Sep 7 week to Oct 19 week, the empty week between counted")
+        XCTAssertEqual(periods(from: at(2026, 10, 24, 23), to: at(2026, 10, 25, 1), .day, calendar: calendar), 1)
+        XCTAssertEqual(periods(from: at(2026, 9, 30), to: at(2026, 10, 1), .month, calendar: calendar), 1)
+    }
+
     func testStreakCountsWeeksInARowAndForgivesAnEmptyCurrentWeek() {
         let sessions = [workout(at(2026, 9, 14)), workout(at(2026, 9, 22)), workout(at(2026, 9, 29))]
         XCTAssertEqual(sessions.weeklyStreak(at: at(2026, 10, 2), calendar: calendar), 3)

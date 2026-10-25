@@ -59,7 +59,7 @@ struct LiftScreen: View {
         return VStack(alignment: .leading, spacing: 0) {
             Text("Estimated 1RM").type(.t14).foregroundStyle(Palette.muted)
             Text("\(weight(latest.rounded(), unit)) \(unit.rawValue)").type(.t28).monospacedDigit().foregroundStyle(Palette.text).padding(.top, Space.s2)
-            Text(gain.map { "\($0 >= 0 ? "+" : "")\(weight($0.rounded(), unit)) \(unit.rawValue) over \(count(points.count - 1, period.name.lowercased()))" } ?? "One point so far")
+            Text(gain.map { "\($0 >= 0 ? "+" : "")\(weight($0.rounded(), unit)) \(unit.rawValue) over \(count(periods(from: points[0].at, to: points.last?.at ?? 0, period), period.name.lowercased()))" } ?? "One point so far")
                 .type(.t14).fontWeight(.semibold).foregroundStyle(gain.map { $0 >= 0 ? Palette.accent : Palette.danger } ?? Palette.muted)
             TrendLine(values: points.map(\.value)).frame(height: Size.chart).padding(.top, Space.s4)
                 .accessibilityLabel("Estimated one-rep max over time")
