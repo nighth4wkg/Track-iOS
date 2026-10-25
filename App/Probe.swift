@@ -18,7 +18,9 @@ extension View {
 
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
-    static let noShadow = has("-noShadow"), noEdge = has("-noEdge"), edgeOld = has("-edgeOld")
+    static let noShadow = has("-noShadow"), noEdge = has("-noEdge"), edgeOld = has("-edgeOld"), tabOld = has("-tabOld"), knobOld = has("-knobOld")
+    /// -slowMo: the app's own animations 8 times slower, to screenshot them frame by frame.
+    static let slowMo: Double = has("-slowMo") ? 8 : 1
     static func has(_ flag: String) -> Bool { args.contains(flag) }
 }
 

@@ -146,8 +146,8 @@ enum TextStyle {
 
 /// Track's motion timings in seconds (the PWA's --motion-fast and --motion).
 enum Motion {
-    static let fast = 0.16, standard = 0.24
-    static let quick = 0.2, slow = 0.35
+    static let fast = 0.16 * Probe.slowMo, standard = 0.24 * Probe.slowMo
+    static let quick = 0.2 * Probe.slowMo, slow = 0.35 * Probe.slowMo
     /// A sheet sliding away: what opening another one from it waits for.
     static let sheetAway = 0.45
     /// The workout sliding up over the tabs, or away (as iOS's own full-screen pages).

@@ -22,15 +22,7 @@ struct MainView: View {
         let covered = model.pushed.contains(model.tab)
         let navHidden = covered || keyboard
         ZStack {
-            // iOS's own tabs with their bar hidden (the pill is the bar): each keeps its state, but only the one on
-            // screen is in the window, so the others aren't laid out again as the keyboard or safe area changes.
-            TabView(selection: $model.tab) {
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    Group { if built.contains(tab) { page(tab) } else { Backdrop() } }
-                        .toolbarVisibility(.hidden, for: .tabBar)
-                        .tag(tab)
-                }
-            }
+            tabs
             .overlay(alignment: .bottom) {
                 NavPill()
                     .opacity(navHidden ? 0 : 1).allowsHitTesting(!navHidden)
@@ -81,6 +73,34 @@ struct MainView: View {
         .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
         .trackOverlays(nav: !navHidden && !model.workoutOpen)
         .perfHook("settings") { settingsOpen = !$0.isEmpty }
+    }
+
+    /// The four pages, each kept built and in the window, only the one on screen shown: switching only shows another,
+    /// where iOS's own tabs took the old page out of the window and put the new one in (45-55 ms, every switch).
+    /// Hidden ones skip the keyboard's inset, so it doesn't lay them out again.
+    @ViewBuilder private var tabs: some View {
+        @Bindable var model = model
+        if Probe.tabOld {
+            TabView(selection: $model.tab) {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    Group { if built.contains(tab) { page(tab) } else { Backdrop() } }
+                        .toolbarVisibility(.hidden, for: .tabBar)
+                        .tag(tab)
+                }
+            }
+        } else {
+            ZStack {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    let shown = model.tab == tab
+                    Group { if built.contains(tab) { page(tab) } else { Backdrop() } }
+                        .environment(\.tabShown, shown)
+                        .opacity(shown ? 1 : 0)
+                        .allowsHitTesting(shown)
+                        .accessibilityHidden(!shown)
+                        .ignoresSafeArea(.keyboard, edges: shown ? [] : .all)
+                }
+            }
+        }
     }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {

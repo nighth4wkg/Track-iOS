@@ -17,6 +17,7 @@ struct Page<Content: View>: View {
     @ViewBuilder let content: Content
     @State private var position = ScrollPosition(edge: .top)
     @State private var shift: CGFloat = 0
+    @Environment(\.tabShown) private var tabShown
 
     var body: some View {
         NavigationStack {
@@ -51,7 +52,8 @@ struct Page<Content: View>: View {
                 .offset(x: shift)
             }
             .scrollPosition($position)
-            .onAppear(perform: arrive)
+            .onAppear { if tabShown { arrive() } }
+            .onChange(of: tabShown) { if tabShown { arrive() } }
             .scrollDismissesKeyboard(.interactively)
             .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in
                 guard let step = HorizontalPan.tabStep(x, velocity), let index = AppTab.allCases.firstIndex(of: model.tab) else { return }
@@ -241,6 +243,8 @@ struct Seg<Value: Hashable>: View {
                 Color.clear.raised(.control, .pill)
                     .frame(width: cell.width, height: cell.height)
                     .offset(x: (dragAt ?? cell.origin).x, y: (dragAt ?? cell.origin).y)
+                    // Its track measured (as its page arrives, mid-slide) just places it: only a new choice glides it.
+                    .transaction(value: cells) { if !Probe.knobOld { $0.animation = nil } }
                     // It glides when the choice changes; its track being laid out (first, or resized) just places it.
                     .animation(dragAt == nil ? .smooth(duration: Motion.fast) : nil, value: shown)
             }
@@ -357,4 +361,9 @@ struct RowValue: View {
             if chevron { Image(systemName: "chevron.right").font(.system(size: IconSize.small, weight: .semibold)).foregroundStyle(Palette.muted) }
         }
     }
+}
+
+extension EnvironmentValues {
+    /// This page's tab is the one on screen (MainView keeps them all built; false while another is shown).
+    @Entry var tabShown = true
 }
