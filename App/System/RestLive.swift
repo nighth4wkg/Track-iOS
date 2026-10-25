@@ -13,18 +13,26 @@ enum RestLive {
         let end = Date(timeIntervalSince1970: Double(until) / 1000)
         let state = RestAttributes.ContentState(until: end, seconds: seconds)
         let content = ActivityContent(state: state, staleDate: end)
-        if let current = Activity<RestAttributes>.activities.first {
-            pending = Task { await current.update(content) }
-        } else {
+        let current = live
+        if current.isEmpty {
             _ = try? Activity.request(attributes: RestAttributes(workout: workout), content: content)
+        } else {
+            pending = Task { for activity in current { await activity.update(content) } }
         }
     }
 
     /// Between rests: the same activity, now "Ready for your next set" (nothing to start if there's none).
     static func idle() {
-        guard let current = Activity<RestAttributes>.activities.first else { return }
-        let state = RestAttributes.ContentState(until: .now, seconds: 1, resting: false)
-        pending = Task { await current.update(ActivityContent(state: state, staleDate: nil)) }
+        let current = live
+        guard !current.isEmpty else { return }
+        let content = ActivityContent(state: RestAttributes.ContentState(until: .now, seconds: 1, resting: false), staleDate: nil)
+        pending = Task { for activity in current { await activity.update(content) } }
+    }
+
+    /// Track's activities still showing (a rest that ran out is stale, not over); every one is kept in step, so one
+    /// left behind can't go on showing an old rest.
+    private static var live: [Activity<RestAttributes>] {
+        Activity<RestAttributes>.activities.filter { $0.activityState == .active || $0.activityState == .stale }
     }
 
     /// Says "Ready" as the rest runs out, while Track is running: the activity's stale date alone left "Rest 0:00" up

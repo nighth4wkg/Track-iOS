@@ -53,6 +53,8 @@ struct Shell: View {
             model.refreshDay()
             if model.training.active != nil, (model.training.restUntil ?? 0) <= nowMillis() { RestLive.idle() }
         }
+        // As a rest runs out the Live Activity says Ready: its stale date alone left "Rest 0:00" up.
+        .task(id: model.training.restUntil) { await RestLive.readyWhenOver(model.training.restUntil) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
         // A new day draws the pages again: their dates and "today" are worked out as they draw.
         .id(model.day)

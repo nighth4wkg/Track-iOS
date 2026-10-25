@@ -5,8 +5,11 @@ import TrackCore
 extension AppModel {
     func startRest() { update { $0.restUntil = nowMillis() + $0.settings.restSeconds * 1000 } }
 
-    /// Ends the rest: Skip, in Track and on the Live Activity.
-    func skipRest() { update { $0.restUntil = nil } }
+    /// Ends the rest: Skip, in Track and on the Live Activity. With none to end (the Live Activity still showing one
+    /// that ran out), it only puts the Live Activity right; there's nothing to save.
+    func skipRest() {
+        if training.restUntil != nil { update { $0.restUntil = nil } } else if training.active != nil { RestLive.idle() } else { RestLive.end() }
+    }
 
     /// The rest's −15s and +15s, as the PWA's: from now if none is running; one pushed into the past ends.
     func shiftRest(by seconds: Int) {
