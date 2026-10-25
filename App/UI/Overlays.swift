@@ -79,7 +79,9 @@ private struct SheetBox<Content: View>: View {
     }
 
     private var drag: AnyGesture<DragGesture.Value> {
-        AnyGesture(DragGesture(minimumDistance: Space.s1)
+        // Measured on the screen: in the sheet's own space the distance shrinks as the sheet follows the finger, so
+        // a slow drag jittered.
+        AnyGesture(DragGesture(minimumDistance: Space.s1, coordinateSpace: .global)
             .onChanged { pull = max(0, $0.translation.height) }
             .onEnded { value in
                 let down = max(0, value.translation.height)
