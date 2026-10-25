@@ -73,6 +73,7 @@ import os
             Logger(subsystem: "Track", category: "actions").log("action \(a.name, privacy: .public): waited \(Int((a.respond ?? 0) * 1000)) ms, \(late, privacy: .public)")
         }
         log.action = name.map { ($0, CACurrentMediaTime(), nil, 0, 0, 0) }
+        if let name { Sampler.begin(name) }
     }
 
     /// Milliseconds since the kernel started this process (the launch, including what runs before main).
