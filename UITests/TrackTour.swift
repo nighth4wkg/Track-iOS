@@ -26,8 +26,9 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Start workout"].firstMatch, "Start workout"); snap("workout", after: 1)
         tap(app.buttons["Reps in reserve, Set 1"].firstMatch, "set 1 RIR"); snap("keypad", after: 0.8)
         tap(app.buttons["Done"].firstMatch, "keypad Done"); snap("keypad-gone", after: 0.6)
+        app.swipeUp(); app.swipeUp()
         tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("picker", after: 1)
-        app.swipeUp(); snap("picker-scrolled"); dismissSheet()
+        app.swipeUp(); snap("picker-scrolled"); dismissSheet(); app.swipeDown(); app.swipeDown()
         tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH ' options'")).firstMatch, "exercise options")
         snap("exercise-options", after: 0.8); dismissSheet()
         tickEverySet(); snap("all-ticked", after: 1)
@@ -38,12 +39,14 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["History"].firstMatch, "History"); snap("history", after: 0.8)
         app.swipeUp(); snap("history-scrolled"); app.swipeDown()
         tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Full body'")).firstMatch, "a past workout"); snap("session", after: 1)
-        app.swipeUp(); snap("session-scrolled"); tap(app.buttons["Back"].firstMatch, "back from session")
+        app.swipeUp(); snap("session-scrolled"); back("session")
 
         tap(app.buttons["Progress"].firstMatch, "Progress"); snap("progress", after: 0.8)
         app.swipeUp(); snap("progress-scrolled")
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press'")).firstMatch, "a lift"); snap("lift", after: 1)
-        app.swipeUp(); snap("lift-scrolled"); tap(app.buttons["Back"].firstMatch, "back from lift")
+        let lift = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Bench Press'")).firstMatch
+        if !lift.isHittable { app.swipeUp() }
+        tap(lift, "a lift"); snap("lift", after: 1)
+        app.swipeUp(); snap("lift-scrolled"); back("lift")
 
         tap(app.buttons["Rank"].firstMatch, "Rank"); snap("rank", after: 0.8)
         app.swipeUp(); snap("rank-scrolled"); app.swipeDown()
@@ -51,27 +54,28 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Home"].firstMatch, "Home")
         tap(app.buttons["Settings"].firstMatch, "Settings"); snap("settings", after: 0.8)
         app.swipeUp(); snap("settings-scrolled"); app.swipeUp(); snap("settings-bottom")
-        tap(app.buttons["Done"].firstMatch, "Settings Done")
+        app.swipeDown(); app.swipeDown(); tap(app.buttons["Done"].firstMatch, "Settings Done")
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Upper'")).firstMatch, "a split"); snap("split", after: 1)
-        app.swipeUp(); snap("split-scrolled"); tap(app.buttons["Back"].firstMatch, "back from split"); snap("home-end", after: 0.6)
+        app.swipeUp(); snap("split-scrolled"); back("split"); snap("home-end", after: 0.6)
     }
 
-    /// Ticks every set, opening each closed exercise in turn, as Finish needs (test data only).
+    /// Ticks every set, as Finish needs (test data only): the next exercise opens as one finishes.
     private func tickEverySet() {
         let mark = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Mark ' AND label ENDSWITH ' done'")).firstMatch
-        let closed = app.buttons.matching(NSPredicate(format: "value == 'Closed'")).firstMatch
         var asked = false
         for _ in 0..<60 {
-            if mark.exists {
-                if !mark.isHittable { app.swipeUp() }
-                mark.tap()
-                if !asked { allowNotificationsIfAsked(); asked = true }
-            } else if closed.exists {
-                if !closed.isHittable { app.swipeUp() }
-                closed.tap()
-            } else { return }
+            guard mark.waitForExistence(timeout: 1) else { return }
+            if !mark.isHittable { app.swipeUp() }
+            mark.tap()
+            if !asked { allowNotificationsIfAsked(); asked = true }
         }
         missing.append("tick every set"); print("TOUR missing: tick every set")
+    }
+
+    /// Back from a page: its title bar scrolls with it, so up to the top first.
+    private func back(_ page: String) {
+        app.swipeDown(); app.swipeDown()
+        tap(app.buttons["Back"].firstMatch, "back from \(page)")
     }
 
     /// A tap outside the top sheet, as a person closes it.

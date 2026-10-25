@@ -74,9 +74,11 @@ struct CompleteScreen: View {
                 }
             }
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: Space.s2) {
-                    Text("+\(finished.xp) XP").type(.t28).monospacedDigit().foregroundStyle(Palette.accent).lineLimit(1)
-                    if finished.leveledUp { Badge(text: "Level up") }
+                // The PWA's wrapping row: on a narrow phone "Level up" drops under the XP rather than cutting it short.
+                let xp = Text("+\(finished.xp) XP").type(.t28).monospacedDigit().foregroundStyle(Palette.accent).fixedSize()
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Space.s2) { xp; if finished.leveledUp { Badge(text: "Level up") } }
+                    VStack(alignment: .leading, spacing: Space.s1) { xp; if finished.leveledUp { Badge(text: "Level up") } }
                 }
                 Text("\(level.required - level.current) XP to Level \(level.level + 1)").type(.t14).foregroundStyle(Palette.muted)
                 Bar(value: fraction).padding(.top, Space.s2).accessibilityLabel("Level \(level.level + 1) progress")
