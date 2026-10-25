@@ -304,18 +304,24 @@ struct Seg<Value: Hashable>: View {
 /// Rows on one card, as the PWA's .card of .row: a hairline between rows. Each row pads itself (Row does), so a
 /// whole row is its button.
 struct RowCard<Content: View>: View {
+    /// A long list (the picker's): only the rows on screen are built, so changing it costs a screenful, not the list.
+    var lazy = false
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(spacing: 0) {
-            Group(subviews: content) { rows in
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    row.overlay(alignment: .top) { if index > 0 { Palette.hairline.frame(height: 1) } }
-                }
-            }
+        Group {
+            if lazy { LazyVStack(spacing: 0) { rows } } else { VStack(spacing: 0) { rows } }
         }
         .raised()
         .clipShape(Corner.card.shape)
+    }
+
+    private var rows: some View {
+        Group(subviews: content) { rows in
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                row.overlay(alignment: .top) { if index > 0 { Palette.hairline.frame(height: 1) } }
+            }
+        }
     }
 }
 
