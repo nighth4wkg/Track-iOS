@@ -24,16 +24,12 @@ struct RestLiveActivity: Widget {
 
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestAttributes.self) { context in
-            // The buttons get their own row, as in the open island: beside them the time had no room.
+            // Laid out as the open island: what it is on the left, the time on the right, the buttons on their own row.
             VStack(spacing: Space.s3) {
                 HStack(spacing: Space.s3) {
-                    ring(context, size: Self.rings.lock.size, line: Self.rings.lock.line)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(Self.resting(context) ? "Rest · \(context.attributes.workout)" : context.attributes.workout)
-                            .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        countdown(context).font(.title.weight(.bold))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    title(context, ring: Self.rings.lock)
+                    countdown(context).font(.title.weight(.bold)).multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 if context.state.resting { controls(stale: context.isStale) }
             }
@@ -44,14 +40,8 @@ struct RestLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: Space.s3) {
-                        ring(context, size: Self.rings.island.size, line: Self.rings.island.line)
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(Self.resting(context) ? "Rest" : "Ready").font(.headline)
-                            Text(context.attributes.workout).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(.leading, Self.island.inset)
+                    title(context, ring: Self.rings.island)
+                        .padding(.leading, Self.island.inset)
                     .frame(maxHeight: .infinity)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -109,6 +99,18 @@ struct RestLiveActivity: Widget {
 
     private func label(_ text: String) -> some View {
         Text(text).lineLimit(1).fixedSize().frame(maxWidth: .infinity, minHeight: Self.button)
+    }
+
+    /// The ring beside "Rest" (or "Ready") over the workout's name: the Lock Screen's and the open island's left side.
+    private func title(_ context: ActivityViewContext<RestAttributes>, ring size: (size: Double, line: Double)) -> some View {
+        HStack(spacing: Space.s3) {
+            ring(context, size: size.size, line: size.line)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(Self.resting(context) ? "Rest" : "Ready").font(.headline)
+                Text(context.attributes.workout).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .layoutPriority(1)
     }
 
     /// A ring that empties as the rest runs out.

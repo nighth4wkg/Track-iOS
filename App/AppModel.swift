@@ -139,7 +139,8 @@ final class AppModel {
         guard next.restUntil != old.restUntil || (next.active == nil) != (old.active == nil) else { return }
         if let until = next.restUntil, until > nowMillis() {
             RestAlert.schedule(at: until)
-            RestLive.show(until: until, seconds: max(1, (until - nowMillis()) / 1000), workout: next.active?.name ?? "Track")
+            // The ring's whole is the rest setting, as Track's own ring: after +15s or −15s it keeps its place.
+            RestLive.show(until: until, seconds: max(1, next.settings.restSeconds), workout: next.active?.name ?? "Track")
         } else {
             RestAlert.cancel()
             if next.active != nil { RestLive.idle() } else { RestLive.end() }
