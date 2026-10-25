@@ -100,7 +100,7 @@ private struct OverallCard: View {
             .accessibilityLabel(ranked.isEmpty ? "No ranked lifts yet" : "\(Ranks.names[overall]), \(Int((part * 100).rounded()))% to the next rank")
             HStack(spacing: Space.s1) {
                 ForEach(Ranks.names.indices, id: \.self) { index in
-                    Text(Ranks.names[index]).type(.t12).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(Ranks.names[index]).type(.t12).lineLimit(1).minimumScaleFactor(Shrink.label)
                         .foregroundStyle(!ranked.isEmpty && index == overall ? Palette.ranks[index] : Palette.muted)
                         .frame(maxWidth: .infinity)
                 }
@@ -114,7 +114,7 @@ private struct OverallCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, Space.s3)
-                .overlay(alignment: .top) { Palette.line.frame(height: 1) }
+                .overlay(alignment: .top) { Palette.line.frame(height: Size.hairline) }
                 .padding(.top, Space.s3)
             }
         }

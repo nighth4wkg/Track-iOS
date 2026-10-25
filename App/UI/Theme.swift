@@ -80,6 +80,16 @@ enum Size {
     /// The page column and the sign-in column.
     static let column: CGFloat = 600
     static let narrow: CGFloat = 480
+    /// A view that is there only to hold the keyboard: the smallest that can.
+    static let anchor: CGFloat = 1
+    /// The line between rows and under the chart's guides.
+    static let hairline: CGFloat = 1
+}
+
+/// How far a one-line figure may shrink to fit a narrow screen rather than wrap: a tile's figure or a set's
+/// "Last", a set's typed value, a rank's name.
+enum Shrink {
+    static let figure: CGFloat = 0.7, value: CGFloat = 0.5, label: CGFloat = 0.8
 }
 
 /// Rings: across, and stroke (the PWA's RINGS).

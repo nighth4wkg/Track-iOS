@@ -139,7 +139,7 @@ struct NavPill: View {
             ForEach(Self.tabs, id: \.tab) { item in
                 let on = model.tab == item.tab
                 Button { model.go(item.tab) } label: {
-                    VStack(spacing: 2) {
+                    VStack(spacing: Space.s1 / 2) {
                         item.icon.image(IconSize.logo, bold: on)
                         Text(item.label).type(.t12)
                     }

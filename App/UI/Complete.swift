@@ -94,7 +94,7 @@ struct CompleteScreen: View {
                 Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
                 Text(unit).type(.t14).foregroundStyle(Palette.muted)
             }
-            .lineLimit(1).minimumScaleFactor(0.7)
+            .lineLimit(1).minimumScaleFactor(Shrink.figure)
         }
         .padding(Space.s3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

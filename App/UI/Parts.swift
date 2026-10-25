@@ -168,7 +168,7 @@ struct RowCard<Content: View>: View {
         VStack(spacing: 0) {
             Group(subviews: content) { rows in
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    row.overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: 1) } }
+                    row.overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: Size.hairline) } }
                 }
             }
         }
@@ -443,7 +443,7 @@ extension View {
     func more() -> some View {
         padding(.vertical, Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .top) { Palette.line.frame(height: 1) }
+            .overlay(alignment: .top) { Palette.line.frame(height: Size.hairline) }
             .padding(.horizontal, Space.s4)
     }
 }

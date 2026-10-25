@@ -85,7 +85,7 @@ struct LiftScreen: View {
                 Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
                 if let unit { Text(unit).type(.t14).foregroundStyle(Palette.muted) }
             }
-            .lineLimit(1).minimumScaleFactor(0.7)
+            .lineLimit(1).minimumScaleFactor(Shrink.figure)
         }
         .pad()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -114,7 +114,7 @@ private struct TrendLine: View {
         Canvas { context, size in
             for share in [1.0 / 6, 0.5, 5.0 / 6] {
                 context.stroke(Path { $0.move(to: CGPoint(x: 0, y: size.height * share)); $0.addLine(to: CGPoint(x: size.width, y: size.height * share)) },
-                               with: .color(Palette.line), lineWidth: 1)
+                               with: .color(Palette.line), lineWidth: Size.hairline)
             }
             let low = (values.min() ?? 0) - Self.room, high = (values.max() ?? 0) + Self.room
             let points = values.enumerated().map { index, value in

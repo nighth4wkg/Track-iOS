@@ -80,7 +80,7 @@ struct ExercisePicker: View {
                 // Built as they scroll in (RowCard builds every row): a filter tap costs a screenful, not the list.
                 LazyVStack(spacing: 0) {
                     ForEach(Array(results.prefix(shown).enumerated()), id: \.element) { index, name in
-                        row(name, choices).overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: 1) } }
+                        row(name, choices).overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: Size.hairline) } }
                     }
                 }
                 .clipShape(Corner.card.shape)
