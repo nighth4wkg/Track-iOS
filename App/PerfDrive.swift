@@ -7,6 +7,7 @@ import TrackCore
 /// finished workout's sheet open and closed, back into the workout, leave. Without the argument nothing here runs.
 @MainActor enum PerfDrive {
     static func run(_ model: AppModel) async {
+        if ProcessInfo.processInfo.arguments.contains("-perfLook") { return await look(model) }
         guard ProcessInfo.processInfo.arguments.contains("-perfActions") else { return }
         try? await Task.sleep(for: .seconds(4))
         guard let split = model.training.splits.first else { return }
@@ -24,6 +25,25 @@ import TrackCore
             FrameLog.mark(name)
             step()
             try? await Task.sleep(for: .seconds(3.5))
+        }
+        FrameLog.mark(nil)
+    }
+
+    /// -perfLook: only looking around, nothing saved (safe on a phone with real data): each tab and back home, twice,
+    /// then the latest workout's sheet opened and closed, twice.
+    private static func look(_ model: AppModel) async {
+        try? await Task.sleep(for: .seconds(4))
+        var steps: [(String, () -> Void)] = []
+        for _ in 0..<2 {
+            steps += AppTab.allCases.dropFirst().map { tab in ("tab \(tab)", { model.tab = tab }) } + [("tab home", { model.tab = .home })]
+        }
+        if let latest = model.training.sessions.first {
+            for _ in 0..<2 { steps += [("history sheet open", { model.history = latest }), ("history sheet close", { model.history = nil })] }
+        }
+        for (name, step) in steps {
+            FrameLog.mark(name)
+            step()
+            try? await Task.sleep(for: .seconds(2.5))
         }
         FrameLog.mark(nil)
     }
