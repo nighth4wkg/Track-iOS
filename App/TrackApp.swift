@@ -1,4 +1,5 @@
 import SwiftUI
+import TrackCore
 
 @main
 struct TrackApp: App {
