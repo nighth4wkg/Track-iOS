@@ -225,7 +225,7 @@ struct Raised: ViewModifier {
         let edge = shape.strokeBorder(LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
                                                              .init(color: .white.opacity(0.04), location: 0.12)],
                                                      startPoint: .top, endPoint: .bottom), lineWidth: 1)
-        content.background {
+        return content.background {
             // The shadow on the bare shape, before the edge goes on: cast by the fill and its edge together, it was
             // worked out offscreen on every frame a card moved.
             shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
