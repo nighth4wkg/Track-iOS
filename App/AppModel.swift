@@ -80,6 +80,12 @@ final class AppModel {
     @ObservationIgnored private var memo: [String: Any] = [:]
     @ObservationIgnored private var memoSessions: [Session] = []
     private static let modeKey = "track.storageMode"
+    /// -dryRun (PerfDrive's -perfWork on a phone with real data): changes stay in memory, nothing is saved and no rest
+    /// alert is set, and the drive puts the data back as it found it.
+    static let dryRun = ProcessInfo.processInfo.arguments.contains("-dryRun")
+
+    /// The dry run is over: the data as it was before it began.
+    func dryRunEnd(_ before: Training) { if Self.dryRun { training = before; workoutOpen = false } }
 
     init(file: TrainingFile? = try? TrainingFile.standard()) {
         self.file = file
@@ -110,7 +116,7 @@ final class AppModel {
         var next = training
         do { try change(&next) } catch { show(error.localizedDescription); return }
         next.editedAt = nowMillis()
-        if next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
+        if !Self.dryRun, next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
             if let until = next.restUntil, until > nowMillis() {
                 RestAlert.schedule(at: until)
                 RestLive.show(until: until, seconds: max(1, (until - nowMillis()) / 1000), workout: next.active?.name ?? "Track")
@@ -120,7 +126,7 @@ final class AppModel {
             }
         }
         training = next
-        guard canSave, let file else { return }
+        guard canSave, !Self.dryRun, let file else { return }
         saver.async { [weak self] in
             do { try file.save(next) } catch {
                 DispatchQueue.main.async { self?.show("Couldn’t save on this iPhone. Free up some space and try again.") }

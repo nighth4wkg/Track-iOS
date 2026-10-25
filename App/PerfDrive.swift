@@ -8,6 +8,7 @@ import TrackCore
 @MainActor enum PerfDrive {
     static func run(_ model: AppModel) async {
         if ProcessInfo.processInfo.arguments.contains("-perfLook") { return await look(model) }
+        if ProcessInfo.processInfo.arguments.contains("-perfWork"), AppModel.dryRun { return await work(model) }
         guard ProcessInfo.processInfo.arguments.contains("-perfActions") else { return }
         try? await Task.sleep(for: .seconds(4))
         guard let split = model.training.splits.first else { return }
@@ -27,6 +28,44 @@ import TrackCore
             try? await Task.sleep(for: .seconds(3.5))
         }
         FrameLog.mark(nil)
+    }
+
+    /// The workout's own test hooks: open or close the picker (object nil closes), open a card (its id).
+    static let picker = Notification.Name("perf.picker"), card = Notification.Name("perf.card")
+    /// The picker's: ["group", name], ["query", text] or ["pick", name].
+    static let filter = Notification.Name("perf.filter")
+
+    /// -perfWork, only with -dryRun (nothing saved; the data is put back at the end): a workout from the first split,
+    /// a card opened and back, the first exercise's sets ticked (rest starts), the picker opened, its muscle filter
+    /// switched quickly (twice, faster the second time), a search typed and cleared, two exercises added, the picker
+    /// closed, the workout left, back, left.
+    private static func work(_ model: AppModel) async {
+        try? await Task.sleep(for: .seconds(4))
+        guard model.training.active == nil, let split = model.training.splits.first else { return }
+        let before = model.training
+        let post = { (name: Notification.Name, object: Any?) in NotificationCenter.default.post(name: name, object: object) }
+        let exercises = { model.training.active?.exercises ?? [] }
+        var steps: [(String, Double, () -> Void)] = [("open workout", 2.5, { model.start(split) })]
+        steps += [("open second card", 1.5, { post(card, exercises().dropFirst().first?.id) }), ("open first card", 1.5, { post(card, exercises().first?.id) })]
+        steps += (0..<(split.exercises.first?.sets.count ?? 0)).map { index in
+            ("tick set \(index + 1)", 1.2, { if let first = exercises().first, first.sets.indices.contains(index) { model.toggle(set: first.sets[index].id, in: first.id) } })
+        }
+        steps.append(("open picker", 2.5, { post(picker, true) }))
+        for pause in [0.4, 0.2] {
+            steps += (LiftTable.groups + ["All"]).map { group in ("filter \(group)", pause, { post(filter, ["group", group]) }) }
+        }
+        steps += ["b", "be", "ben", "benc", "bench", ""].map { text in ("type '\(text)'", 0.15, { post(filter, ["query", text]) }) }
+        let fresh = Catalog.names.filter { name in !split.exercises.contains { $0.name == name } }.prefix(2)
+        steps += fresh.map { name in ("add exercise", 1.2, { post(filter, ["pick", name]) }) }
+        steps += [("close picker", 2.5, { post(picker, nil) }), ("leave workout", 2.5, { model.workoutOpen = false }),
+                  ("back into workout", 2.5, { model.workoutOpen = true }), ("leave workout again", 2.5, { model.workoutOpen = false })]
+        for (name, pause, step) in steps {
+            FrameLog.mark(name)
+            step()
+            try? await Task.sleep(for: .seconds(pause))
+        }
+        FrameLog.mark(nil)
+        model.dryRunEnd(before)
     }
 
     /// -perfLook: only looking around, nothing saved (safe on a phone with real data): each tab and back home, twice,

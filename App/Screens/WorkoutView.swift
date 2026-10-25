@@ -83,6 +83,10 @@ struct WorkoutView: View {
             .task(id: model.workoutOpen) { try? await Task.sleep(for: .seconds(Motion.screen + 0.1)); if model.workoutOpen, !Task.isCancelled { model.workoutCovers = true } }
             .task { await FrameLog.driveNext(fields) { focus = $0 } }
             .sheet(item: $sheet, onDismiss: swapPicked) { sheetView($0).trackOverlays() }
+            .onReceive(NotificationCenter.default.publisher(for: PerfDrive.picker)) { note in sheet = note.object == nil ? nil : .add }
+            .onReceive(NotificationCenter.default.publisher(for: PerfDrive.card)) { note in
+                withAnimation(.smooth(duration: Motion.standard)) { opened = note.object as? String }
+            }
     }
 
     /// The page's top, where Finish is.
