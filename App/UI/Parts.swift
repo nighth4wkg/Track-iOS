@@ -285,13 +285,14 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     @ViewBuilder let row: (Item) -> Content
     @ViewBuilder var end: (Item) -> End
     @State private var held: Item.ID?
-    @State private var drag: CGFloat = 0
+    @State private var finger = Finger()
+    /// Places the held row has crossed: the only part of the drag that redraws the list.
+    @State private var steps = 0
     /// One row and the gap under it: a drag's step per place.
     @State private var step = Size.row
 
     var body: some View {
         let from = items.firstIndex { $0.id == held }
-        let steps = from.map { start in max(-start, min(items.count - 1 - start, Int((drag / step).rounded()))) } ?? 0
         VStack(spacing: Space.s3) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 HStack(spacing: Space.s3) {
@@ -300,11 +301,17 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                         .frame(width: Size.control, height: Size.control).raised(.control, .pill)
                         .contentShape(Circle())
                         .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .global)
-                            .onChanged { held = item.id; drag = $0.translation.height }
+                            .onChanged {
+                                finger.y = $0.translation.height
+                                let crossed = max(-index, min(items.count - 1 - index, Int((finger.y / step).rounded())))
+                                if held != item.id { held = item.id }
+                                if crossed != steps { steps = crossed }
+                            }
                             .onEnded { _ in
                                 if steps != 0 { onMove(index, index + steps) }
+                                finger.y = 0
                                 held = nil
-                                drag = 0
+                                steps = 0
                             })
                         .accessibilityLabel("Move \(name(item))")
                     end(item)
@@ -313,7 +320,8 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                 .frame(minHeight: Size.control + Space.s4 * 2)
                 .raised()
                 .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { step = $0 }
-                .offset(y: item.id == held ? drag : room(index, from, steps))
+                .offset(y: room(index, from, steps))
+                .follow(finger, while: item.id == held)
                 .zIndex(item.id == held ? 1 : 0)
             }
         }
@@ -332,6 +340,26 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
 extension ArrangeList where End == EmptyView {
     init(items: [Item], name: @escaping (Item) -> String, onMove: @escaping (_ from: Int, _ to: Int) -> Void, @ViewBuilder row: @escaping (Item) -> Content) {
         self.init(items: items, name: name, onMove: onMove, row: row, end: { _ in EmptyView() })
+    }
+}
+
+// MARK: Following a finger
+
+/// Where a finger has dragged something to. Touches only write it; the dragged view reads it once per screen refresh
+/// (follow), as iOS's own scroll views do. Redrawn on each touch instead, a touch landing late in a frame missed it,
+/// and a slow drag moved every other frame.
+final class Finger { var y: CGFloat = 0 }
+
+extension View {
+    /// Moves this view down by the finger's drag, every screen refresh while `on`.
+    func follow(_ finger: Finger, while on: Bool) -> some View { modifier(Follow(finger: finger, on: on)) }
+}
+
+private struct Follow: ViewModifier {
+    let finger: Finger
+    let on: Bool
+    func body(content: Content) -> some View {
+        TimelineView(.animation(paused: !on)) { _ in content.offset(y: on ? finger.y : 0) }
     }
 }
 

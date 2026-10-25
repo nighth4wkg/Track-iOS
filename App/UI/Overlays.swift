@@ -40,7 +40,8 @@ private struct SheetBox<Content: View>: View {
     let tall: Bool
     let close: () -> Void
     @ViewBuilder let content: Content
-    @State private var pull: CGFloat = 0
+    @State private var finger = Finger()
+    @State private var pulling = false
     @State private var height: CGFloat = 0
 
     var body: some View {
@@ -62,7 +63,7 @@ private struct SheetBox<Content: View>: View {
         .frame(maxWidth: Size.column - Space.s4, maxHeight: tall ? .infinity : nil, alignment: .top)
         .raised(.sheet, .sheet)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
-        .offset(y: pull)
+        .follow(finger, while: pulling)
         .padding(.horizontal, Space.s2)
         .padding(.top, Space.s4)
         .padding(.bottom, Space.s2)
@@ -82,10 +83,14 @@ private struct SheetBox<Content: View>: View {
         // Measured on the screen: in the sheet's own space the distance shrinks as the sheet follows the finger, so
         // a slow drag jittered.
         AnyGesture(DragGesture(minimumDistance: Space.s1, coordinateSpace: .global)
-            .onChanged { pull = max(0, $0.translation.height) }
+            .onChanged {
+                finger.y = max(0, $0.translation.height)
+                if !pulling { pulling = true }
+            }
             .onEnded { value in
                 let down = max(0, value.translation.height)
-                pull = 0
+                finger.y = 0
+                pulling = false
                 if down > height * 0.4 || value.predictedEndTranslation.height - value.translation.height > height * 0.4 { close() }
             })
     }
