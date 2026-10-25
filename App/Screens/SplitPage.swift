@@ -105,6 +105,7 @@ struct SplitPage: View {
             .animation(.smooth(duration: Motion.standard), value: editing)
             .animation(.smooth(duration: Motion.standard), value: split.exercises.map(\.id))
             .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))
+            .perfHook("split.edit") { _ in toggleEditing(split) }
             .sheet(isPresented: $picking) {
                 ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }
             }

@@ -65,6 +65,7 @@ struct MuscleRow: View {
             }
         }
         .raised()
+        .perfHook("rank.row") { muscle in if muscle == rank.muscle.rawValue { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } }
     }
 
     private func stat(_ label: String, _ color: Color, _ value: String, _ detail: String) -> some View {

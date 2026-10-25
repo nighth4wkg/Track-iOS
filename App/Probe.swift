@@ -5,6 +5,17 @@ import os
 
 /// shortcut: temporary, for the 60 Hz pass (remove once measured). -probe samples the main thread's stack every
 /// millisecond for a second after each PerfDrive action and logs where its busy time went (device log "Track probe").
+extension View {
+    /// Test hook: PerfDrive's -perfWork reaches a view's own state through this, by key ("" is no value). Does
+    /// nothing unless the drive posts.
+    func perfHook(_ key: String, _ act: @escaping (String) -> Void) -> some View {
+        onReceive(NotificationCenter.default.publisher(for: PerfDrive.hook)) { note in
+            guard let step = note.object as? [String], step.count == 2, step[0] == key else { return }
+            act(step[1])
+        }
+    }
+}
+
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
     static func has(_ flag: String) -> Bool { args.contains(flag) }

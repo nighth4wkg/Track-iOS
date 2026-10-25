@@ -86,10 +86,9 @@ struct ExercisePicker: View {
         .scrollDismissesKeyboard(.interactively)
         .onChange(of: query) { shown = Self.page }
         .onChange(of: group) { shown = Self.page }
-        .onReceive(NotificationCenter.default.publisher(for: PerfDrive.filter)) { note in
-            guard let step = note.object as? [String], step.count == 2 else { return }
-            if step[0] == "group" { group = step[1] } else if step[0] == "query" { query = step[1] } else { pick(step[1]) }
-        }
+        .perfHook("pick.group") { group = $0 }
+        .perfHook("pick.query") { query = $0 }
+        .perfHook("pick.add") { pick($0) }
         // Filled once the sheet is up, so neither the opening nor the first filter tap waits for it.
         .task {
             try? await Task.sleep(for: .seconds(Motion.screen))

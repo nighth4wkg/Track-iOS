@@ -29,6 +29,7 @@ struct HomeView: View {
         }
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
         .onChange(of: training.splits.count) { _, count in if count < 2 { arranging = false } }
+        .perfHook("home.split") { open = $0.isEmpty ? nil : $0 }
         .sheet(isPresented: $naming) {
             NewSplitSheet { split in
                 model.update { $0.splits.append(split) }

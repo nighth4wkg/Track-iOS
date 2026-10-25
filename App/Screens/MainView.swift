@@ -10,7 +10,8 @@ struct MainView: View {
     /// The workout on screen or sliding; once it's away it's also unseen, as iOS's own top bar inside it would
     /// otherwise still be read out (VoiceOver) below the screen.
     @State private var workoutShown = false
-    /// Tabs built so far: each is built on its first visit and kept, so coming back is instant and keeps its place.
+    /// Tabs built so far: each is built soon after launch (or on its first visit, if sooner) and kept, so coming back is
+    /// instant and keeps its place.
     @State private var built: Set<AppTab> = [.home]
     /// The keyboard is up: the nav pill steps aside rather than riding up on it.
     @State private var keyboard = false
@@ -39,6 +40,14 @@ struct MainView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
             .onChange(of: model.tab) { _, tab in built.insert(tab) }
+            // The other tabs built one at a time once the app has settled, so a first visit doesn't wait for its page
+            // to be built (50-80 ms at 60 Hz) and arrives like a return visit.
+            .task {
+                for tab in AppTab.allCases where !built.contains(tab) {
+                    try? await Task.sleep(for: .seconds(Motion.settle))
+                    built.insert(tab)
+                }
+            }
             // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
             .id(model.day)
             .onChange(of: phase) { _, now in
@@ -69,11 +78,9 @@ struct MainView: View {
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
-        .sheet(item: $model.history) { session in
-            // shortcut: -sheetPlain test switch (60 Hz pass): the sheet with only its title, to tell iOS's cost from ours.
-            if Probe.has("-sheetPlain") { SheetFrame(title: session.name) { EmptyView() } } else { HistoryDetail(session: session).trackOverlays() }
-        }
+        .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
         .trackOverlays(nav: !navHidden && !model.workoutOpen)
+        .perfHook("settings") { settingsOpen = !$0.isEmpty }
     }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {

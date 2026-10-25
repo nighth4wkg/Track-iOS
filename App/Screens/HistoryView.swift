@@ -37,6 +37,8 @@ struct HistoryView: View {
         .animation(.smooth(duration: Motion.standard), value: from + to)
         .sensoryFeedback(.selection, trigger: from + to)
         .onChange(of: query + from + to) { shown = Self.page }
+        .perfHook("history.dates") { datesOpen = !$0.isEmpty }
+        .perfHook("history.month") { step in month = Calendars.local.date(byAdding: .month, value: Int(step) ?? 0, to: month) ?? month }
     }
 
     private var filterButton: some View {

@@ -62,6 +62,7 @@ struct HistoryDetail: View {
         .onAppear { note = current.notes ?? "" }
         .onChange(of: typing) { _, now in if !now { save(current) } }
         .onDisappear { save(current) }
+        .perfHook("detail.card") { id in withAnimation(.smooth(duration: Motion.standard)) { opened = id.isEmpty ? nil : id } }
     }
 
     /// The exercise and its set count; open, a line per set: "1L", "60 kg × 8", "RIR 2".

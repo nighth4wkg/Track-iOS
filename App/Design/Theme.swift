@@ -112,35 +112,18 @@ enum Radius {
 enum Corner {
     case small, inner, card, sheet, pill, circle
 
-    var shape: Rounded {
+    /// iOS's own rounded box, not a custom shape: it draws that without working out a path on the CPU, which cost
+    /// every card a redraw as a sheet came and went (the sheet's close stalled 64 ms at 60 Hz, 0-15 ms this way).
+    var shape: RoundedRectangle {
         switch self {
-        case .small: Rounded(radius: Radius.small)
-        case .inner: Rounded(radius: Radius.inner)
-        case .card: Rounded(radius: Radius.card)
-        case .sheet: Rounded(radius: Radius.sheet)
-        case .pill, .circle: Rounded(radius: nil)
+        case .small: RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
+        case .inner: RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
+        case .card: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        case .sheet: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous)
+        // Fully round ends (a pill, or a circle when square): iOS keeps a radius to half the shorter side.
+        case .pill, .circle: RoundedRectangle(cornerRadius: .greatestFiniteMagnitude, style: .circular)
         }
     }
-
-    /// shortcut: -nativeShape test switch (60 Hz pass): iOS's own rounded box, which it draws without a custom path.
-    var native: RoundedRectangle {
-        let radius = shape.radius
-        return RoundedRectangle(cornerRadius: radius ?? .greatestFiniteMagnitude, style: radius == nil ? .circular : .continuous)
-    }
-}
-
-/// A box with continuous corners at a radius, or fully round ends (a pill, or a circle when square) when it has none.
-struct Rounded: InsettableShape {
-    let radius: CGFloat?
-    var inset: CGFloat = 0
-
-    func path(in rect: CGRect) -> Path {
-        let box = rect.insetBy(dx: inset, dy: inset)
-        guard let radius else { return RoundedRectangle(cornerRadius: min(box.width, box.height) / 2, style: .circular).path(in: box) }
-        return RoundedRectangle(cornerRadius: max(0, radius - inset), style: .continuous).path(in: box)
-    }
-
-    func inset(by amount: CGFloat) -> Rounded { Rounded(radius: radius, inset: inset + amount) }
 }
 
 /// Text styles, as the PWA's t-12 to t-32 (the iPhone's caption, subheadline, headline, title3, title and large
@@ -169,6 +152,8 @@ enum Motion {
     static let sheetAway = 0.45
     /// The workout sliding up over the tabs, or away (as iOS's own full-screen pages).
     static let screen = 0.45
+    /// The pause before each unvisited tab is built after launch, so the building doesn't land on the first frames.
+    static let settle = 0.7
     /// How small a pressed button gets.
     static let press = 0.97
     /// A long press that arms a row's delete, as the PWA's list gesture.
@@ -218,18 +203,15 @@ struct Raised: ViewModifier {
     let corner: Corner
 
     func body(content: Content) -> some View {
-        if Probe.has("-nativeShape") { paint(content, corner.native) } else { paint(content, corner.shape) }
-    }
-
-    private func paint(_ content: Content, _ shape: some InsettableShape) -> some View {
+        let shape = corner.shape
         let edge = shape.strokeBorder(LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
                                                              .init(color: .white.opacity(0.04), location: 0.12)],
                                                      startPoint: .top, endPoint: .bottom), lineWidth: 1)
-        return content.background {
+        content.background {
             // The shadow on the bare shape, before the edge goes on: cast by the fill and its edge together, it was
             // worked out offscreen on every frame a card moved.
             shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
-                .shadow(color: Probe.has("-noShadow") ? .clear : .black.opacity(0.45), radius: 4, y: 3)
+                .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
                 .overlay(edge)
         }
     }
@@ -241,12 +223,9 @@ struct Sunk: ViewModifier {
     var ring: Color?
 
     func body(content: Content) -> some View {
-        if Probe.has("-nativeShape") { paint(content, corner.native) } else { paint(content, corner.shape) }
-    }
-
-    private func paint(_ content: Content, _ shape: some InsettableShape) -> some View {
+        let shape = corner.shape
         content.background {
-            shape.fill(Probe.has("-noInner") ? AnyShapeStyle(Palette.input) : AnyShapeStyle(Palette.input.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1))))
+            shape.fill(Palette.input.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1)))
                 .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
         }
     }

@@ -51,7 +51,6 @@ struct Page<Content: View>: View {
                 .offset(x: shift)
             }
             .scrollPosition($position)
-            .scrollEdgeEffectHidden(Probe.has("-noEdge"))
             .onAppear(perform: arrive)
             .scrollDismissesKeyboard(.interactively)
             .gesture(HorizontalPan(sharesTouches: true, onChange: { _ in }, onEnd: { x, velocity in

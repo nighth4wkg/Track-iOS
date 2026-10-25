@@ -38,7 +38,6 @@ struct SheetFrame<Content: View>: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = steady ? max(height, $0) : $0 }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .scrollEdgeEffectHidden(Probe.has("-noEdge"))
         .presentationDetents(height > 0 && !tall ? [.height(height)] : [.large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(Radius.sheet)
