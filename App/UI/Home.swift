@@ -11,6 +11,8 @@ struct HomeScreen: View {
     var body: some View {
         let training = model.training
         let now = nowMillis()
+        // Worked out once: it reads every past workout.
+        let next = training.nextSplit
         TabPage {
             HStack(spacing: Space.s3) {
                 HStack(spacing: Space.s2) {
@@ -31,15 +33,15 @@ struct HomeScreen: View {
             if let error = model.loadError {
                 Label(error, systemImage: "exclamationmark.triangle").type(.t14).foregroundStyle(Palette.danger).padding(.top, Space.s4)
             }
-            UpNextCard(training: training, now: now).padding(.top, Space.s4)
-            if !training.splits.isEmpty { splits(training).padding(.top, Space.s6) }
+            UpNextCard(training: training, next: next, now: now).padding(.top, Space.s4)
+            if !training.splits.isEmpty { splits(training, next: next?.split.id).padding(.top, Space.s6) }
             HomeTiles(training: training, now: now).padding(.top, Space.s3)
         }
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
         .onChange(of: training.splits.count) { _, count in if count < 2 { arranging = false } }
     }
 
-    private func splits(_ training: Training) -> some View {
+    private func splits(_ training: Training, next: String?) -> some View {
         VStack(alignment: .leading, spacing: Space.s2) {
             HStack(spacing: Space.s3) {
                 Text("Your splits").type(.t20).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
@@ -58,7 +60,7 @@ struct HomeScreen: View {
             } else {
                 VStack(spacing: Space.s3) {
                     ForEach(training.splits) { split in
-                        SplitCard(split: split, next: training.active == nil && training.nextSplit?.split.id == split.id)
+                        SplitCard(split: split, next: training.active == nil && next == split.id)
                     }
                 }
             }
@@ -72,6 +74,7 @@ struct HomeScreen: View {
 private struct UpNextCard: View {
     @Environment(AppModel.self) private var model
     let training: Training
+    let next: (split: Split, lastDone: Int?)?
     let now: Int
     @State private var discarding = false
 
@@ -85,15 +88,15 @@ private struct UpNextCard: View {
                 VStack(alignment: .leading, spacing: 0) {
                     if let active = training.active {
                         Badge(text: "In progress").padding(.bottom, Space.s1)
-                        Text(active.name).type(.t20).lineLimit(1)
+                        Text(active.name).type(.t20)
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text("\(elapsed(active.startedAt, context.date)) min").type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                         }
                         Text("\(active.exercises.doneCount) of \(count(active.exercises.plannedCount, "set")) done")
                             .type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
-                    } else if let next = training.nextSplit {
+                    } else if let next {
                         Badge(text: "Up next").padding(.bottom, Space.s1)
-                        Text(next.split.name).type(.t20).lineLimit(1)
+                        Text(next.split.name).type(.t20)
                         Text(next.split.summary).type(.t14).foregroundStyle(Palette.muted)
                         Text(next.lastDone.map { "Last done " + ago($0, now: now) } ?? "Not done yet").type(.t14).foregroundStyle(Palette.muted)
                     } else {
@@ -122,7 +125,7 @@ private struct UpNextCard: View {
                 Button { model.workoutOpen = true } label: { Label { Text("Continue workout") } icon: { Icon.play.image(IconSize.small) } }
                     .buttonStyle(PrimaryStyle())
             }
-        } else if let next = training.nextSplit {
+        } else if let next {
             Button { model.start(next.split) } label: { Label { Text("Start workout") } icon: { Icon.play.image(IconSize.small) } }
                 .buttonStyle(PrimaryStyle())
         } else {
@@ -213,7 +216,7 @@ struct SplitLine: View {
             TrackMark(size: IconSize.medium).foregroundStyle(Palette.text)
                 .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
             VStack(alignment: .leading, spacing: 0) {
-                Text(split.name).type(.t16).foregroundStyle(Palette.text).lineLimit(1)
+                Text(split.name).type(.t16).foregroundStyle(Palette.text)
                 Text(split.exercises.isEmpty ? "Tap to add exercises" : split.summary).type(.t14).foregroundStyle(Palette.muted)
             }
         }
@@ -276,7 +279,7 @@ struct NewSplitSheet: View {
                         HStack(spacing: Space.s3) {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(template.name).type(.t16).foregroundStyle(Palette.text)
-                                Text(template.exercises.joined(separator: ", ")).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                                Text(template.exercises.joined(separator: ", ")).type(.t14).foregroundStyle(Palette.muted)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             Icon.plus.image(IconSize.medium).foregroundStyle(Palette.muted)

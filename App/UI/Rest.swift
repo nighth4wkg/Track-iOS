@@ -10,11 +10,13 @@ struct RestTimer: View {
     /// How often the time and ring redraw.
     private static let tick: TimeInterval = 0.5
     @State private var ended = 0
+    /// The rest that ran out: its clock stops redrawing until the next one starts.
+    @State private var over: Int?
 
     var body: some View {
         let until = model.training.restUntil
         Group {
-            if let until {
+            if let until, until != over {
                 TimelineView(.periodic(from: .now, by: Self.tick)) { context in
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))
@@ -24,9 +26,11 @@ struct RestTimer: View {
                 }
                 .task(id: until) {
                     let wait = Double(until) / 1000 - Date.now.timeIntervalSince1970
-                    guard wait > 0 else { return }
+                    guard wait > 0 else { over = until; return }
                     try? await Task.sleep(for: .seconds(wait))
-                    if !Task.isCancelled, model.training.restUntil == until { ended += 1 }
+                    guard !Task.isCancelled, model.training.restUntil == until else { return }
+                    ended += 1
+                    over = until
                 }
             }
         }

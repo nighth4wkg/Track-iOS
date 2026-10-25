@@ -103,7 +103,7 @@ struct SessionScreen: View {
                         .type(.t14).monospacedDigit()
                     }
                 }
-                .padding(.horizontal, Space.s4).padding(.bottom, Space.s3)
+                .more()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

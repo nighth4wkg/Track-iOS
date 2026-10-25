@@ -35,7 +35,7 @@ struct ProgressScreen: View {
                     ForEach(records, id: \.name) { record in
                         Button { model.open(.lift(record.name)) } label: {
                             HStack(spacing: Space.s3) {
-                                Text(record.name).type(.t16).foregroundStyle(Palette.text).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                                Text(record.name).type(.t16).foregroundStyle(Palette.text).frame(maxWidth: .infinity, alignment: .leading)
                                 Text("\(weight(record.kg, training.settings.unit)) \(training.settings.unit.rawValue)").type(.t14).monospacedDigit().foregroundStyle(Palette.text)
                                 Icon.next.image(IconSize.small).foregroundStyle(Palette.muted)
                             }

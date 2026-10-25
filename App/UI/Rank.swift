@@ -178,10 +178,7 @@ private struct MuscleRow: View {
                     }
                     if !names.isEmpty { Chips(label: "Counts here", rows: names) }
                 }
-                .padding(.vertical, Space.s4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(alignment: .top) { Palette.line.frame(height: 1) }
-                .padding(.horizontal, Space.s4)
+                .more()
             }
         }
         .clipShape(Corner.card.shape)

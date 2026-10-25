@@ -100,7 +100,7 @@ struct WorkoutScreen: View {
                     .foregroundStyle(Palette.text).frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
-                    Text(ExerciseCard.detail(exercise, previous, unit)).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                    Text(ExerciseCard.detail(exercise, previous, unit)).type(.t14).foregroundStyle(Palette.muted)
                 }
             }
         }
@@ -142,12 +142,12 @@ struct WorkoutScreen: View {
             } label: {
                 VStack(spacing: 0) {
                     HStack(spacing: Space.s1) {
-                        Text(active.name).type(.t16).foregroundStyle(Palette.text).lineLimit(1)
+                        Text(active.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.center)
                         Icon.down.image(IconSize.small).foregroundStyle(Palette.muted)
                     }
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         Text(elapsed(active.startedAt, context.date) + dot + "\(done)/\(planned) sets").type(.t14).monospacedDigit()
-                            .foregroundStyle(Palette.muted).lineLimit(1)
+                            .foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                     }
                 }
             }
@@ -221,7 +221,7 @@ struct ExerciseCard: View, Equatable {
                     .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
-                    Text(Self.detail(exercise, nil, unit, last: last)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted).lineLimit(1)
+                    Text(Self.detail(exercise, nil, unit, last: last)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Icon.down.image(IconSize.medium).foregroundStyle(Palette.muted)
@@ -241,7 +241,7 @@ struct ExerciseCard: View, Equatable {
             HStack(spacing: Space.s3) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t20).foregroundStyle(Palette.text)
-                    Text(muscle + dot + "Rest \(clock(restSeconds))").type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                    Text(muscle + dot + "Rest \(clock(restSeconds))").type(.t14).foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())

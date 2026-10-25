@@ -437,3 +437,13 @@ struct SwipeToArm: ViewModifier {
 extension View {
     func swipeToArm(_ armed: Binding<Bool>) -> some View { modifier(SwipeToArm(armed: armed)) }
 }
+
+extension View {
+    /// What a card opens to show under its row (the PWA's .more): a hairline over it, inset like the row's text.
+    func more() -> some View {
+        padding(.vertical, Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .top) { Palette.line.frame(height: 1) }
+            .padding(.horizontal, Space.s4)
+    }
+}

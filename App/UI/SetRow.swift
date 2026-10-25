@@ -58,7 +58,7 @@ struct SetRow: View {
                 HStack(spacing: Space.s2) {
                     Badge(text: "New best")
                     Text("\(TrainingSet.display(kg: shown.kg ?? 0, unit: unit)) \(unit.rawValue) beats \(TrainingSet.display(kg: heaviest, unit: unit)) \(unit.rawValue)")
-                        .type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+                        .type(.t14).foregroundStyle(Palette.muted)
                 }
             }
         }
