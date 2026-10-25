@@ -31,16 +31,18 @@ enum Catalog {
     }
 }
 
-/// Adding an exercise, as the PWA's picker: a search, the muscle filter, a name typed that isn't in the library (to
-/// add as it is), your 3 most recent, then the library or the matches, 30 at a time. Adding keeps it open for the
-/// next, each added one ticked. Given `replacing`, it's "Swap exercise": what's picked takes that one's place.
+/// Adding an exercise (the PWA's Picker): a search, the muscle filter, a name typed that isn't in the library (to add
+/// as it is), your 3 most recent, then the library or the matches, 30 at a time. Adding keeps it open for the next,
+/// each added one ticked. Given `replacing`, it's "Swap exercise": what's picked takes that one's place and it closes.
 struct ExercisePicker: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeSheet) private var close
     @State private var query = ""
     @State private var group = "All"
     @State private var shown = Self.page
     @State private var added: [String] = []
+    /// Ranked once per opening: adding an exercise must not re-sort the list under your finger.
+    @State private var usage: [String: Int]?
     /// Each name's muscles, worked out once per opening (a reference, so filling it redraws nothing).
     @State private var groups = Groups()
     var replacing: String? = nil
@@ -48,9 +50,7 @@ struct ExercisePicker: View {
     private static let page = 30
 
     var body: some View {
-        let usage = model.derived("usage") { sessions in
-            sessions.reduce(into: [String: Int]()) { usage, session in for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
-        }
+        let usage = usage ?? Self.usage(model.training.sessions)
         let recent = model.derived("recent") { sessions in
             var seen = Set<String>()
             return sessions.sorted { ($0.finishedAt ?? 0) > ($1.finishedAt ?? 0) }.flatMap { $0.exercises.map(\.name) }
@@ -62,8 +62,8 @@ struct ExercisePicker: View {
         let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
         let custom = !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
         SheetFrame(title: replacing == nil ? "Add exercise" : "Swap exercise",
-                   subtitle: replacing ?? (added.isEmpty ? nil : "\(added.count) added"), tall: true) {
-            Field(placeholder: "Search exercises", text: $query, label: "Search exercises", icon: "magnifyingglass",
+                   subtitle: replacing ?? (added.isEmpty ? nil : "\(added.count) added")) {
+            Field(placeholder: "Search exercises", text: $query, label: "Search exercises", icon: .search,
                   submit: { if custom { pick(typed) } else if let first = results.first { pick(first) } })
                 .padding(.top, Space.s3)
             Seg(label: "Muscle", options: (["All"] + LiftTable.groups).map { (value: $0, text: $0) }, value: $group, columns: 3)
@@ -80,7 +80,7 @@ struct ExercisePicker: View {
                 // Built as they scroll in (RowCard builds every row): a filter tap costs a screenful, not the list.
                 LazyVStack(spacing: 0) {
                     ForEach(Array(results.prefix(shown).enumerated()), id: \.element) { index, name in
-                        row(name, choices).overlay(alignment: .top) { if index > 0 { Palette.hairline.frame(height: 1) } }
+                        row(name, choices).overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: 1) } }
                     }
                 }
                 .clipShape(Corner.card.shape)
@@ -88,20 +88,21 @@ struct ExercisePicker: View {
                 .padding(.top, Space.s2)
             }
             if results.count > shown {
-                Button("Show more") { shown += Self.page }.buttonStyle(SecondaryButtonStyle()).padding(.top, Space.s3)
+                Button("Show more") { shown += Self.page }.buttonStyle(SecondaryStyle()).padding(.top, Space.s3)
             }
         }
-        .scrollDismissesKeyboard(.interactively)
         .onChange(of: query) { shown = Self.page }
         .onChange(of: group) { shown = Self.page }
-        .perfHook("pick.group") { group = $0 }
-        .perfHook("pick.query") { query = $0 }
-        .perfHook("pick.add") { pick($0) }
+        .onAppear { if self.usage == nil { self.usage = usage } }
         // Filled once the sheet is up, so neither the opening nor the first filter tap waits for it.
         .task {
-            try? await Task.sleep(for: .seconds(Motion.screen))
+            await Task.yield()
             for name in Catalog.names { _ = groups.of(name, choices) }
         }
+    }
+
+    private static func usage(_ sessions: [Session]) -> [String: Int] {
+        sessions.reduce(into: [String: Int]()) { usage, session in for exercise in session.exercises { usage[exercise.name, default: 0] += 1 } }
     }
 
     /// The name over its muscle ("Added" in green once added), and + (✓ once added).
@@ -113,15 +114,14 @@ struct ExercisePicker: View {
                 Text(isAdded ? "Added" : groups.of(name, choices).first ?? "Exercise").type(.t14)
                     .foregroundStyle(isAdded ? Palette.accent : Palette.muted)
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
             Button { pick(name) } label: {
-                Image(systemName: isAdded ? "checkmark" : "plus").font(.system(size: IconSize.medium, weight: .bold))
-                    .foregroundStyle(isAdded ? Palette.primaryText : Palette.text)
+                (isAdded ? Icon.check : Icon.plus).image(IconSize.medium, bold: true)
+                    .foregroundStyle(isAdded ? Palette.onGreen : Palette.text)
                     .frame(width: Size.control, height: Size.control)
-                    .raised(isAdded ? .green : .control, .inner)
-                    .contentTransition(.symbolEffect(.replace))
+                    .raised(isAdded ? .green : .control, .pill)
             }
-            .buttonStyle(PressStyle())
+            .buttonStyle(CardStyle())
             .accessibilityLabel("\(replacing == nil ? "Add" : "Use") \(name)")
             .sensoryFeedback(.impact(weight: .light), trigger: isAdded) { _, now in now }
         }
@@ -132,7 +132,7 @@ struct ExercisePicker: View {
     private func pick(_ name: String) {
         let name = String(name.prefix(Limits.name))
         onPick(name)
-        if replacing != nil { dismiss() } else { withAnimation(.smooth(duration: Motion.fast)) { added.append(name) } }
+        if replacing != nil { close() } else { added.append(name) }
     }
 }
 
@@ -147,4 +147,3 @@ private final class Groups {
         return found
     }
 }
-

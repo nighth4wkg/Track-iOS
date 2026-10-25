@@ -90,7 +90,7 @@ extension AppModel {
         let after = Experience.progress(of: training.sessions)
         let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0, choices: choices) } ?? []
         workoutOpen = false
-        tab = .progress
+        go(.progress)
         finished = Finished(id: session.id, xp: after.total - before.total, level: after.level, leveledUp: after.level > before.level,
                             rankUps: zip(ranksBefore, ranksAfter).filter { $1.best != nil && $1.rank > $0.rank }.map { "\($1.muscle.rawValue) → \($1.name)" })
     }
@@ -116,6 +116,7 @@ extension AppModel {
         confirm = Confirm(title: "Delete \(split.name)?", message: "Its past workouts stay in History.", label: "Delete split",
                           destructive: true) { [weak self] in
             guard let self, let index = training.splits.firstIndex(where: { $0.id == split.id }) else { return }
+            pages.removeAll { $0 == .split(split.id) }
             update { $0.splits.remove(at: index) }
             show("Split deleted.") { [weak self] in
                 guard let self, !training.splits.contains(where: { $0.id == split.id }) else { return }
@@ -128,7 +129,7 @@ extension AppModel {
         confirm = Confirm(title: "Delete this workout?", message: "Its sets and XP go too. You can undo.",
                           label: "Delete workout", destructive: true) { [weak self] in
             guard let self, let index = training.sessions.firstIndex(where: { $0.id == session.id }) else { return }
-            history = nil
+            pages.removeAll { $0 == .session(session.id) }
             update { $0.sessions.remove(at: index) }
             show("Workout deleted.") { [weak self] in self?.update { $0.sessions.insert(session, at: min(index, $0.sessions.count)) } }
         }

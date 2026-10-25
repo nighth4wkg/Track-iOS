@@ -29,7 +29,7 @@ enum RestLive {
 
     /// Says "Ready" as the rest runs out, while Track is running: the activity's stale date alone left "Rest 0:00" up
     /// on the iPhone. iOS's few seconds of background time cover a rest ending just after leaving Track; coming back
-    /// to Track catches a later one (MainView).
+    /// to Track catches a later one (Shell).
     @MainActor static func readyWhenOver(_ until: Int?) async {
         guard let until else { return }
         let wait = Double(until) / 1000 - Date.now.timeIntervalSince1970

@@ -1,5 +1,5 @@
 import Foundation
-import CoreGraphics
+import SwiftUI
 import Observation
 import TrackCore
 
@@ -10,6 +10,21 @@ enum StorageMode: String {
 }
 
 enum AppTab: Hashable, CaseIterable { case home, history, progress, rank }
+
+/// A page opened over a tab, as the PWA's deeper routes: back returns to what was under it.
+enum Route: Hashable {
+    case split(String), lift(String), session(String), settings
+}
+
+/// Something shown in a sheet over the screen (UI/Overlays.swift draws them, newest on top).
+struct Presented: Identifiable {
+    let id = UUID()
+    let view: AnyView
+    /// As tall as the screen whatever it holds (the picker, whose list grows and shrinks as you search).
+    let tall: Bool
+    /// What a tap outside it or a drag down does (usually just closing it).
+    let onClose: (() -> Void)?
+}
 
 /// A question before something that can't be taken back, shown in Track's own dialog (as the website's).
 struct Confirm: Identifiable {
@@ -48,30 +63,34 @@ final class AppModel {
     private(set) var mode: StorageMode?
     /// Why the saved copy couldn't be read, if it couldn't. The app then starts empty without overwriting it.
     private(set) var loadError: String?
-    var confirm: Confirm? { didSet { dialogChanged() } }
+    var confirm: Confirm?
     var toast: Toast?
-    /// The screens that can show the toast, in the order they came up (see ToastOverlay).
-    var toastHosts: [UUID] = []
-    var tab = AppTab.home {
-        didSet { tabStep = (AppTab.allCases.firstIndex(of: tab) ?? 0) > (AppTab.allCases.firstIndex(of: oldValue) ?? 0) ? 1 : -1 }
-    }
-    /// Which way the last tab change went (1: to the right), for the page's slide in.
-    @ObservationIgnored var tabStep: CGFloat = 1
-    /// The tab whose page last came up, so coming back from a split's page doesn't count as switching.
-    @ObservationIgnored var arrivedTab = AppTab.home
-    var workoutOpen = false { didSet { if workoutOpen != oldValue { workoutCovers = false } } } // it slides first
+    var tab = AppTab.home
+    /// Pages open over the tab, last on top.
+    var pages: [Route] = []
+    /// Sheets open, last on top.
+    var sheets: [Presented] = []
+    var workoutOpen = false
     /// Today, refreshed when Track comes back on a new day, so Home's date, "Done today" and the week move on.
     private(set) var day = dayKey(nowMillis())
-    /// The open workout fully covers the tabs (not sliding in or pulled aside), so they needn't be drawn under it.
-    var workoutCovers = false
     var finished: Finished?
-    /// Tabs with a page pushed over them (Home's split, Progress's lift): the nav pill hides while the tab on screen has
-    /// one, as on the PWA's bare pages. Set by the binding that pushes the page, so it changes as Back is tapped.
-    var pushed: Set<AppTab> = []
-    /// The finished workout open in its detail sheet.
-    var history: Session?
 
-    func setPushed(_ tab: AppTab, _ up: Bool) { if up { pushed.insert(tab) } else { pushed.remove(tab) } }
+    /// A tab, from the nav pill: whatever was open over the last one closes.
+    func go(_ next: AppTab) { tab = next; pages = []; sheets = [] }
+    func open(_ route: Route) { pages.append(route) }
+    func back() { _ = pages.popLast() }
+    /// Shows a sheet; returns its id for closing it.
+    @discardableResult func present(_ view: some View, tall: Bool = false, onClose: (() -> Void)? = nil) -> UUID {
+        let sheet = Presented(view: AnyView(view), tall: tall, onClose: onClose)
+        sheets.append(sheet)
+        return sheet.id
+    }
+    func dismiss(_ id: UUID) { sheets.removeAll { $0.id == id } }
+    /// The top sheet closes as a tap outside or a drag down closes it.
+    func closeTop() {
+        guard let top = sheets.last else { return }
+        if let close = top.onClose { close() } else { dismiss(top.id) }
+    }
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true
@@ -165,8 +184,6 @@ final class AppModel {
         workoutOpen = false
     }
 
-    private func dialogChanged() { DialogWindow.update(open: confirm != nil) }
-
     func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }
 
     func refreshDay() { if dayKey(nowMillis()) != day { day = dayKey(nowMillis()) } }
@@ -180,7 +197,7 @@ final class AppModel {
 
     /// Starts a past workout again with its own numbers.
     func repeatWorkout(_ session: Session) {
-        history = nil
+        pages.removeAll { if case .session = $0 { true } else { false } }
         start(Split(id: session.splitId, name: session.name, exercises: session.exercises), carryOver: false)
     }
 

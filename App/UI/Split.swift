@@ -1,14 +1,12 @@
 import SwiftUI
 import TrackCore
 
-/// A split, as the PWA's: its name over its size with Edit, each exercise on a card (number, sets, last time's top
+/// A split (the PWA's Split): its name over its size with Edit, each exercise on a card (number, sets, last time's top
 /// set), Add exercise, Last time, and Start workout docked at the bottom. Editing renames it, moves exercises by the
 /// grip, removes them (asking first, then Undo) and offers Delete split.
-struct SplitPage: View {
+struct SplitScreen: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
     let splitId: String
-    @State private var picking = false
     @State private var editingOn = false
     @State private var name = ""
 
@@ -19,11 +17,10 @@ struct SplitPage: View {
             let editing = editingOn && !live
             let last = model.training.latestSession(of: splitId)
             let unit = model.training.settings.unit
-            SubPage(title: split.name, subtitle: split.summary) {
-                if !live {
-                    Button(editing ? "Done" : "Edit") { toggleEditing(split) }.buttonStyle(SecondaryButtonStyle(hug: true))
+            DeepPage {
+                TitleBar(title: split.name, subtitle: split.summary) {
+                    if !live { Button(editing ? "Done" : "Edit") { toggleEditing(split) }.buttonStyle(SecondaryStyle(hug: true)) }
                 }
-            } content: {
                 if editing {
                     VStack(alignment: .leading, spacing: Space.s2) {
                         Text("Split name").type(.t14).foregroundStyle(Palette.muted)
@@ -40,7 +37,7 @@ struct SplitPage: View {
                         }) { exercise in
                             names(exercise)
                         } end: { exercise in
-                            RoundButton(icon: "trash", label: "Remove \(exercise.name)") { remove(exercise) }
+                            RoundButton(icon: .trash, label: "Remove \(exercise.name)") { remove(exercise) }
                         }
                     } else {
                         VStack(spacing: Space.s3) {
@@ -48,11 +45,10 @@ struct SplitPage: View {
                                 HStack(spacing: Space.s3) {
                                     Text("\(index + 1)").type(.t16).monospacedDigit().foregroundStyle(Palette.text)
                                         .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
-                                    names(exercise)
-                                    Spacer(minLength: 0)
+                                    names(exercise).frame(maxWidth: .infinity, alignment: .leading)
                                     Text(topSet(exercise, last, unit)).type(.t14).monospacedDigit().foregroundStyle(Palette.text).lineLimit(1)
                                 }
-                                .padding(Space.s4)
+                                .pad()
                                 .raised()
                             }
                         }
@@ -63,11 +59,13 @@ struct SplitPage: View {
                     Text("This split’s workout is on. Change its exercises in the workout; the split keeps them.")
                         .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s3)
                 } else {
-                    Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }
-                        .buttonStyle(SecondaryButtonStyle()).padding(.top, Space.s3)
+                    Button {
+                        model.present(ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }, tall: true)
+                    } label: { Label { Text("Add exercise") } icon: { Icon.plus.image(IconSize.medium) } }
+                    .buttonStyle(SecondaryStyle()).padding(.top, Space.s3)
                 }
                 if editing {
-                    Button("Delete split") { model.deleteSplit(split) }.buttonStyle(SecondaryButtonStyle(danger: true)).padding(.top, Space.s6)
+                    Button("Delete split") { model.deleteSplit(split) }.buttonStyle(SecondaryStyle(danger: true)).padding(.top, Space.s6)
                 } else if let last, let finished = last.finishedAt {
                     HStack(spacing: Space.s3) {
                         VStack(alignment: .leading, spacing: 0) {
@@ -75,43 +73,35 @@ struct SplitPage: View {
                             Text(Date(timeIntervalSince1970: Double(finished) / 1000).formatted(.gregorian.weekday(.wide).month(.abbreviated).day()))
                                 .type(.t16).foregroundStyle(Palette.text)
                         }
-                        Spacer(minLength: 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         VStack(alignment: .trailing, spacing: 0) {
                             Text("\(last.minutes) min")
                             Text("\(weight(last.volume, unit)) \(unit.rawValue)")
                         }
                         .type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                     }
-                    .padding(Space.s4)
+                    .pad()
                     .raised()
                     .padding(.top, Space.s6)
                 }
                 // Room for the dock, so the last card scrolls clear of it.
-                if !editing { Color.clear.frame(height: Size.primary + Space.s4) }
+                if !editing { Color.clear.frame(height: Size.primary + Space.s4 - homeIndicator) }
             }
             .overlay(alignment: .bottom) {
                 if !editing {
                     Button { if model.training.active == nil { model.start(split) } else { model.workoutOpen = true } } label: {
-                        Label(model.training.active == nil ? "Start workout" : "Workout in progress", systemImage: "play.fill")
+                        Label { Text(model.training.active == nil ? "Start workout" : "Workout in progress") } icon: { Icon.play.image(IconSize.small) }
                     }
-                    .buttonStyle(PrimaryButtonStyle())
+                    .buttonStyle(PrimaryStyle())
                     .disabled(split.exercises.isEmpty)
                     .padding(.horizontal, Space.s4)
+                    .frame(maxWidth: Size.column)
                     .floatingBottom()
-                    .frame(maxWidth: Measure.page)
-                    .transition(.opacity)
                 }
             }
-            .animation(.smooth(duration: Motion.standard), value: editing)
-            .animation(.smooth(duration: Motion.standard), value: split.exercises.map(\.id))
             .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))
-            .perfHook("split.edit") { _ in toggleEditing(split) }
-            .sheet(isPresented: $picking) {
-                ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }
-            }
         } else {
-            // Deleted: back to Home.
-            Color.clear.onAppear { dismiss() }
+            DeepPage { TitleBar(title: "Split", subtitle: "This split no longer exists.") }
         }
     }
 
@@ -131,11 +121,11 @@ struct SplitPage: View {
 
     private func toggleEditing(_ split: Split) {
         if editingOn { rename(split) } else { name = split.name }
-        withAnimation(.smooth(duration: Motion.standard)) { editingOn.toggle() }
+        editingOn.toggle()
     }
 
     private func rename(_ split: Split) {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
         if !trimmed.isEmpty, trimmed != split.name { model.update { $0.edit(splitId) { $0.name = trimmed } } }
     }
 

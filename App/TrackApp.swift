@@ -17,17 +17,19 @@ struct TrackApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if model.mode == nil { WelcomeView().transition(.opacity) } else { MainView().transition(.opacity) }
+                if model.mode == nil { WelcomeScreen() } else { Shell() }
             }
             .environment(model)
             .tint(Palette.accent)
-            .onAppear { DialogWindow.install(model); TestSeed.apply(model); FrameLog.install(); Sampler.install()
+            .preferredColorScheme(.dark)
+            .onAppear {
+                TestSeed.apply(model)
+                FrameLog.install()
                 // The library's and your own exercises' muscles worked out off the main thread, ahead of the picker,
                 // the workout's cards and the ranks.
                 let names = Catalog.names + model.training.sessions.flatMap { $0.exercises.map(\.name) }
                 Task.detached(priority: .utility) { LiftTable.warm(names) }
             }
-            .task { await PerfDrive.run(model) }
             // The rest Live Activity: back to the workout in progress.
             .onOpenURL { url in if url.host == "workout", model.training.active != nil { model.workoutOpen = true } }
         }

@@ -1,7 +1,7 @@
 import SwiftUI
 import TrackCore
 
-/// A set, as the PWA's row: its number (green on the next to do), last time's numbers, kg · reps · RIR, and ✓. In
+/// A set (the PWA's row): its number (green on the next to do), last time's numbers, kg · reps · RIR, and ✓. In
 /// auto mode, changing a number logs the set. Swipe left and ✓ becomes a red ✕ that deletes it (Undo). A new heaviest
 /// set says what it beat under the row.
 /// What you type shows at once (✓, errors) and is saved when you pause, leave the row or tap ✓, so typing never waits
@@ -32,7 +32,6 @@ struct SetRow: View {
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
     @State private var replacing: String? // the field just tapped: its first keystroke replaces it (key)
-    @State private var shownError: String? // set inside an animation, so the rows below glide as it opens and closes
 
     var body: some View {
         let shown = typed
@@ -54,20 +53,16 @@ struct SetRow: View {
                 field(rir, id: "rir", label: "Reps in reserve, \(name)", bad: error?.fields.contains("rir") == true)
                 check(done: shown.done, name: name)
             }
-            if let shownError { Text(shownError).type(.t12).foregroundStyle(Palette.danger) }
+            if let message = error?.message { Text(message).type(.t12).foregroundStyle(Palette.danger) }
             if let heaviest, best {
                 HStack(spacing: Space.s2) {
                     Badge(text: "New best")
                     Text("\(TrainingSet.display(kg: shown.kg ?? 0, unit: unit)) \(unit.rawValue) beats \(TrainingSet.display(kg: heaviest, unit: unit)) \(unit.rawValue)")
                         .type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
                 }
-                .transition(.opacity.combined(with: .scale(scale: Motion.press)))
             }
         }
-        .onChange(of: error?.message) { _, now in withAnimation(.smooth(duration: Motion.standard)) { shownError = now } }
         .swipeToArm($armed)
-        .animation(.smooth(duration: Motion.quick), value: shown.done)
-        .animation(.smooth(duration: Motion.standard), value: best)
         .onAppear { load(unit) }
         .onDisappear(perform: flush)
         // Leaving the app saves a number still waiting on its pause.
@@ -87,13 +82,12 @@ struct SetRow: View {
     /// ✓ (green once done), or the red ✕ while armed.
     private func check(done: Bool, name: String) -> some View {
         Button { armed ? delete() : tapCheck() } label: {
-            Image(systemName: armed ? "xmark" : "checkmark").font(.system(size: IconSize.medium, weight: .bold))
-                .foregroundStyle(armed ? Palette.danger : done ? Palette.primaryText : Palette.muted)
+            (armed ? Icon.close : Icon.check).image(IconSize.medium, bold: true)
+                .foregroundStyle(armed ? Palette.danger : done ? Palette.onGreen : Palette.muted)
                 .frame(maxWidth: .infinity, minHeight: Size.control)
                 .raised(done && !armed ? .green : .control, .inner)
-                .contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(PressStyle())
+        .buttonStyle(CardStyle())
         .accessibilityLabel(armed ? "Delete \(name)" : done ? "\(name) done" : "Mark \(name) done")
         .accessibilityAddTraits(done ? .isSelected : [])
         .accessibilityAction(named: "Delete set") { delete() } // the swipe, for VoiceOver
@@ -130,7 +124,7 @@ struct SetRow: View {
     }
     private func delete() {
         armed = false
-        withAnimation(.smooth(duration: Motion.quick)) { model.removeSet(set.id, in: exercise.id) }
+        model.removeSet(set.id, in: exercise.id)
     }
 
     /// Shows the set's numbers, unless they already read the same (so typing "62." isn't rewritten to "62").
@@ -167,5 +161,102 @@ struct SetRow: View {
             }
             if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
         }
+    }
+}
+
+
+extension View {
+    /// The workout's set numbers typed on one keyboard: an unseen input (KeyInput) stays first responder while any
+    /// set is typed in, so Next only moves the highlight. A field taking the keyboard made iOS rebuild it, most of
+    /// what each Next cost. The set being typed in is scrolled into view, as iOS does for a field it focuses.
+    func setKeyboard(_ focus: Binding<String?>) -> some View { modifier(SetKeyboard(focus: focus)) }
+}
+
+private struct SetKeyboard: ViewModifier {
+    @Environment(AppModel.self) private var model
+    @Binding var focus: String?
+
+    func body(content: Content) -> some View {
+        ScrollViewReader { proxy in
+            content
+                .background(alignment: .topLeading) {
+                    // Only built while typing, so there's no field of its own for VoiceOver or the UI tests (the set's
+                    // boxes are) and nothing for iOS to hand the keyboard back to when a sheet closes. The keyboard going
+                    // by itself (dragged away, another field taking it) ends the typing.
+                    if focus != nil {
+                        KeyInput { if focus != nil { focus = nil } }
+                            .frame(width: 1, height: 1).allowsHitTesting(false).accessibilityHidden(true)
+                    }
+                }
+                .onChange(of: focus) { reveal(proxy) }
+                // A question over the workout ends the typing, rather than leaving the keyboard under it.
+                .onChange(of: model.confirm != nil) { _, open in if open { focus = nil } }
+                // The keyboard coming up (or the bar over it changing) can cover the set.
+                .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { _ in reveal(proxy) }
+        }
+    }
+
+    /// Scrolls just enough to show the set being typed in, once a card it opens has its height.
+    private func reveal(_ proxy: ScrollViewProxy) {
+        guard let focus, let dot = focus.lastIndex(of: ".") else { return }
+        let set = String(focus[..<dot])
+        DispatchQueue.main.async { proxy.scrollTo(set) }
+    }
+}
+
+/// The unseen input: the system's decimal pad, whose keys go to the set row being typed in (SetRow.key).
+struct KeyInput: UIViewRepresentable {
+    /// A key: the text added, or nil for delete.
+    static let typed = Notification.Name("KeyInput.typed")
+    let onEnd: () -> Void
+
+    func makeUIView(context: Context) -> Field { Field() }
+
+    func updateUIView(_ view: Field, context: Context) {
+        view.onEnd = onEnd
+        guard !view.started else { return }
+        view.started = true
+        // After the update: taking the keyboard changes the safe area being laid out.
+        DispatchQueue.main.async { _ = view.becomeFirstResponder() }
+    }
+
+    /// Typing ended: the keyboard goes with the field.
+    static func dismantleUIView(_ view: Field, coordinator: ()) {
+        view.onEnd = {}
+        _ = view.resignFirstResponder()
+    }
+
+    final class Field: UIView, UIKeyInput {
+        var onEnd: () -> Void = {}
+        var started = false
+        var keyboardType: UIKeyboardType = .decimalPad
+        override var canBecomeFirstResponder: Bool { true }
+        var hasText: Bool { true }
+        func insertText(_ text: String) { NotificationCenter.default.post(name: KeyInput.typed, object: text) }
+        func deleteBackward() { NotificationCenter.default.post(name: KeyInput.typed, object: nil) }
+        override func resignFirstResponder() -> Bool {
+            let resigned = super.resignFirstResponder()
+            if resigned { onEnd() }
+            return resigned
+        }
+    }
+}
+
+
+extension TrainingSet {
+    /// What's wrong with a set's typed numbers, worded as on the website: every field out of range (each gets a red
+    /// edge) and the first one's message (shown under the row).
+    static func inputError(weight: String, reps: String, rir: String, unit: TrackCore.Settings.Unit) -> (fields: Set<String>, message: String)? {
+        var bad: [(field: String, message: String)] = []
+        if !weight.isEmpty, kilograms(from: weight, unit: unit).map({ $0 <= Limits.kg }) != true {
+            bad.append(("kg", "Enter a weight from \(Limits.wholeRange(0...Limits.kg, unit))."))
+        }
+        if !reps.isEmpty, wholeNumber(reps).map({ (1...Limits.reps).contains($0) }) != true {
+            bad.append(("reps", "Reps must be a whole number from 1 to \(Limits.grouped(Limits.reps))."))
+        }
+        if !rir.isEmpty, wholeNumber(rir).map({ (0...Limits.rir).contains($0) }) != true {
+            bad.append(("rir", "RIR must be a whole number from 0 to \(Limits.rir)."))
+        }
+        return bad.first.map { (Set(bad.map(\.field)), $0.message) }
     }
 }

@@ -117,7 +117,7 @@ extension Exercise {
     /// The sets as counted: a left and the right beside it (either order) are one set.
     public var setGroups: [[TrainingSet]] { Exercise.groups(sets) }
 
-    static func groups(_ sets: [TrainingSet]) -> [[TrainingSet]] {
+    public static func groups(_ sets: [TrainingSet]) -> [[TrainingSet]] {
         var groups: [[TrainingSet]] = [], index = 0
         while index < sets.count {
             let set = sets[index]
