@@ -15,7 +15,9 @@ struct HistoryScreen: View {
 
     var body: some View {
         let training = model.training
-        let results = training.sessions.filtered(query: query, from: from, to: to)
+        // Kept until the workouts or the search change: History stays alive behind the other tabs, and every set
+        // logged would otherwise sort the whole history again.
+        let results = model.derived("history", at: [query, from, to]) { $0.filtered(query: query, from: from, to: to) }
         let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || !from.isEmpty || !to.isEmpty
         TabPage {
             TabHead(title: "History") {
@@ -30,7 +32,8 @@ struct HistoryScreen: View {
                 }
                 .padding(.top, Space.s3)
             }
-            HistoryCalendar(month: $month, from: $from, to: $to, sessions: training.sessions.finished).padding(.top, Space.s3)
+            HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days") { Set($0.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) })
+                .padding(.top, Space.s3)
             list(results, filtering: filtering, unit: training.settings.unit).padding(.top, Space.s6)
         }
         .sensoryFeedback(.selection, trigger: from + to)
@@ -48,7 +51,7 @@ struct HistoryScreen: View {
             }
             .frame(minHeight: Size.control)
             if results.isEmpty {
-                Text(model.training.sessions.finished.isEmpty ? "Finish a workout and it shows up here." : "No workouts match. Try another name or date.")
+                Text(model.derived("any finished") { $0.finished.isEmpty } ? "Finish a workout and it shows up here." : "No workouts match. Try another name or date.")
                     .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
             } else {
                 LazyVStack(spacing: Space.s3) {
@@ -147,11 +150,11 @@ struct HistoryCalendar: View {
     @Binding var month: Date
     @Binding var from: String
     @Binding var to: String
-    let sessions: [Session]
+    /// The days with a finished workout ("2026-10-25").
+    let trained: Set<String>
 
     var body: some View {
         let calendar = Calendars.local
-        let trained = Set(sessions.compactMap { $0.finishedAt.map { dayKey($0) } })
         let today = dayKey(nowMillis())
         let lead = (calendar.component(.weekday, from: month) + 5) % 7
         let length = calendar.range(of: .day, in: .month, for: month)?.count ?? 30

@@ -79,7 +79,7 @@ private struct UpNextCard: View {
         VStack(spacing: Space.s4) {
             HStack(spacing: Space.s4) {
                 VStack(spacing: Space.s1) {
-                    WeekRing(done: model.derived("days \(dayKey(now))") { $0.trainingDays(inWeekOf: now).count }, goal: training.settings.weeklyGoal)
+                    WeekRing(done: model.derived("days", at: dayKey(now)) { $0.trainingDays(inWeekOf: now).count }, goal: training.settings.weeklyGoal)
                     Text("This week").type(.t12).foregroundStyle(Palette.muted).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 0) {
@@ -173,7 +173,7 @@ private struct HomeTiles: View {
     }
 
     private var volume: some View {
-        let week = model.derived("volume W \(now / 60_000)") { $0.volumeChange(per: .week, at: now) }
+        let week = model.derived("volume W", at: now / 60_000) { $0.volumeChange(per: .week, at: now) }
         return VStack(alignment: .leading, spacing: 0) {
             Text("Volume this week").type(.t14).foregroundStyle(Palette.muted)
             HStack(alignment: .firstTextBaseline, spacing: Space.s1) {

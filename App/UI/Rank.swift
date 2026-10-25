@@ -25,8 +25,8 @@ struct RankScreen: View {
             if let bodyweight {
                 let choices = training.settings.lifts ?? [:]
                 let signature = choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")
-                let ranks = model.derived("ranks \(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
-                let counted = model.derived("counted \(signature)") { $0.countedNames(choices: choices) }
+                let ranks = model.derived("ranks", at: "\(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
+                let counted = model.derived("counted", at: signature) { $0.countedNames(choices: choices) }
                 // Apart only when it needs you: names Track doesn't know, and ones you chose not to count.
                 let uncounted = counted.filter { $0.groups.isEmpty && (!$0.known || $0.chosen) }
                 OverallCard(ranks: ranks, unit: unit).padding(.top, Space.s4)

@@ -20,7 +20,7 @@ struct LiftScreen: View {
             if entries.isEmpty {
                 Text("Log this exercise in a workout to see its progress.").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s4)
             } else {
-                let points = model.derived("lift \(name) \(period)") { $0.oneRepMaxes(of: name, per: period) }
+                let points = model.derived("lift points \(name)", at: period) { $0.oneRepMaxes(of: name, per: period) }
                 trend(points, unit: unit).padding(.top, Space.s4)
                 HStack(spacing: Space.s3) {
                     tile("Best set", setText(Self.top(entries.flatMap(\.sets)), unit))

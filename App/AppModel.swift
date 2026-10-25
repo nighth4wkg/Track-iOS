@@ -96,7 +96,7 @@ final class AppModel {
     @ObservationIgnored private var canSave = true
     /// Saving happens off the main thread, in order, so typing and dragging never wait on the disk.
     @ObservationIgnored private let saver = DispatchQueue(label: "track.save", qos: .userInitiated)
-    @ObservationIgnored private var memo: [String: Any] = [:]
+    @ObservationIgnored private var memo: [String: (stamp: AnyHashable, value: Any)] = [:]
     @ObservationIgnored private var memoSessions: [Session] = []
     private static let modeKey = "track.storageMode"
     /// -dryRun (PerfDrive's -perfWork on a phone with real data): changes stay in memory, nothing is saved and no rest
@@ -155,15 +155,17 @@ final class AppModel {
 
     /// A figure worked out from the workouts (records, achievements, levels, ranks, streaks), kept until they change,
     /// so typing a set or dragging an exercise doesn't redo them on every screen. The comparison is instant while the
-    /// workouts are untouched (the same storage). Keys carry what else a figure depends on, such as the day.
-    func derived<T>(_ key: String, _ make: ([Session]) -> T) -> T {
+    /// workouts are untouched (the same storage).
+    /// `stamp` is what else it depends on that changes over time (the day, the minute, a search): a new one replaces
+    /// the figure kept under `key` rather than adding another, so the store stays one figure per key.
+    func derived<T>(_ key: String, at stamp: AnyHashable = 0, _ make: ([Session]) -> T) -> T {
         if memoSessions != training.sessions {
             memo = [:]
             memoSessions = training.sessions
         }
-        if let stored = memo[key], let value = stored as? T { return value }
+        if let stored = memo[key], stored.stamp == stamp, let value = stored.value as? T { return value }
         let value = make(training.sessions)
-        memo[key] = value
+        memo[key] = (stamp, value)
         return value
     }
 

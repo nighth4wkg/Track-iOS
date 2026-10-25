@@ -19,7 +19,7 @@ struct ProgressScreen: View {
             Seg(label: "Measure", options: Tally.allCases.map { (value: $0, text: $0.rawValue) }, value: $tally).padding(.top, Space.s4)
             chart(training, now: now).padding(.top, Space.s3)
             HStack(spacing: Space.s3) {
-                tile("Streak", "\(model.derived("streak \(dayKey(now))") { $0.weeklyStreak(at: now) })", unit: "wk")
+                tile("Streak", "\(model.derived("streak", at: dayKey(now)) { $0.weeklyStreak(at: now) })", unit: "wk")
                 let level = model.derived("xp") { Experience.progress(of: $0) }.level
                 Button { model.present(XpHelp()) } label: { tile("Level", "\(level)") }
                     .buttonStyle(CardStyle()).accessibilityLabel("Level \(level). How XP works")
@@ -51,8 +51,8 @@ struct ProgressScreen: View {
 
     private func chart(_ training: Training, now: Int) -> some View {
         let unit = training.settings.unit
-        let result = model.derived("tally \(tally) \(period) \(now / 60_000)") { $0.change(of: tally, per: period, at: now) }
-        let bars = model.derived("bars \(tally) \(period) \(now / 60_000)") { $0.bars(of: tally, per: period, at: now) }
+        let result = model.derived("tally", at: "\(tally) \(period) \(now / 60_000)") { $0.change(of: tally, per: period, at: now) }
+        let bars = model.derived("bars", at: "\(tally) \(period) \(now / 60_000)") { $0.bars(of: tally, per: period, at: now) }
         let top = max(1, bars.flatMap { [$0.now, $0.last] }.max() ?? 1)
         let note = result.value == 0 ? "Nothing logged \(period.now) yet" : result.change.map { "\($0 >= 0 ? "+" : "")\($0)% vs \(period.last)" } ?? "Nothing \(period.last) to compare"
         let tint = result.value == 0 ? Palette.muted : result.change.map { $0 >= 0 ? Palette.accent : Palette.danger } ?? Palette.muted
@@ -146,9 +146,8 @@ struct XpHelp: View {
     ]
 
     var body: some View {
-        let sessions = model.training.sessions
-        let level = Experience.progress(of: sessions)
-        let latest = Experience.rewards(of: sessions).last
+        let level = model.derived("xp") { Experience.progress(of: $0) }
+        let latest = model.derived("latest reward") { Experience.rewards(of: $0).last }
         SheetFrame(title: "How XP works") {
             VStack(alignment: .leading, spacing: Space.s2) {
                 HStack(spacing: Space.s2) {
@@ -193,7 +192,7 @@ struct QuestList: View {
 
     var body: some View {
         let sessions = model.training.sessions
-        let awards = sessions.questAwards
+        let awards = model.derived("awards") { $0.questAwards }
         let cap = Experience.dailyStart + Experience.perSet * Experience.dailySetCap
         SheetFrame(title: "Achievements") {
             Text("\(awards.count) of \(Quest.all.count) completed. Achievement XP is paid once, outside the \(cap) XP daily training limit.")
