@@ -76,7 +76,7 @@ extension AppModel {
     /// The owner's rule, as the PWA's: a workout saves only when every set is done (the header's count is full).
     func finish() {
         guard let active = training.active else { return }
-        guard active.exercises.doneCount >= active.exercises.plannedCount else { show("Mark all exercises done first."); return }
+        guard active.exercises.doneCount >= active.exercises.plannedCount else { problem("Mark all exercises done first."); return }
         save()
     }
 

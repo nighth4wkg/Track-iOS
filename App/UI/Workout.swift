@@ -170,8 +170,8 @@ struct WorkoutScreen: View {
     /// next set) and Done. It replaces the rest timer meanwhile, so the two never stack up.
     private func keyboardBar(_ fields: [String]) -> some View {
         HStack(spacing: Space.s2) {
+            // The rest's time takes the free room; with no rest the pill hugs its buttons.
             RestTimer(compact: true).padding(.leading, Space.s2)
-            Spacer(minLength: Space.s2)
             if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
                 Button("Next") { self.focus = fields[index + 1] }.buttonStyle(SecondaryStyle(hug: true))
             }

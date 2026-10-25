@@ -122,7 +122,7 @@ struct SettingsScreen: View {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url), let backup = try? TrainingFile.decode(data), backup.isValid else {
-            model.show("Not a Track backup file.")
+            model.problem("Not a Track backup file.")
             return
         }
         model.confirm = Confirm(title: "Restore this backup?",

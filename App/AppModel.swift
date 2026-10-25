@@ -41,6 +41,8 @@ struct Toast: Identifiable, Equatable {
     let id = UUID()
     let text: String
     var undo: (() -> Void)?
+    /// Something went wrong: a red alert instead of the tick (the PWA's toastError).
+    var problem = false
     static func == (a: Toast, b: Toast) -> Bool { a.id == b.id }
 }
 
@@ -133,7 +135,7 @@ final class AppModel {
     /// Changes the training data and saves it on this device. A change that throws is shown and not applied.
     func update(_ change: (inout Training) throws -> Void) {
         var next = training
-        do { try change(&next) } catch { show(error.localizedDescription); return }
+        do { try change(&next) } catch { problem(error.localizedDescription); return }
         next.editedAt = nowMillis()
         if !Self.dryRun, next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
             if let until = next.restUntil, until > nowMillis() {
@@ -148,7 +150,7 @@ final class AppModel {
         guard canSave, !Self.dryRun, let file else { return }
         saver.async { [weak self] in
             do { try file.save(next) } catch {
-                DispatchQueue.main.async { self?.show("Couldn’t save on this iPhone. Free up some space and try again.") }
+                DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone. Free up some space and try again.") }
             }
         }
     }
@@ -187,6 +189,8 @@ final class AppModel {
     }
 
     func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }
+
+    func problem(_ text: String) { toast = Toast(text: text, problem: true) }
 
     func refreshDay() { if dayKey(nowMillis()) != day { day = dayKey(nowMillis()) } }
 

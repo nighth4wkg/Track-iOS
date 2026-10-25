@@ -250,7 +250,7 @@ private struct CountsFor: View {
         let choice: String? = value.isEmpty || row.auto == [value] ? nil : value
         let lifts = model.training.settings.lifts ?? [:]
         if choice != nil, lifts[row.key] == nil, lifts.count >= Limits.liftChoices {
-            model.show("You can move up to \(Limits.grouped(Limits.liftChoices)) exercises.")
+            model.problem("You can move up to \(Limits.grouped(Limits.liftChoices)) exercises.")
             return
         }
         model.update { training in

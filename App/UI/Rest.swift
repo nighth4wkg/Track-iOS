@@ -21,7 +21,11 @@ struct RestTimer: View {
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))
                     if left > 0 {
-                        if compact { ring(left, total).accessibilityLabel("Rest, \(time(left)) left") } else { full(left, total) }
+                        if compact {
+                            ring(left, total).accessibilityLabel("Rest, \(time(left)) left").frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            full(left, total)
+                        }
                     }
                 }
                 .task(id: until) {
