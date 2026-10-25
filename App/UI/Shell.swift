@@ -160,19 +160,23 @@ struct NavPill: View {
 extension View {
     /// A swipe in from the left edge goes back, as iOS's own pages do, at once when let go far or fast enough.
     func edgeBack(_ on: Bool, back: @escaping () -> Void) -> some View {
-        gesture(EdgePan(onEnd: { x, velocity in if x > EdgePan.distance || velocity > EdgePan.flick { back() } }), isEnabled: on)
+        gesture(EdgePan(on: on, onEnd: { x, velocity in if x > EdgePan.distance || velocity > EdgePan.flick { back() } }))
     }
 }
 
 private struct EdgePan: UIGestureRecognizerRepresentable {
     static let distance: CGFloat = 64, flick: CGFloat = 600
+    let on: Bool
     let onEnd: (_ x: CGFloat, _ velocity: CGFloat) -> Void
 
     func makeUIGestureRecognizer(context: Context) -> UIScreenEdgePanGestureRecognizer {
         let pan = UIScreenEdgePanGestureRecognizer()
         pan.edges = .left
+        pan.isEnabled = on
         return pan
     }
+
+    func updateUIGestureRecognizer(_ pan: UIScreenEdgePanGestureRecognizer, context: Context) { pan.isEnabled = on }
 
     func handleUIGestureRecognizerAction(_ pan: UIScreenEdgePanGestureRecognizer, context: Context) {
         guard pan.state == .ended else { return }

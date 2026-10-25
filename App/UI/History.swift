@@ -151,7 +151,7 @@ struct HistoryCalendar: View {
 
     var body: some View {
         let calendar = Calendars.local
-        let trained = Set(sessions.compactMap { $0.finishedAt.map(dayKey) })
+        let trained = Set(sessions.compactMap { $0.finishedAt.map { dayKey($0) } })
         let today = dayKey(nowMillis())
         let lead = (calendar.component(.weekday, from: month) + 5) % 7
         let length = calendar.range(of: .day, in: .month, for: month)?.count ?? 30
