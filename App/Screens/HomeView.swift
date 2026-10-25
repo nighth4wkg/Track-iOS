@@ -25,6 +25,7 @@ struct HomeView: View {
                 HomeTiles(training: training, now: now).padding(.top, Space.s3)
             }
             .navigationDestination(item: $open) { SplitPage(splitId: $0) }
+            .onChange(of: open != nil) { _, up in model.setPushed(.home, up) }
         }
         .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
         .onChange(of: training.splits.count) { _, count in if count < 2 { arranging = false } }

@@ -27,22 +27,27 @@ struct WorkoutView: View {
 
     private func page(_ active: Session) -> some View {
         let fields: [String] = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
+        // Once every set is done none opens by itself: the page goes up to Finish instead.
         let expanded: String? = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
-            ?? (active.exercises.first { $0.doneCount < $0.setCount } ?? active.exercises.first)?.id
-        let expandedDone: Bool? = active.exercises.first { $0.id == expanded }.map { $0.doneCount == $0.setCount }
+            ?? active.exercises.first { $0.doneCount < $0.setCount }?.id
         let splitId = active.splitId
         let previous: Session? = model.derived("previous \(splitId)") { sessions in
             sessions.filter { $0.splitId == splitId }.max { ($0.finishedAt ?? 0) < ($1.finishedAt ?? 0) }
         }
-        return ScrollView { content(active, expanded: expanded, previous: previous) }
+        return ScrollViewReader { proxy in scroller(active, fields: fields, expanded: expanded, previous: previous, proxy: proxy) }
+    }
+
+    private func scroller(_ active: Session, fields: [String], expanded: String?, previous: Session?, proxy: ScrollViewProxy) -> some View {
+        ScrollView { content(active, expanded: expanded, previous: previous) }
             .scrollDismissesKeyboard(.interactively)
             .setKeyboard($focus)
             .background(Backdrop())
-            // A bar (iOS 26), not an inset: the page fades behind it.
-            .safeAreaBar(edge: .bottom) {
+            // An inset, not iOS 26's bar: the bar's edge effect drew a dark slab behind the timer (the owner, on the iPhone);
+            // the PWA's timer floats over the page with nothing behind it.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 // While typing, one bar over the keyboard (the rest's time, Next, Done) instead of the rest timer. Without
                 // the keyboard the timer sits as far from the screen's edge as the nav pill.
-                Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().padding(.bottom, Space.s4 - homeIndicator) } }
+                Group { if focus != nil { keyboardBar(fields) } else { RestCapsule().floatingBottom() } }
                     .animation(.smooth(duration: Motion.quick), value: focus == nil)
             }
             .offset(x: pull + drag)
@@ -56,11 +61,19 @@ struct WorkoutView: View {
                 guard let id, let exercise = active.exercises.first(where: { ex in ex.sets.contains { id.hasPrefix($0.id) } }), exercise.id != expanded else { return }
                 withAnimation(.smooth(duration: Motion.standard)) { opened = exercise.id }
             }
-            // A card whose last set just got done hands over to the next with sets to do (the keyboard goes with it).
-            .onChange(of: expandedDone) { was, now in
-                guard was == false, now == true else { return }
-                withAnimation(.smooth(duration: Motion.standard)) { opened = nil }
+            // As the PWA's moveOn: a set done in a card with more to do shows its next set; the card's last set hands over
+            // to the next card with sets to do (also one opened by hand; the keyboard goes with it) and the page glides to
+            // it, or after the last one up to Finish.
+            .onChange(of: active.exercises.map(\.doneCount)) { was, now in
+                guard was.count == now.count, let index = now.indices.first(where: { now[$0] > was[$0] }) else { return }
+                let card = active.exercises[index]
+                if let set = card.sets.first(where: { !$0.done }) {
+                    if focus == nil { reveal(proxy, set.id, anchor: nil) } // while typing, the keyboard keeps its set in view
+                    return
+                }
+                if opened == card.id { withAnimation(.smooth(duration: Motion.standard)) { opened = nil } }
                 focus = nil
+                reveal(proxy, active.exercises.first { $0.doneCount < $0.setCount }?.id ?? Self.top, anchor: .top)
             }
             // Settled back (let go short, or cancelled): the tabs underneath needn't be drawn again.
             .onChange(of: drag) { _, now in
@@ -71,12 +84,20 @@ struct WorkoutView: View {
             .sheet(item: $sheet, onDismiss: swapPicked) { sheetView($0).trackOverlays() }
     }
 
+    /// The page's top, where Finish is.
+    private static let top = "top"
+
+    /// Glides once to show it (nil anchor: just enough), after the cards have their new heights.
+    private func reveal(_ proxy: ScrollViewProxy, _ id: String, anchor: UnitPoint?) {
+        DispatchQueue.main.async { withAnimation(.smooth(duration: Motion.standard)) { proxy.scrollTo(id, anchor: anchor) } }
+    }
+
     /// The header, the progress bar, then the cards (or the list being arranged) and Add exercise.
     private func content(_ active: Session, expanded: String?, previous: Session?) -> some View {
         let done = active.exercises.doneCount, planned = active.exercises.plannedCount
         let unit = model.training.settings.unit
         return VStack(alignment: .leading, spacing: 0) {
-            header(active, done: done, planned: planned)
+            header(active, done: done, planned: planned).id(Self.top)
             RankBar(progress: Double(done) / Double(max(1, planned)), color: Palette.accent)
                 .padding(.top, Space.s3)
                 .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
@@ -92,6 +113,8 @@ struct WorkoutView: View {
         .animation(.smooth(duration: Motion.standard), value: expanded)
         .animation(.smooth(duration: Motion.standard), value: arranging)
         .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
+        // A set done (or undone): here, as the PWA's, since the last set's row closes with its card before it could.
+        .sensoryFeedback(trigger: done) { was, now in now > was ? .impact(weight: .medium) : .selection }
     }
 
     private func arrangeList(_ active: Session, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
@@ -181,11 +204,6 @@ struct WorkoutView: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(minHeight: Size.control)
-    }
-
-    /// The home indicator's strip at the bottom of the screen (0 on a phone with a home button), never the keyboard.
-    private var homeIndicator: CGFloat {
-        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
     }
 
     /// The swipe back: from the left edge, the page follows the finger; past a third (or a flick) it slides away and

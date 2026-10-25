@@ -97,7 +97,6 @@ struct SetRow: View {
         .accessibilityLabel(armed ? "Delete \(name)" : done ? "\(name) done" : "Mark \(name) done")
         .accessibilityAddTraits(done ? .isSelected : [])
         .accessibilityAction(named: "Delete set") { delete() } // the swipe, for VoiceOver
-        .sensoryFeedback(trigger: done) { _, now in now ? .impact(weight: .medium) : .selection }
     }
 
     /// A number field on the workout's one keyboard, named for VoiceOver as the PWA's: "Reps, Set 1". Its ring: red

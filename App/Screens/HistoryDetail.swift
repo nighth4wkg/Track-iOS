@@ -53,7 +53,6 @@ struct HistoryDetail: View {
         .onAppear { note = current.notes ?? "" }
         .onChange(of: typing) { _, now in if !now { save(current) } }
         .onDisappear { save(current) }
-        .animation(.smooth(duration: Motion.standard), value: opened)
     }
 
     /// The exercise and its set count; open, a line per set: "1L", "60 kg × 8", "RIR 2".
@@ -61,7 +60,8 @@ struct HistoryDetail: View {
         let open = opened == exercise.id
         let labels = exercise.setLabels
         return VStack(alignment: .leading, spacing: 0) {
-            Button { opened = open ? nil : exercise.id } label: {
+            // Animated here, not over the whole sheet: the sheet's height follows its content.
+            Button { withAnimation(.smooth(duration: Motion.standard)) { opened = open ? nil : exercise.id } } label: {
                 HStack(spacing: Space.s3) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
@@ -95,7 +95,6 @@ struct HistoryDetail: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .raised()
-        .clipped()
     }
 
     private func tile(_ label: String, _ value: String, _ unit: String? = nil) -> some View {

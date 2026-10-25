@@ -65,10 +65,13 @@ final class AppModel {
     /// The open workout fully covers the tabs (not sliding in or pulled aside), so they needn't be drawn under it.
     var workoutCovers = false
     var finished: Finished?
-    /// Pages pushed over the tabs (a split, a lift): the nav pill hides while any is up, as on the PWA's bare pages.
-    var pushed = 0
+    /// Tabs with a page pushed over them (Home's split, Progress's lift): the nav pill hides while the tab on screen has
+    /// one, as on the PWA's bare pages. Set by the binding that pushes the page, so it changes as Back is tapped.
+    var pushed: Set<AppTab> = []
     /// The finished workout open in its detail sheet.
     var history: Session?
+
+    func setPushed(_ tab: AppTab, _ up: Bool) { if up { pushed.insert(tab) } else { pushed.remove(tab) } }
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true

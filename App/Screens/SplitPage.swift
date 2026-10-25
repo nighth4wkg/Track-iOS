@@ -97,9 +97,8 @@ struct SplitPage: View {
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(split.exercises.isEmpty)
                     .padding(.horizontal, Space.s4)
-                    .padding(.bottom, Space.s4)
+                    .floatingBottom()
                     .frame(maxWidth: Measure.page)
-                    .ignoresSafeArea(.container, edges: .bottom)
                     .transition(.opacity)
                 }
             }

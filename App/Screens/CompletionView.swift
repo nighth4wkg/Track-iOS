@@ -56,9 +56,8 @@ struct CompletionView: View {
             .background(Backdrop())
             .overlay(alignment: .bottom) {
                 Button("Continue") { model.finished = nil }.buttonStyle(PrimaryButtonStyle())
-                    .padding(.horizontal, Space.s4).padding(.bottom, Space.s4)
+                    .padding(.horizontal, Space.s4).floatingBottom()
                     .frame(maxWidth: Measure.page)
-                    .ignoresSafeArea(.container, edges: .bottom)
             }
             .sensoryFeedback(.success, trigger: shown) { _, now in now }
             .onAppear { withAnimation(.smooth(duration: Motion.slow)) { shown = true } }

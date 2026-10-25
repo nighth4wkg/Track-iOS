@@ -50,6 +50,7 @@ struct ProgressPage: View {
                 }
             }
             .navigationDestination(item: $lift) { LiftPage(name: $0) }
+            .onChange(of: lift != nil) { _, up in model.setPushed(.progress, up) }
         }
         .sheet(isPresented: $xpHelp) { XpHelp() }
         .sheet(isPresented: $quests) { QuestList().trackOverlays() }

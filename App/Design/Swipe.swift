@@ -45,7 +45,7 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
                 let x = pan.location(in: window).x - pan.translation(in: window).x
                 if x < 24 || x > window.bounds.width - 24 { return false }
                 let start = CGPoint(x: x, y: pan.location(in: window).y - pan.translation(in: window).y)
-                if SwipeZones.frames.values.contains(where: { $0.contains(start) }) { return false }
+                if SwipeZones.held || SwipeZones.frames.values.contains(where: { $0.contains(start) }) { return false }
                 var node = window.hitTest(pan.location(in: window), with: nil)
                 while let view = node {
                     if view is UIControl { return false }
@@ -58,6 +58,12 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
         func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             sharesTouches
         }
+
+        /// The tab swipe waits on a row's swipe under the finger (SwipeToArm) and is dropped when that one takes the drag,
+        /// so swiping a row to its delete doesn't also move to the next tab.
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRequireFailureOf other: UIGestureRecognizer) -> Bool {
+            sharesTouches && (other.delegate as? Coordinator)?.sharesTouches == false
+        }
     }
 }
 
@@ -65,6 +71,8 @@ struct HorizontalPan: UIGestureRecognizerRepresentable {
 /// as they lay out and leave when they go; it isn't observed, so scrolling costs nothing.
 enum SwipeZones {
     nonisolated(unsafe) static var frames: [String: CGRect] = [:]
+    /// A Seg's knob is under the finger: its drag is the knob's, not the tab swipe's.
+    nonisolated(unsafe) static var held = false
 }
 
 /// One row with iOS's own swipe, as Home's workout card: swipe it left for Edit and Delete, round icons that follow

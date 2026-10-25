@@ -64,7 +64,7 @@ struct NavPill: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .frame(maxWidth: Size.navWidth)
         .padding(.horizontal, Space.s4)
-        .padding(.bottom, Space.s4)
+        .floatingBottom()
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Main")
     }

@@ -58,6 +58,9 @@ struct MuscleRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .overlay(alignment: .top) { Palette.hairline.frame(height: 1) }
                 .padding(.horizontal, Space.s4)
+                // Drawn as one layer: a dozen chips each with its own shadow, fading in while the card grows, dropped
+                // frames on the iPhone.
+                .drawingGroup()
                 .transition(.opacity)
             }
         }

@@ -16,6 +16,7 @@ struct MainView: View {
 
     var body: some View {
         @Bindable var model = model
+        let covered = model.pushed.contains(model.tab)
         ZStack {
             ZStack {
                 ForEach(AppTab.allCases.filter(built.contains), id: \.self) { tab in
@@ -24,14 +25,18 @@ struct MainView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                NavPill().ignoresSafeArea(.container, edges: .bottom)
-                    .opacity(model.pushed > 0 ? 0 : 1).allowsHitTesting(model.pushed == 0)
-                    .animation(.smooth(duration: Motion.fast), value: model.pushed > 0)
+                NavPill()
+                    .opacity(covered ? 0 : 1).allowsHitTesting(!covered)
+                    .animation(.smooth(duration: Motion.fast), value: covered)
             }
             .onChange(of: model.tab) { _, tab in built.insert(tab) }
             // A new day redraws the pages from scratch: their dates and "today" are worked out as they draw.
             .id(model.day)
-            .onChange(of: phase) { _, now in if now == .active { model.refreshDay() } }
+            .onChange(of: phase) { _, now in
+                guard now == .active else { return }
+                model.refreshDay()
+                if model.training.active != nil, (model.training.restUntil ?? 0) <= nowMillis() { RestLive.idle() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
             .tint(Palette.accent)
             .opacity(model.workoutOpen && model.workoutCovers ? 0 : 1)
@@ -51,11 +56,12 @@ struct MainView: View {
             try? await Task.sleep(for: .seconds(Motion.screen))
             if !model.workoutOpen, !Task.isCancelled { workoutShown = false }
         }
+        .task(id: model.training.restUntil) { await RestLive.readyWhenOver(model.training.restUntil) }
         .sensoryFeedback(.selection, trigger: model.tab)
         .sheet(isPresented: $settingsOpen) { SettingsView().trackOverlays() }
         .fullScreenCover(item: $model.finished) { CompletionView(finished: $0).trackOverlays() }
         .sheet(item: $model.history) { HistoryDetail(session: $0).trackOverlays() }
-        .trackOverlays(nav: model.pushed == 0 && !model.workoutOpen)
+        .trackOverlays(nav: !covered && !model.workoutOpen)
     }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {

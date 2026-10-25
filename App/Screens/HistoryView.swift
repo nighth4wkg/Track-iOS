@@ -33,6 +33,8 @@ struct HistoryView: View {
             }
         }
         .animation(.smooth(duration: Motion.standard), value: datesOpen)
+        // A day tapped (or the range changed): the list glides to its workouts rather than jumping.
+        .animation(.smooth(duration: Motion.standard), value: from + to)
         .sensoryFeedback(.selection, trigger: from + to)
         .onChange(of: query + from + to) { shown = Self.page }
     }

@@ -310,3 +310,15 @@ struct Brand: View {
         .accessibilityLabel("Track")
     }
 }
+
+extension View {
+    /// A floating bar (the nav pill, the rest timer) Space.s4 above the screen's bottom edge, over the home indicator's
+    /// strip as the PWA's --clear, when laid out inside the safe area. Measured from the window: an overlay's
+    /// ignoresSafeArea left the pill a whole strip higher on the iPhone.
+    func floatingBottom() -> some View { padding(.bottom, Space.s4 - homeIndicator) }
+}
+
+/// The home indicator's strip at the bottom of the screen (0 on a phone with a home button), never the keyboard.
+@MainActor var homeIndicator: CGFloat {
+    UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
+}

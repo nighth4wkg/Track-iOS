@@ -44,7 +44,8 @@ struct Page<Content: View>: View {
                 }
                 .padding(.horizontal, Space.s4)
                 .padding(.top, Space.s4)
-                .padding(.bottom, Size.nav + Space.s4 * 2)
+                // Clear of the nav pill, which floats over the home indicator's strip (floatingBottom).
+                .padding(.bottom, Size.nav + Space.s4 * 2 - homeIndicator)
                 .frame(maxWidth: Measure.page)
                 .frame(maxWidth: .infinity)
                 .offset(x: shift)
@@ -163,7 +164,6 @@ extension ArrangeList where End == EmptyView {
 /// A page pushed over a tab, as the PWA's bare pages: the back button beside its title (and a line under it), one
 /// control at the end, then its cards. The nav pill steps aside while it's up.
 struct SubPage<Content: View, Trailing: View>: View {
-    @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let title: String
     var subtitle: String?
@@ -193,8 +193,6 @@ struct SubPage<Content: View, Trailing: View>: View {
         }
         .background(Backdrop())
         .toolbar(.hidden, for: .navigationBar)
-        .onAppear { model.pushed += 1 }
-        .onDisappear { model.pushed -= 1 }
     }
 }
 
@@ -204,8 +202,10 @@ extension SubPage where Trailing == EmptyView {
     }
 }
 
-/// A row of choices, as the PWA's Seg: a SUNK pill track with a raised knob that slides under the chosen one. Short
-/// shows only each choice's first letter (D W M), still read out in full.
+/// A row of choices, as the PWA's Seg: a SUNK pill track with one raised knob under the chosen one, shared with the
+/// nav pill's behaviour (owner: every pill works the same): a press brings the knob to the finger at once; drag it and
+/// it follows (across rows too, in a wrapped one), the choice under it lit with a tick each; letting go chooses the
+/// nearest. Short shows only each choice's first letter (D W M), still read out in full.
 struct Seg<Value: Hashable>: View {
     let label: String
     let options: [(value: Value, text: String)]
@@ -215,43 +215,87 @@ struct Seg<Value: Hashable>: View {
     var compact = false
     /// Wrapped into rows of this many, as the PWA's .seg.wrap (the picker's muscles).
     var columns: Int?
-    @Namespace private var knob
+    /// Each choice's place in the track.
+    @State private var cells: [Int: CGRect] = [:]
+    /// The choice under the finger while it's down.
+    @State private var near: Int?
+    /// The knob's place while dragged; nil sits it on its choice.
+    @State private var dragAt: CGPoint?
+    /// Decided by the first move: sideways is the knob's drag, up or down a scroll (nil: not moved yet).
+    @State private var sideways: Bool?
+    private static var space: String { "seg" }
 
     var body: some View {
+        let chosen = options.firstIndex { $0.value == value }
+        let shown = near ?? chosen
         Group {
             if let columns {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s1), count: columns), spacing: Space.s1) { buttons }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s1), count: columns), spacing: Space.s1) { choices(shown) }
             } else {
-                HStack(spacing: Space.s1) { buttons }
+                HStack(spacing: Space.s1) { choices(shown) }
             }
         }
+        .background(alignment: .topLeading) {
+            if let shown, let cell = cells[shown] {
+                Color.clear.raised(.control, .pill)
+                    .frame(width: cell.width, height: cell.height)
+                    .offset(x: (dragAt ?? cell.origin).x, y: (dragAt ?? cell.origin).y)
+                    .animation(dragAt == nil ? .smooth(duration: Motion.fast) : nil, value: dragAt ?? cell.origin)
+            }
+        }
+        .coordinateSpace(.named(Self.space))
+        .simultaneousGesture(DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.space))
+            .onChanged(follow)
+            .onEnded { _ in
+                SwipeZones.held = false
+                if sideways != false, let near { value = options[near].value }
+                withAnimation(.smooth(duration: Motion.fast)) { near = nil; dragAt = nil }
+                sideways = nil
+            })
         .padding(Space.s1)
         .sunk(columns == nil ? .pill : .card)
         .fixedSize(horizontal: short || compact, vertical: false)
-        .animation(.smooth(duration: Motion.fast), value: value)
-        .sensoryFeedback(.selection, trigger: value)
+        .sensoryFeedback(.selection, trigger: shown)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
 
-    @ViewBuilder private var buttons: some View {
-        ForEach(options, id: \.value) { option in
-            let on = option.value == value
-            Button { value = option.value } label: {
-                Text(short ? String(option.text.prefix(1)) : option.text)
-                    .type(.t14).fontWeight(.semibold).lineLimit(1)
-                    .foregroundStyle(on ? Palette.text : Palette.muted)
-                    .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
-                    .frame(minWidth: short || compact ? Size.cell : nil)
-                    .background {
-                        if on { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: "knob", in: knob) }
-                    }
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(option.text)
-            .accessibilityAddTraits(on ? .isSelected : [])
+    private func choices(_ shown: Int?) -> some View {
+        ForEach(Array(options.enumerated()), id: \.element.value) { index, option in
+            Text(short ? String(option.text.prefix(1)) : option.text)
+                .type(.t14).fontWeight(.semibold).lineLimit(1)
+                .foregroundStyle(index == shown ? Palette.text : Palette.muted)
+                .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
+                .frame(minWidth: short || compact ? Size.cell : nil)
+                .contentShape(Rectangle())
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { cells[index] = $0 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(option.text)
+                .accessibilityAddTraits(option.value == value ? [.isButton, .isSelected] : .isButton)
+                .accessibilityAction { value = option.value }
         }
+    }
+
+    /// The finger down or moving: the nearest choice lights up; once it has gone sideways the knob rides under it,
+    /// kept within the track. Up or down first is a scroll: the knob goes back.
+    private func follow(_ drag: DragGesture.Value) {
+        guard sideways != false, !cells.isEmpty, let first = cells.values.first else { return }
+        SwipeZones.held = true
+        if sideways == nil, hypot(drag.translation.width, drag.translation.height) >= Space.s2 {
+            sideways = abs(drag.translation.width) > abs(drag.translation.height)
+            if sideways == false {
+                SwipeZones.held = false
+                withAnimation(.smooth(duration: Motion.fast)) { near = nil; dragAt = nil }
+                return
+            }
+        }
+        let size = first.size
+        let xs = cells.values.map(\.minX), ys = cells.values.map(\.minY)
+        let x = min(max(drag.location.x - size.width / 2, xs.min()!), xs.max()!)
+        let y = min(max(drag.location.y - size.height / 2, ys.min()!), ys.max()!)
+        let index = cells.min { hypot($0.value.minX - x, $0.value.minY - y) < hypot($1.value.minX - x, $1.value.minY - y) }!.key
+        if near != index { near = index }
+        if sideways == true { dragAt = CGPoint(x: x, y: y) }
     }
 }
 
