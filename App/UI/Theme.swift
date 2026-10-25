@@ -49,11 +49,6 @@ enum Surface {
     var edge: Double { self == .green ? 0.4 : 0.08 }
 }
 
-/// 16 page edge, card padding, title to content; 8 label to content; 12 between cards; 24 between sections; 4 tight.
-enum Space {
-    static let s1: CGFloat = 4, s2: CGFloat = 8, s3: CGFloat = 12, s4: CGFloat = 16, s6: CGFloat = 24
-}
-
 enum Size {
     /// Every tap target: round buttons, fields, done keys, set rows.
     static let control: CGFloat = 44
@@ -347,6 +342,16 @@ extension View {
     /// home indicator's strip as iOS's own floating bars sit (owner: not lifted above it as on Android). For a view laid
     /// out inside the bottom safe area.
     func floatingBottom(_ above: CGFloat = 0) -> some View { padding(.bottom, Space.s4 + above - homeIndicator) }
+
+    /// Marks this as the bar floating at the bottom of a covering screen (the rest timer, a page's docked button), so
+    /// the pill sits above it as the PWA's does over .nav and .dock.
+    func floatingBar(_ height: CGFloat) -> some View { preference(key: FloatingBar.self, value: height) }
+}
+
+/// The tallest bar floating at the bottom of what shows (see floatingBar); 0 when none.
+struct FloatingBar: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 /// The status bar's height, where content scrolling up fades out (see Shell).

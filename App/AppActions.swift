@@ -5,10 +5,8 @@ import TrackCore
 extension AppModel {
     func startRest() { update { $0.restUntil = nowMillis() + $0.settings.restSeconds * 1000 } }
 
-    /// Adds to the rest, or ends it with 0: the capsule's +30s and Skip, and the Live Activity's.
-    func changeRest(by seconds: Int) {
-        update { $0.restUntil = seconds == 0 ? nil : max(nowMillis(), $0.restUntil ?? 0) + seconds * 1000 }
-    }
+    /// Ends the rest: Skip, in Track and on the Live Activity.
+    func skipRest() { update { $0.restUntil = nil } }
 
     /// The rest's −15s and +15s, as the PWA's: from now if none is running; one pushed into the past ends.
     func shiftRest(by seconds: Int) {

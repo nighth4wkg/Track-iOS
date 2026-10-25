@@ -97,6 +97,7 @@ struct SplitScreen: View {
                     .padding(.horizontal, Space.s4)
                     .frame(maxWidth: Size.column)
                     .floatingBottom()
+                    .floatingBar(Size.primary)
                 }
             }
             .sensoryFeedback(.selection, trigger: split.exercises.map(\.id))

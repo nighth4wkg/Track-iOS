@@ -10,6 +10,8 @@ struct Shell: View {
     @Environment(\.scenePhase) private var phase
     /// The keyboard is up: the nav pill steps aside rather than riding up on it.
     @State private var keyboard = false
+    /// The bar floating at the bottom of the covering screen (rest timer, docked button): the pill sits above it.
+    @State private var bar: CGFloat = 0
 
     var body: some View {
         let covered = !model.pages.isEmpty || model.workoutOpen || model.finished != nil
@@ -29,6 +31,7 @@ struct Shell: View {
                     .opacity(shown ? 1 : 0)
                     .allowsHitTesting(shown)
                     .accessibilityHidden(!shown)
+                    .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
                     .edgeBack(shown) { model.back() }
             }
             if model.workoutOpen, model.training.active != nil { WorkoutScreen() }
@@ -39,8 +42,9 @@ struct Shell: View {
             }
             SheetLayer()
             AskLayer()
-            ToastLayer(above: covered ? 0 : Size.nav + Space.s3)
+            ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3)
         }
+        .onPreferenceChange(FloatingBar.self) { bar = $0 }
         .background(Backdrop())
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }

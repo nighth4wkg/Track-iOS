@@ -188,7 +188,8 @@ struct AskLayer: View {
 }
 
 /// The pill at the bottom (model.toast): a tick when something worked, Undo when there's something to bring back.
-/// Gone after a few seconds, on ✕, or on a swipe down. It sits `above` the floating bar under it (the nav pill); while
+/// Gone after a few seconds, on ✕, or on a swipe down. It sits `above` the floating bar under it (the nav pill, the rest
+/// timer, a docked button); while
 /// typing, or while a sheet is open, it moves to the top, off the fields and the sheet's buttons.
 struct ToastLayer: View {
     @Environment(AppModel.self) private var model

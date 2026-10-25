@@ -52,6 +52,7 @@ struct CompleteScreen: View {
                     .padding(.horizontal, Space.s4)
                     .frame(maxWidth: Size.column)
                     .floatingBottom()
+                    .floatingBar(Size.primary)
             }
             .sensoryFeedback(.success, trigger: finished.id)
         } else {

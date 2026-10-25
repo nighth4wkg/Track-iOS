@@ -101,12 +101,13 @@ final class AppModel {
     @ObservationIgnored private var memo: [String: (stamp: AnyHashable, value: Any)] = [:]
     @ObservationIgnored private var memoSessions: [Session] = []
     private static let modeKey = "track.storageMode"
-    /// -dryRun (PerfDrive's -perfWork on a phone with real data): changes stay in memory, nothing is saved and no rest
-    /// alert is set, and the drive puts the data back as it found it.
+    /// -dryRun (PerfDrive's -perfWork on a phone with real data): changes stay in memory and nothing is saved; the rest
+    /// alert and Live Activity still run (they hold no data, so they can be checked), and the drive puts the data back
+    /// as it found it.
     static let dryRun = ProcessInfo.processInfo.arguments.contains("-dryRun")
 
     /// The dry run is over: the data as it was before it began.
-    func dryRunEnd(_ before: Training) { if Self.dryRun { training = before; workoutOpen = false } }
+    func dryRunEnd(_ before: Training) { if Self.dryRun { syncRest(training, before); training = before; workoutOpen = false } }
 
     init(file: TrainingFile? = try? TrainingFile.standard()) {
         self.file = file
@@ -133,19 +134,23 @@ final class AppModel {
     }
 
     /// Changes the training data and saves it on this device. A change that throws is shown and not applied.
+    /// The rest's alert and Live Activity follow the data when its rest or workout changes.
+    private func syncRest(_ old: Training, _ next: Training) {
+        guard next.restUntil != old.restUntil || (next.active == nil) != (old.active == nil) else { return }
+        if let until = next.restUntil, until > nowMillis() {
+            RestAlert.schedule(at: until)
+            RestLive.show(until: until, seconds: max(1, (until - nowMillis()) / 1000), workout: next.active?.name ?? "Track")
+        } else {
+            RestAlert.cancel()
+            if next.active != nil { RestLive.idle() } else { RestLive.end() }
+        }
+    }
+
     func update(_ change: (inout Training) throws -> Void) {
         var next = training
         do { try change(&next) } catch { problem(error.localizedDescription); return }
         next.editedAt = nowMillis()
-        if !Self.dryRun, next.restUntil != training.restUntil || (next.active == nil) != (training.active == nil) {
-            if let until = next.restUntil, until > nowMillis() {
-                RestAlert.schedule(at: until)
-                RestLive.show(until: until, seconds: max(1, (until - nowMillis()) / 1000), workout: next.active?.name ?? "Track")
-            } else {
-                RestAlert.cancel()
-                if next.active != nil { RestLive.idle() } else { RestLive.end() }
-            }
-        }
+        syncRest(training, next)
         training = next
         guard canSave, !Self.dryRun, let file else { return }
         saver.async { [weak self] in

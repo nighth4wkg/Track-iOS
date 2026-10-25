@@ -11,53 +11,63 @@ struct TrackWidgets: WidgetBundle {
 /// both driven by the system from the end time, so they stay smooth with Track closed.
 struct RestLiveActivity: Widget {
     private static let mint = Color(hex: Hex.mint)
+    /// The Lock Screen's see-through night behind it.
+    private static let backdrop = 0.85
+    /// Rings (size, line): on the Lock Screen a tap target's size, in the open island smaller, in its pill smallest.
+    private static let rings = (lock: (size: 44.0, line: 5.0), island: (size: 36.0, line: 4.0), compact: (size: 20.0, line: 3.0))
+    /// The open island's time, its inset from the island's curve, and the pill's room for the time.
+    private static let island = (time: 34.0, inset: 6.0, compactTime: 44.0)
+    /// A button's least height: the system's small capsule.
+    private static let button = 28.0
     /// A tap opens the workout itself, not Home (TrackApp's onOpenURL).
     private static let workout = URL(string: "track://workout")
 
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestAttributes.self) { context in
-            HStack(spacing: 14) {
-                ring(context, size: 44, line: 5)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(Self.resting(context) ? "Rest · \(context.attributes.workout)" : context.attributes.workout)
-                        .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-                    countdown(context).font(.title.weight(.bold))
+            // The buttons get their own row, as in the open island: beside them the time had no room.
+            VStack(spacing: Space.s3) {
+                HStack(spacing: Space.s3) {
+                    ring(context, size: Self.rings.lock.size, line: Self.rings.lock.line)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(Self.resting(context) ? "Rest · \(context.attributes.workout)" : context.attributes.workout)
+                            .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        countdown(context).font(.title.weight(.bold))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .layoutPriority(1)
-                Spacer(minLength: 4)
                 if context.state.resting { controls(stale: context.isStale) }
             }
-            .padding(16)
-            .activityBackgroundTint(Color(hex: Hex.night, opacity: 0.85))
+            .padding(Space.s4)
+            .activityBackgroundTint(Color(hex: Hex.night, opacity: Self.backdrop))
             .activitySystemActionForegroundColor(.white)
             .widgetURL(Self.workout)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 10) {
-                        ring(context, size: 36, line: 4)
+                    HStack(spacing: Space.s3) {
+                        ring(context, size: Self.rings.island.size, line: Self.rings.island.line)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(Self.resting(context) ? "Rest" : "Ready").font(.headline)
-                            Text(context.attributes.workout).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            Text(context.attributes.workout).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    .padding(.leading, 6)
+                    .padding(.leading, Self.island.inset)
                     .frame(maxHeight: .infinity)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    countdown(context).font(.system(size: 34, weight: .bold)).multilineTextAlignment(.trailing)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(.trailing, 6)
+                    countdown(context).font(.system(size: Self.island.time, weight: .bold)).multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(.trailing, Self.island.inset)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if context.state.resting { controls(stale: context.isStale, wide: true).padding(.horizontal, 6).padding(.top, 6) }
+                    if context.state.resting { controls(stale: context.isStale).padding(.horizontal, Self.island.inset).padding(.top, Self.island.inset) }
                 }
             } compactLeading: {
-                ring(context, size: 20, line: 3)
+                ring(context, size: Self.rings.compact.size, line: Self.rings.compact.line)
             } compactTrailing: {
                 countdown(context).font(.subheadline.weight(.semibold)).foregroundStyle(Self.mint)
-                    .multilineTextAlignment(.trailing).frame(maxWidth: 44)
+                    .multilineTextAlignment(.trailing).frame(maxWidth: Self.island.compactTime)
             } minimal: {
-                ring(context, size: 20, line: 3)
+                ring(context, size: Self.rings.compact.size, line: Self.rings.compact.line)
             }
             .keylineTint(Self.mint)
             .widgetURL(Self.workout)
@@ -83,19 +93,22 @@ struct RestLiveActivity: Widget {
         }
     }
 
-    /// +30s while it runs, then Skip (Done once it's over): they change the rest in Track. In the Dynamic Island they
-    /// share its width.
-    private func controls(stale: Bool, wide: Bool = false) -> some View {
-        HStack(spacing: 8) {
-            if !stale { Button(intent: RestIntent(seconds: 30)) { label("+30s", wide) } }
-            Button(intent: RestIntent(seconds: 0)) { label(stale ? "Done" : "Skip", wide) }
+    /// −15s and +15s while it runs (the app's rest buttons), then Skip (Done once it's over): they change the rest in
+    /// Track. They share the row's width.
+    private func controls(stale: Bool) -> some View {
+        HStack(spacing: Space.s2) {
+            if !stale {
+                Button(intent: RestIntent(seconds: -15)) { label("−15s") }
+                Button(intent: RestIntent(seconds: 15)) { label("+15s") }
+            }
+            Button(intent: RestIntent(seconds: 0)) { label(stale ? "Done" : "Skip") }
         }
         .font(.subheadline.weight(.semibold))
         .buttonStyle(.bordered).buttonBorderShape(.capsule).tint(Self.mint)
     }
 
-    private func label(_ text: String, _ wide: Bool) -> some View {
-        Text(text).lineLimit(1).fixedSize().frame(maxWidth: wide ? .infinity : nil, minHeight: 28)
+    private func label(_ text: String) -> some View {
+        Text(text).lineLimit(1).fixedSize().frame(maxWidth: .infinity, minHeight: Self.button)
     }
 
     /// A ring that empties as the rest runs out.

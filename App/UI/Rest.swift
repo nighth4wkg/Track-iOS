@@ -47,7 +47,7 @@ struct RestTimer: View {
             Spacer(minLength: 0)
             shift("−15s", "15 seconds less") { model.shiftRest(by: -15) }
             shift("+15s", "15 seconds more") { model.shiftRest(by: 15) }
-            Button("Skip") { model.changeRest(by: 0) }.buttonStyle(PrimaryStyle(compact: true))
+            Button("Skip") { model.skipRest() }.buttonStyle(PrimaryStyle(compact: true))
         }
         .padding(.horizontal, Space.s2)
         .frame(height: Size.nav)
@@ -56,6 +56,7 @@ struct RestTimer: View {
         .padding(.horizontal, Space.s4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Rest timer")
+        .floatingBar(Size.nav)
     }
 
     /// The ring running down beside the time left.
