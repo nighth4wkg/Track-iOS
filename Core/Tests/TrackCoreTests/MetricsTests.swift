@@ -45,6 +45,14 @@ final class MetricsTests: XCTestCase {
         XCTAssertEqual(sessions.volumeChange(per: .month, at: at(2026, 9, 30), calendar: calendar).volume, 9300)
     }
 
+    func testMonthBarsStayInsideTheirMonth() {
+        // September has 30 days: its "29" span is 29-30 only, so 2 October counts for October, not as last month.
+        let sessions = [workout(at(2026, 9, 29)), workout(at(2026, 10, 2))]
+        let bars = sessions.bars(of: .workouts, per: .month, at: at(2026, 10, 25), calendar: calendar)
+        XCTAssertEqual(bars.map(\.now), [1, 0, 0, 0, 0])
+        XCTAssertEqual(bars.map(\.last), [0, 0, 0, 0, 1])
+    }
+
     func testBarsAndTalliesFollowThePwa() {
         let sessions = [workout(at(2026, 9, 22), kg: 100), workout(at(2026, 9, 29), sets: 2), workout(at(2026, 9, 30))]
         let week = sessions.bars(of: .sets, per: .week, at: at(2026, 9, 30), calendar: calendar)

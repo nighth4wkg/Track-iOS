@@ -113,8 +113,11 @@ extension Array where Element == Session {
         if period == .month {
             let first = periodStart(time, .month, calendar: calendar)
             let last = millis(calendar.date(byAdding: .month, value: -1, to: date(first))!)
+            let next = millis(calendar.date(byAdding: .month, value: 1, to: date(first))!)
+            // Each month's spans end with it: last month's 29th on would otherwise count this month's first days.
             for week in 0..<5 {
-                spans.append(("\(week * 7 + 1)", day(first, week * 7), day(first, week * 7 + 7), day(last, week * 7), day(last, week * 7 + 7)))
+                spans.append(("\(week * 7 + 1)", day(first, week * 7), Swift.min(day(first, week * 7 + 7), next),
+                              day(last, week * 7), Swift.min(day(last, week * 7 + 7), first)))
             }
         } else {
             let start = period == .week ? weekStart(time, calendar: calendar) : day(periodStart(time, .day, calendar: calendar), -6)
