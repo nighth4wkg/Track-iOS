@@ -12,20 +12,18 @@ struct NavPill: View {
     @State private var near: Int?
     /// The knob's place while dragged; nil sits it on its tab.
     @State private var dragX: CGFloat?
-    /// Off when it's placed by the one hosting it (HitProbe's -pillHost).
-    var floats = true
 
     private static let tabs: [(tab: AppTab, label: String, icon: String)] = [
         (.home, "Home", "house"), (.history, "History", "calendar"), (.progress, "Progress", "chart.bar"), (.rank, "Rank", "rosette"),
     ]
 
+    /// Worked out from the measured width each time it's read, never kept by the gesture: over iOS's tabs the gesture
+    /// kept the closures from the first layout (width 0, every touch ignored) until a tab change redrew the pill.
+    private var cell: CGFloat { max(0, (width - Space.s1 * CGFloat(Self.tabs.count + 1)) / CGFloat(Self.tabs.count)) }
+    private func spot(_ index: Int) -> CGFloat { Space.s1 + CGFloat(index) * (cell + Space.s1) }
+
     var body: some View {
         let chosen = Self.tabs.firstIndex { $0.tab == model.tab } ?? 0
-        let cell = max(0, (width - Space.s1 * CGFloat(Self.tabs.count + 1)) / CGFloat(Self.tabs.count))
-        let spot = { (index: Int) in Space.s1 + CGFloat(index) * (cell + Space.s1) }
-        // The knob's place under the finger, kept on the pill, and the tab nearest it.
-        let place = { (drag: DragGesture.Value) in min(max(drag.location.x - cell / 2, spot(0)), spot(Self.tabs.count - 1)) }
-        let nearest = { (x: CGFloat) in Int(((x - Space.s1) / (cell + Space.s1)).rounded()) }
         HStack(spacing: Space.s1) {
             ForEach(Array(Self.tabs.enumerated()), id: \.element.tab) { index, item in
                 let on = index == (near ?? chosen)
@@ -55,26 +53,22 @@ struct NavPill: View {
         .contentShape(Capsule())
         .gesture(DragGesture(minimumDistance: 0)
             .onChanged { drag in
-                if near == nil { HitProbe.note("pill change \(Int(drag.location.x)) cell \(Int(cell))") }
                 guard cell > 0 else { return }
                 // Sideways past a small step claims it as a drag; until then it's a press on the tab below.
-                let x = place(drag)
+                let x = min(max(drag.location.x - cell / 2, spot(0)), spot(Self.tabs.count - 1))
                 if dragX != nil || abs(drag.translation.width) >= Space.s2 { dragX = x }
-                let index = nearest(x)
+                let index = Int(((x - Space.s1) / (cell + Space.s1)).rounded())
                 if near != index { near = index }
             }
-            .onEnded { drag in
-                HitProbe.note("pill end near \(String(describing: near))")
-                // A press held back until the finger lifts (a row's swipe below waiting to see if it moves, as on Home at
-                // launch) ends without a change: the tab under the finger still counts.
-                if cell > 0 { model.tab = Self.tabs[near ?? nearest(place(drag))].tab }
+            .onEnded { _ in
+                if let near { model.tab = Self.tabs[near].tab }
                 withAnimation(.smooth(duration: Motion.fast)) { dragX = nil; near = nil }
             })
         .sensoryFeedback(.selection, trigger: near) { old, now in old != nil && now != nil }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .frame(maxWidth: Size.navWidth)
         .padding(.horizontal, Space.s4)
-        .padding(.bottom, floats ? Space.s4 - homeIndicator : 0)
+        .floatingBottom()
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Main")
     }

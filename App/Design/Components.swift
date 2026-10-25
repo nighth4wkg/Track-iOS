@@ -249,9 +249,7 @@ struct Seg<Value: Hashable>: View {
         .coordinateSpace(.named(Self.space))
         .simultaneousGesture(DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.space))
             .onChanged(follow)
-            .onEnded { drag in
-                // A press held back until the finger lifts ends without a change: the choice under it still counts.
-                if near == nil, sideways == nil { follow(drag) }
+            .onEnded { _ in
                 SwipeZones.held = false
                 if sideways != false, let near { value = options[near].value }
                 withAnimation(.smooth(duration: Motion.fast)) { near = nil; dragAt = nil }
