@@ -211,8 +211,8 @@ struct Raised: ViewModifier {
             // The shadow on the bare shape, before the edge goes on: cast by the fill and its edge together, it was
             // worked out offscreen on every frame a card moved.
             shape.fill(LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom))
-                .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
-                .overlay(edge)
+                .shadow(color: .black.opacity(Probe.noShadow ? 0 : 0.45), radius: Probe.noShadow ? 0 : 4, y: Probe.noShadow ? 0 : 3)
+                .overlay(edge.opacity(Probe.noEdge ? 0 : 1))
         }
     }
 }
