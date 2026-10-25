@@ -45,7 +45,7 @@ struct ExercisePicker: View {
     @State private var groups = Groups()
     var replacing: String? = nil
     let onPick: (String) -> Void
-    private static let page = 30
+    private static let page = Probe.has("-pickRows10") ? 10 : 30
 
     var body: some View {
         let usage = model.derived("usage") { sessions in
@@ -110,8 +110,8 @@ struct ExercisePicker: View {
                 Image(systemName: isAdded ? "checkmark" : "plus").font(.system(size: IconSize.medium, weight: .bold))
                     .foregroundStyle(isAdded ? Palette.primaryText : Palette.text)
                     .frame(width: Size.control, height: Size.control)
-                    .raised(isAdded ? .green : .control, .inner)
-                    .contentTransition(.symbolEffect(.replace))
+                    .modifier(ProbeRaised(on: !Probe.has("-pickFlat"), surface: isAdded ? .green : .control))
+                    .modifier(ProbeSymbol(on: !Probe.has("-pickNoSymbol")))
             }
             .buttonStyle(PressStyle())
             .accessibilityLabel("\(replacing == nil ? "Add" : "Use") \(name)")
@@ -138,4 +138,16 @@ private final class Groups {
         map[name] = found
         return found
     }
+}
+
+// Temporary: picker ablation switches.
+private struct ProbeRaised: ViewModifier {
+    let on: Bool; let surface: Surface
+    func body(content: Content) -> some View {
+        if on { content.raised(surface, .inner) } else { content.background(Palette.input, in: Corner.inner.shape) }
+    }
+}
+private struct ProbeSymbol: ViewModifier {
+    let on: Bool
+    func body(content: Content) -> some View { if on { content.contentTransition(.symbolEffect(.replace)) } else { content } }
 }

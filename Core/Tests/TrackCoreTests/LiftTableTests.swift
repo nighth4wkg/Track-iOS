@@ -74,4 +74,14 @@ final class LiftTableTests: XCTestCase {
         training.settings.lifts = Dictionary(uniqueKeysWithValues: (0...Limits.liftChoices).map { ("lift \($0)", "Legs") })
         XCTAssertFalse(training.isValid)
     }
+
+    func testDetectionsAreTheSameFromManyThreadsAtOnce() {
+        let names = ["Bench Press", "Incline Dumbbell Press", "Lat Pulldown", "Back Squat", "Plank", "Something New"]
+        let expected = names.map { "\(LiftTable.detect($0))" }
+        DispatchQueue.concurrentPerform(iterations: 64) { index in
+            let name = names[index % names.count]
+            XCTAssertEqual("\(LiftTable.detect(name))", expected[index % names.count])
+            XCTAssertEqual(LiftTable.nameKey(name), LiftTable.nameKey(name))
+        }
+    }
 }

@@ -94,7 +94,13 @@ public enum LiftTable {
 
     /// A name as stored and compared: accents and punctuation gone, lower case, words split from other scripts. The key
     /// the user's choices are saved under, so it must stay stable (and equal the website's).
-    public static func nameKey(_ name: String) -> String {
+    public static func nameKey(_ name: String) -> String { nameKeys.value(name) { makeNameKey(name) } }
+
+    // Each name's keys and detection, worked out once: they're regex work, and the picker, the workout's cards and
+    // the ranks ask for the same names over and over (the picker's 1,000-odd names took ~95 ms on an iPhone 16).
+    private static let nameKeys = Memo<String>(), matchKeys = Memo<String>(), detections = Memo<Detection>()
+
+    private static func makeNameKey(_ name: String) -> String {
         var text = name.decomposedStringWithCompatibilityMapping.lowercased()
         text = replace(marks, in: text, with: "")
         text = replace(quotes, in: text, with: "")
@@ -105,14 +111,21 @@ public enum LiftTable {
     }
 
     /// The key with other languages' phrases and shorthand swapped for the standard words the lifts match.
-    static func matchKey(_ name: String) -> String {
+    static func matchKey(_ name: String) -> String { matchKeys.value(name) { makeMatchKey(name) } }
+
+    private static func makeMatchKey(_ name: String) -> String {
         var text = " \(nameKey(name)) "
         for (from, to) in phrases { text = text.replacingOccurrences(of: from, with: " \(to) ", options: .literal) }
         return text.split(separator: " ").map { words[String($0)] ?? String($0) }.joined(separator: " ")
     }
 
     /// What the name itself says, ignoring any choice.
-    public static func detect(_ name: String) -> Detection {
+    public static func detect(_ name: String) -> Detection { detections.value(name) { makeDetection(name) } }
+
+    /// Works out these names' detections ahead (off the main thread), so the first screen to ask doesn't wait.
+    public static func warm(_ names: [String]) { for name in names { _ = detect(name) } }
+
+    private static func makeDetection(_ name: String) -> Detection {
         let key = matchKey(name)
         if matches(ignore, key) { return .ignore }
         let dumbbell = matches(gear["dumbbell"], key)
@@ -152,5 +165,18 @@ public enum LiftTable {
         let paired = lift.pair.flatMap { pair in !oneSided && matches(gear["pair"], key) ? 2 * pair : nil }
         let scale = (shared ? 0.5 : paired ?? 1) * (machine && lift.bodyweight == nil ? machineLoad : 1)
         return (oneSided, sign, scale)
+    }
+}
+
+/// Values by name, each made once; safe from any thread.
+final class Memo<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Value] = [:]
+
+    func value(_ key: String, _ make: () -> Value) -> Value {
+        if let known = lock.withLock({ values[key] }) { return known }
+        let made = make()
+        lock.withLock { values[key] = made }
+        return made
     }
 }
