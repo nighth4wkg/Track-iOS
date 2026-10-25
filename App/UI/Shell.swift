@@ -160,8 +160,8 @@ struct NavPill: View {
 /// iOS's own pages rather than running into the status bar's text.
 private struct StatusFade: View {
     var body: some View {
-        let height = statusBar + Space.s4
-        LinearGradient(stops: [.init(color: Palette.background, location: statusBar / max(1, height)),
+        let height = statusBarHeight + Space.s4
+        LinearGradient(stops: [.init(color: Palette.background, location: statusBarHeight / max(1, height)),
                                .init(color: Palette.background.opacity(0), location: 1)], startPoint: .top, endPoint: .bottom)
             .frame(height: height)
             .frame(maxHeight: .infinity, alignment: .top)

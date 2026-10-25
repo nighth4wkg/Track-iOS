@@ -342,7 +342,7 @@ extension View {
 }
 
 /// The status bar's height, where content scrolling up fades out (see Shell).
-@MainActor var statusBar: CGFloat {
+@MainActor var statusBarHeight: CGFloat {
     UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.top ?? 0
 }
 
