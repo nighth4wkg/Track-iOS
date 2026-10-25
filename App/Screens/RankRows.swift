@@ -7,7 +7,8 @@ struct MuscleRow: View {
     let rank: MuscleRank
     let unit: TrackCore.Settings.Unit
     let names: [CountedName]
-    @State private var open = false
+    /// The one muscle open, as the PWA: opening another closes this.
+    @Binding var opened: Muscle?
 
     /// What to log to rank a muscle that has nothing yet.
     private static let hints: [Muscle: String] = [
@@ -15,11 +16,14 @@ struct MuscleRow: View {
         .arms: "Log a curl or pushdown", .legs: "Log a squat or leg press",
     ]
 
+    private var open: Bool { opened == rank.muscle }
+    private func toggle() { withAnimation(.smooth(duration: Motion.standard)) { opened = open ? nil : rank.muscle } }
+
     var body: some View {
         let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
         let opens = rank.best != nil || !names.isEmpty
         VStack(alignment: .leading, spacing: 0) {
-            Button { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } label: {
+            Button(action: toggle) {
                 VStack(alignment: .leading, spacing: Space.s2) {
                     HStack(spacing: Space.s2) {
                         Text(rank.muscle.rawValue).type(.t16).foregroundStyle(Palette.text).lineLimit(1)
@@ -67,7 +71,7 @@ struct MuscleRow: View {
         // Its inside clipped to the card (the PWA's overflow: hidden): a closing card's fading inside stays in it.
         .clipShape(Corner.card.shape)
         .raised()
-        .perfHook("rank.row") { muscle in if muscle == rank.muscle.rawValue { withAnimation(.smooth(duration: Motion.standard)) { open.toggle() } } }
+        .perfHook("rank.row") { muscle in if muscle == rank.muscle.rawValue { toggle() } }
     }
 
     private func stat(_ label: String, _ color: Color, _ value: String, _ detail: String) -> some View {

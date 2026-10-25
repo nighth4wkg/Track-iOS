@@ -11,6 +11,7 @@ extension Palette {
 struct RankPage: View {
     @Environment(AppModel.self) private var model
     @State private var editing = false
+    @State private var opened: Muscle?
 
     var body: some View {
         let training = model.training
@@ -31,7 +32,7 @@ struct RankPage: View {
                     Text("Muscles").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6)
                     VStack(spacing: Space.s3) {
                         ForEach(ranks, id: \.muscle) { rank in
-                            MuscleRow(rank: rank, unit: unit, names: counted.filter { $0.groups.contains(rank.muscle.rawValue) })
+                            MuscleRow(rank: rank, unit: unit, names: counted.filter { $0.groups.contains(rank.muscle.rawValue) }, opened: $opened)
                         }
                         // Apart only when it needs you: names Track doesn't know, and ones you chose not to count.
                         let uncounted = counted.filter { $0.groups.isEmpty && (!$0.known || $0.chosen) }
