@@ -97,6 +97,8 @@ struct ExerciseCard: View, Equatable {
                 .padding(.top, Space.s4)
         }
         .padding(Space.s4)
+        // Its inside clipped to the card: a removed set fading out stays in the shrinking card.
+        .clipShape(Corner.card.shape)
         .raised()
         .animation(.smooth(duration: Motion.quick), value: exercise.sets.map(\.id))
     }
