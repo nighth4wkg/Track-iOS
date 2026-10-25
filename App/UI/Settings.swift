@@ -107,12 +107,8 @@ struct SettingsScreen: View {
                 Text("\(count(days, "day")) a week").type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button { model.update { $0.settings.weeklyGoal -= 1 } } label: {
-                Text("−").type(.t20).foregroundStyle(Palette.text).frame(width: Size.control, height: Size.control).raised(.control, .pill)
-            }
-            .buttonStyle(CardStyle())
-            .disabled(days <= Limits.weeklyGoal.lowerBound)
-            .accessibilityLabel("One day fewer")
+            RoundButton(icon: .minus, label: "One day fewer", size: IconSize.medium) { model.update { $0.settings.weeklyGoal -= 1 } }
+                .disabled(days <= Limits.weeklyGoal.lowerBound)
             RoundButton(icon: .plus, label: "One day more", size: IconSize.medium) { model.update { $0.settings.weeklyGoal += 1 } }
                 .disabled(days >= Limits.weeklyGoal.upperBound)
         }

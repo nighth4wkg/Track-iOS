@@ -327,7 +327,7 @@ enum Icon: String {
          next = "chevron.right", down = "chevron.down", up = "chevron.up", arrange = "arrow.up.arrow.down",
          grip = "line.3.horizontal", plus = "plus", check = "checkmark", close = "xmark", alert = "exclamationmark.circle",
          play = "play.fill", search = "magnifyingglass", filter = "line.3.horizontal.decrease", more = "ellipsis",
-         trash = "trash", settings = "gearshape", eye = "eye"
+         trash = "trash", settings = "gearshape", eye = "eye", minus = "minus"
 
     func image(_ size: CGFloat = IconSize.regular, bold: Bool = false) -> some View {
         Image(systemName: rawValue).font(.system(size: size, weight: bold ? .bold : .semibold))
@@ -339,6 +339,11 @@ extension View {
     /// home indicator's strip as iOS's own floating bars sit (owner: not lifted above it as on Android). For a view laid
     /// out inside the bottom safe area.
     func floatingBottom(_ above: CGFloat = 0) -> some View { padding(.bottom, Space.s4 + above - homeIndicator) }
+}
+
+/// The status bar's height, where content scrolling up fades out (see Shell).
+@MainActor var statusBar: CGFloat {
+    UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.top ?? 0
 }
 
 /// The home indicator's strip (0 on a phone with a home button), never the keyboard.

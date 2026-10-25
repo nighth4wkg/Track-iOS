@@ -21,6 +21,9 @@ struct SheetLayer: View {
                     SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
                         .environment(\.closeSheet, { close(sheet) })
                 }
+                // The layer reaches the screen's bottom edge (not the home indicator's), so the sheet sits 8 above
+                // it; the keyboard still lifts it.
+                .ignoresSafeArea(.container, edges: .bottom)
             }
         }
     }
@@ -63,7 +66,6 @@ private struct SheetBox<Content: View>: View {
         .padding(.horizontal, Space.s2)
         .padding(.top, Space.s4)
         .padding(.bottom, Space.s2)
-        .ignoresSafeArea(.container, edges: .bottom)
         .accessibilityAddTraits(.isModal)
         .accessibilityAction(.escape, close)
     }
@@ -160,11 +162,11 @@ struct AskLayer: View {
                 .raised(.sheet, .sheet)
                 .padding(.horizontal, Space.s2)
                 .padding(.bottom, Space.s2)
-                .ignoresSafeArea(.container, edges: .bottom)
                 .accessibilityAddTraits(.isModal)
                 .accessibilityAction(.escape, cancel)
                 .sensoryFeedback(confirm.destructive ? .warning : .impact(weight: .light), trigger: confirm.id)
             }
+            .ignoresSafeArea(.container, edges: .bottom)
         }
     }
 

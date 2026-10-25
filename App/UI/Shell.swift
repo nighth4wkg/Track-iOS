@@ -33,6 +33,7 @@ struct Shell: View {
             }
             if model.workoutOpen, model.training.active != nil { WorkoutScreen() }
             if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
+            StatusFade()
             if !covered && !keyboard {
                 NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
             }
@@ -152,6 +153,21 @@ struct NavPill: View {
         .raised(.nav, .pill)
         .padding(.horizontal, Space.s4)
         .sensoryFeedback(.selection, trigger: model.tab)
+    }
+}
+
+/// Under the clock and battery: the page colour, fading out just below, so content scrolling up passes under it as on
+/// iOS's own pages rather than running into the status bar's text.
+private struct StatusFade: View {
+    var body: some View {
+        let height = statusBar + Space.s4
+        LinearGradient(stops: [.init(color: Palette.background, location: statusBar / max(1, height)),
+                               .init(color: Palette.background.opacity(0), location: 1)], startPoint: .top, endPoint: .bottom)
+            .frame(height: height)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 
