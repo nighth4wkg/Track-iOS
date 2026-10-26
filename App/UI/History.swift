@@ -166,6 +166,7 @@ struct HistoryCalendar: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 RoundButton(icon: .back, label: "Previous month", size: IconSize.medium) { step(-1) }
                 RoundButton(icon: .next, label: "Next month", size: IconSize.medium) { step(1) }
+                    .disabled(month >= Self.monthStart(Date())) // no workouts ahead of this month
             }
             Cells(columns: columns) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
@@ -180,7 +181,10 @@ struct HistoryCalendar: View {
                     let picked = from == key && to == key
                     let isToday = key == today
                     let inMonth = calendar.isDate(date, equalTo: month, toGranularity: .month)
-                    Button { from = picked ? "" : key; to = picked ? "" : key } label: {
+                    Button {
+                        guard key <= today else { return } // a day still ahead has nothing to show
+                        from = picked ? "" : key; to = picked ? "" : key
+                    } label: {
                         VStack(spacing: Space.s1) {
                             Text(date.formatted(.gregorian.day())).type(.t14).fontWeight(isToday ? .bold : nil).monospacedDigit()
                                 .foregroundStyle(!inMonth ? Palette.faint : isToday ? Palette.accent : Palette.text)

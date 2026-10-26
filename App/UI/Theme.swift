@@ -242,6 +242,13 @@ private struct Pressed: ViewModifier {
     func body(content: Content) -> some View { content.opacity(on ? 0.75 : 1) }
 }
 
+/// A disabled control or card fades, as the PWA's button:disabled (the main button and rows have their own looks).
+private struct Faded: ViewModifier {
+    @Environment(\.isEnabled) private var enabled
+    static let opacity = 0.45
+    func body(content: Content) -> some View { content.opacity(enabled ? 1 : Self.opacity) }
+}
+
 /// The screen's main action: the green pill. `compact` beside other controls: a control's height, as wide as its words.
 struct PrimaryStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
@@ -281,6 +288,7 @@ struct SecondaryStyle: ButtonStyle {
             .frame(maxWidth: hug ? nil : .infinity, minHeight: height)
             .raised(.control, .pill)
             .modifier(Pressed(on: configuration.isPressed))
+            .modifier(Faded())
     }
 }
 
@@ -293,7 +301,7 @@ struct RowStyle: ButtonStyle {
 
 /// A whole card that opens something.
 struct CardStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View { configuration.label.modifier(Pressed(on: configuration.isPressed)) }
+    func makeBody(configuration: Configuration) -> some View { configuration.label.modifier(Pressed(on: configuration.isPressed)).modifier(Faded()) }
 }
 
 /// The Track mark: the hex dumbbell turned 45 degrees (ui/icons.tsx Mark), never green.

@@ -131,6 +131,8 @@ struct ExercisePicker: View {
 
     private func pick(_ name: String) {
         let name = String(name.prefix(Limits.name))
+        // A second tap on its ✓ (a quick double tap) mustn't add it twice.
+        if replacing == nil && added.contains(name) { return }
         onPick(name)
         if replacing != nil { close() } else { added.append(name) }
     }

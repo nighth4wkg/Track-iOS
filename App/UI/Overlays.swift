@@ -53,13 +53,9 @@ private struct SheetBox<Content: View>: View {
                 .contentShape(Rectangle())
                 .gesture(drag)
                 .accessibilityHidden(true)
-            Group {
-                if tall {
-                    scroller
-                } else {
-                    ViewThatFits(in: .vertical) { inside; scroller }
-                }
-            }
+            // One scroll view, as tall as what it holds up to the room there is: swapping a plain copy for a scrolling
+            // one (ViewThatFits) when the keyboard came up rebuilt the content, so it jumped and its field lost the keyboard.
+            Group { if tall { scroller } else { UpToContent { scroller } } }
             .environment(\.sheetDrag, drag)
         }
         .frame(maxWidth: Size.column - Space.s4, maxHeight: tall ? .infinity : nil, alignment: .top)
@@ -78,7 +74,7 @@ private struct SheetBox<Content: View>: View {
     }
 
     private var scroller: some View {
-        ScrollView { inside }.scrollDismissesKeyboard(.interactively)
+        ScrollView { inside }.scrollDismissesKeyboard(.interactively).scrollBounceBehavior(.basedOnSize)
     }
 
     private var drag: AnyGesture<DragGesture.Value> {
@@ -95,6 +91,19 @@ private struct SheetBox<Content: View>: View {
                 pulling = false
                 if down > height * Self.closeShare || value.predictedEndTranslation.height - value.translation.height > height * Self.closeShare { close() }
             })
+    }
+}
+
+/// Its one view as tall as it would be (a scroll view: its content), but no taller than offered.
+private struct UpToContent: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let view = subviews.first else { return .zero }
+        let ideal = view.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
+        return CGSize(width: proposal.width ?? ideal.width, height: min(ideal.height, proposal.height ?? ideal.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
 
