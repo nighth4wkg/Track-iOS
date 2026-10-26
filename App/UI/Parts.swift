@@ -53,7 +53,7 @@ struct Seg<Value: Hashable>: View {
     var body: some View {
         Group {
             if let columns {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s1), count: columns), spacing: Space.s1) { cells }
+                Tiles(columns: columns, spacing: Space.s1, rowSpacing: Space.s1) { cells }
             } else {
                 HStack(spacing: Space.s1) { cells }
             }
@@ -81,6 +81,29 @@ struct Seg<Value: Hashable>: View {
             .buttonStyle(.plain)
             .accessibilityLabel(option.text)
             .accessibilityAddTraits(on ? [.isSelected] : [])
+        }
+    }
+}
+
+/// Cells in rows of `columns`, equal widths, all built at once. A LazyVGrid builds rows only while they're on screen and
+/// can leave one blank after scrolling back to it (the picker's muscle filter on an iPhone SE).
+struct Tiles<Content: View>: View {
+    let columns: Int
+    var spacing: CGFloat = 0
+    var rowSpacing: CGFloat = 0
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        Group(subviews: content) { cells in
+            VStack(spacing: rowSpacing) {
+                ForEach(Array(stride(from: 0, to: cells.count, by: columns)), id: \.self) { start in
+                    // Every cell fills an equal share, a short last row kept to the columns' widths by empty ones.
+                    HStack(spacing: spacing) {
+                        ForEach(cells[start..<min(start + columns, cells.count)]) { $0.frame(maxWidth: .infinity) }
+                        ForEach(0..<max(0, start + columns - cells.count), id: \.self) { _ in Color.clear.frame(maxWidth: .infinity) }
+                    }
+                }
+            }
         }
     }
 }

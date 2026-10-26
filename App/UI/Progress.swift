@@ -56,7 +56,7 @@ struct ProgressScreen: View {
         let top = max(1, bars.flatMap { [$0.now, $0.last] }.max() ?? 1)
         let note = result.value == 0 ? "Nothing logged \(period.now) yet" : result.change.map { "\($0 >= 0 ? "+" : "")\($0)% vs \(period.last)" } ?? "Nothing \(period.last) to compare"
         let tint = result.value == 0 ? Palette.muted : result.change.map { $0 >= 0 ? Palette.accent : Palette.danger } ?? Palette.muted
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: max(1, bars.count))
+        let columns = max(1, bars.count)
         return VStack(alignment: .leading, spacing: 0) {
             Text("\(tally.rawValue) \(period.now)").type(.t14).foregroundStyle(Palette.muted)
             HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
@@ -66,7 +66,7 @@ struct ProgressScreen: View {
             .foregroundStyle(Palette.text)
             .padding(.top, Space.s2)
             Text(note).type(.t14).fontWeight(.semibold).foregroundStyle(tint)
-            LazyVGrid(columns: columns, spacing: 0) {
+            Tiles(columns: columns) {
                 ForEach(Array(bars.enumerated()), id: \.offset) { _, bar in
                     HStack(alignment: .bottom, spacing: Space.s1) {
                         column(bar.last / top, fill: AnyShapeStyle(Palette.previous), always: true)
@@ -78,7 +78,7 @@ struct ProgressScreen: View {
             .padding(.top, Space.s4)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(tally.rawValue) by \(period == .month ? "week" : "day"), against the period before")
-            LazyVGrid(columns: columns, spacing: 0) {
+            Tiles(columns: columns) {
                 ForEach(Array(bars.enumerated()), id: \.offset) { _, bar in
                     Text(bar.label).type(.t12).foregroundStyle(bar.today ? Palette.text : Palette.muted)
                 }

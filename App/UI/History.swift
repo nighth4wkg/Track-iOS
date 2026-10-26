@@ -159,7 +159,7 @@ struct HistoryCalendar: View {
         let lead = (calendar.component(.weekday, from: month) + 5) % 7
         let length = calendar.range(of: .day, in: .month, for: month)?.count ?? 30
         let start = calendar.date(byAdding: .day, value: -lead, to: month) ?? month
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+        let columns = calendar.weekdaySymbols.count
         VStack(alignment: .leading, spacing: Space.s2) {
             HStack(spacing: Space.s2) {
                 Text(month.formatted(.gregorian.month(.wide).year())).type(.t16).foregroundStyle(Palette.text)
@@ -167,13 +167,13 @@ struct HistoryCalendar: View {
                 RoundButton(icon: .back, label: "Previous month", size: IconSize.medium) { step(-1) }
                 RoundButton(icon: .next, label: "Next month", size: IconSize.medium) { step(1) }
             }
-            LazyVGrid(columns: columns, spacing: 0) {
+            Tiles(columns: columns) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
                     Text(letter).type(.t12).foregroundStyle(Palette.muted)
                 }
             }
             .accessibilityHidden(true)
-            LazyVGrid(columns: columns, spacing: Space.s1) {
+            Tiles(columns: columns, rowSpacing: Space.s1) {
                 ForEach(0..<(lead + length + 6) / 7 * 7, id: \.self) { offset in
                     let date = calendar.date(byAdding: .day, value: offset, to: start) ?? start
                     let key = dayKey(millis(date))

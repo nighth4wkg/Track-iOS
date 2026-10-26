@@ -78,10 +78,9 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Back"].firstMatch, "back from \(page)")
     }
 
-    /// A tap outside the top sheet, as a person closes it.
+    /// The top sheet's Done.
     private func dismissSheet() {
-        let outside = app.descendants(matching: .any)["Dismiss"].firstMatch
-        if outside.waitForExistence(timeout: 2) { outside.tap() } else { app.swipeDown() }
+        tap(app.buttons["Done"].firstMatch, "sheet Done")
         Thread.sleep(forTimeInterval: 0.6)
     }
 
