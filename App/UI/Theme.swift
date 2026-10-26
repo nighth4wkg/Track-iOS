@@ -84,6 +84,19 @@ enum Size {
     static let anchor: CGFloat = 1
     /// The line between rows and under the chart's guides.
     static let hairline: CGFloat = 1
+    /// A card row holding a control, padded all round (Home's splits, rows being arranged).
+    static let controlRow: CGFloat = control + Space.s4 * 2
+}
+
+/// Insets of single parts (the PWA's --pad-*).
+enum Pad {
+    /// A secondary button's sides, a field's sides, a pill's message side, a badge's top and bottom.
+    static let secondary: CGFloat = 18, field: CGFloat = 14, toast: CGFloat = 20, badge: CGFloat = 3
+}
+
+/// Gaps of single parts (the PWA's --gap-*): a tab's icon to its word.
+enum Gap {
+    static let tab: CGFloat = 2
 }
 
 /// How far a one-line figure may shrink to fit a narrow screen rather than wrap: a tile's figure or a set's
@@ -101,6 +114,8 @@ enum Rings {
 
 enum IconSize {
     static let small: CGFloat = 16, medium: CGFloat = 18, regular: CGFloat = 20, logo: CGFloat = 22, emblem: CGFloat = 26, mark: CGFloat = 28
+    /// A round button's icon.
+    static let round: CGFloat = 19
 }
 
 enum Motion {
@@ -113,6 +128,8 @@ enum Radius {
     static let small: CGFloat = 4, inner: CGFloat = 12, card: CGFloat = 18, sheet: CGFloat = 28
     /// A segment that wraps onto rows (the picker's muscles) rounds like this, not as a pill.
     static let wrap: CGFloat = 22
+    /// A chart key's swatch.
+    static let key: CGFloat = 2
 }
 
 enum Corner {
@@ -285,7 +302,7 @@ struct SecondaryStyle: ButtonStyle {
         configuration.label
             .type(.t16)
             .foregroundStyle(danger ? Palette.danger : Palette.text)
-            .padding(.horizontal, hug ? Space.s4 + Space.s1 / 2 : 0)
+            .padding(.horizontal, hug ? Pad.secondary : 0)
             .frame(maxWidth: hug ? nil : .infinity, minHeight: height)
             .raised(.control, .pill)
             .modifier(Pressed(on: configuration.isPressed))
@@ -351,7 +368,8 @@ enum Icon: String {
          next = "chevron.right", down = "chevron.down", up = "chevron.up", arrange = "arrow.up.arrow.down",
          grip = "line.3.horizontal", plus = "plus", check = "checkmark", close = "xmark", alert = "exclamationmark.circle",
          play = "play.fill", search = "magnifyingglass", filter = "line.3.horizontal.decrease", more = "ellipsis",
-         trash = "trash", settings = "gearshape", eye = "eye", minus = "minus"
+         trash = "trash", settings = "gearshape", eye = "eye", minus = "minus", warning = "exclamationmark.triangle",
+         badge = "rosette"
 
     func image(_ size: CGFloat = IconSize.regular, bold: Bool = false) -> some View {
         Image(systemName: rawValue).font(.system(size: size, weight: bold ? .bold : .semibold))
@@ -390,6 +408,9 @@ struct FloatingBar: PreferenceKey {
 func weight(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
     (kg * (unit == .lb ? Limits.poundsPerKilogram : 1)).formatted(.number.precision(.fractionLength(0)))
 }
+
+/// Now to the minute: what a memo that depends on the time is redone with, once a minute rather than every redraw.
+func minuteStamp(_ millis: Int) -> Int { millis / 60_000 }
 
 /// A set: "82.5 kg × 7".
 func setText(_ set: TrainingSet, _ unit: TrackCore.Settings.Unit) -> String {

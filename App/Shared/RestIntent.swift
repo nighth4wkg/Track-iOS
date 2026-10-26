@@ -6,6 +6,9 @@ struct RestIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Change rest"
     static let isDiscoverable = false
 
+    /// What −/+ take off or add, in Track and on the Live Activity.
+    static let step = 15
+
     /// Seconds to add or take off (the app's −15s and +15s); 0 ends the rest.
     @Parameter(title: "Seconds") var seconds: Int
 

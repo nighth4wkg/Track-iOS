@@ -44,7 +44,7 @@ private struct SheetBox<Content: View>: View {
     @State private var pulling = false
     @State private var height: CGFloat = 0
     /// Let go past this share of its height (or flicked as far), it closes: the PWA's CLOSE_DRAG.
-    private static var closeShare: Double { 0.4 }
+    private static let closeShare = 0.4
 
     var body: some View {
         VStack(spacing: 0) {
@@ -234,7 +234,7 @@ struct ToastLayer: View {
                     .buttonStyle(.plain).accessibilityLabel("Dismiss")
                 }
                 .accessibilityElement(children: .contain)
-                .padding(.leading, Space.s4 + Space.s1).padding(.trailing, Space.s1).padding(.vertical, Space.s2)
+                .padding(.leading, Pad.toast).padding(.trailing, Space.s1).padding(.vertical, Space.s2)
                 .frame(minHeight: Size.row)
                 .raised(.float, .pill)
                 .padding(.horizontal, Space.s4)

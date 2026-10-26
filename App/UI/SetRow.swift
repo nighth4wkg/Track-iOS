@@ -31,6 +31,8 @@ struct SetRow: View {
     /// RIR only carried over, doesn't count.
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
+    /// Typing saves once the keys pause this long, not on every key.
+    private static let typingPause = Duration.milliseconds(400)
     @State private var replacing: String? // the field just tapped: its first keystroke replaces it (key)
 
     var body: some View {
@@ -111,7 +113,7 @@ struct SetRow: View {
     private func typedInto(_ id: String) {
         if id == "rir" { rirTyped = true }
         pending?.cancel()
-        pending = Task { try? await Task.sleep(for: .milliseconds(400)); if !Task.isCancelled { flush() } }
+        pending = Task { try? await Task.sleep(for: Self.typingPause); if !Task.isCancelled { flush() } }
     }
     /// A key typed into a field here: a digit (or, in the weight, the decimal point), or nil for delete. As the
     /// website selects a number on focus, the first key after arriving in a field replaces it (deleting clears it).

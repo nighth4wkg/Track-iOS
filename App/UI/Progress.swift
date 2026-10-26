@@ -51,8 +51,8 @@ struct ProgressScreen: View {
 
     private func chart(_ training: Training, now: Int) -> some View {
         let unit = training.settings.unit
-        let result = model.derived("tally", at: "\(tally) \(period) \(now / 60_000)") { $0.change(of: tally, per: period, at: now) }
-        let bars = model.derived("bars", at: "\(tally) \(period) \(now / 60_000)") { $0.bars(of: tally, per: period, at: now) }
+        let result = model.derived("tally", at: "\(tally) \(period) \(minuteStamp(now))") { $0.change(of: tally, per: period, at: now) }
+        let bars = model.derived("bars", at: "\(tally) \(period) \(minuteStamp(now))") { $0.bars(of: tally, per: period, at: now) }
         let top = max(1, bars.flatMap { [$0.now, $0.last] }.max() ?? 1)
         let note = result.value == 0 ? "Nothing logged \(period.now) yet" : result.change.map { "\($0 >= 0 ? "+" : "")\($0)% vs \(period.last)" } ?? "Nothing \(period.last) to compare"
         let tint = result.value == 0 ? Palette.muted : result.change.map { $0 >= 0 ? Palette.accent : Palette.danger } ?? Palette.muted
@@ -104,7 +104,7 @@ struct ProgressScreen: View {
 
     private func key(_ text: String, _ color: Color) -> some View {
         HStack(spacing: Space.s1) {
-            RoundedRectangle(cornerRadius: Radius.small / 2).fill(color).frame(width: Space.s2, height: Space.s2)
+            RoundedRectangle(cornerRadius: Radius.key).fill(color).frame(width: Space.s2, height: Space.s2)
             Text(text).type(.t12).foregroundStyle(Palette.muted)
         }
     }
@@ -199,7 +199,7 @@ struct QuestList: View {
                 ForEach(Quest.all) { quest in
                     let award = awards[quest.id]
                     HStack(alignment: .top, spacing: Space.s3) {
-                        Image(systemName: award == nil ? "rosette" : Icon.check.rawValue).font(.system(size: IconSize.medium, weight: .bold))
+                        Image(systemName: (award == nil ? Icon.badge : Icon.check).rawValue).font(.system(size: IconSize.medium, weight: .bold))
                             .foregroundStyle(award == nil ? Palette.muted : Palette.onGreen)
                             .frame(width: Size.tile, height: Size.tile)
                             .raised(award == nil ? .control : .green, .inner)

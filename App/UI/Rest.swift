@@ -47,8 +47,8 @@ struct RestTimer: View {
         HStack(spacing: Space.s2) {
             ring(left, total).accessibilityLabel("\(time(left)) of rest left")
             Spacer(minLength: 0)
-            shift("−15s", "15 seconds less") { model.shiftRest(by: -15) }
-            shift("+15s", "15 seconds more") { model.shiftRest(by: 15) }
+            shift("−\(RestIntent.step)s", "\(RestIntent.step) seconds less") { model.shiftRest(by: -RestIntent.step) }
+            shift("+\(RestIntent.step)s", "\(RestIntent.step) seconds more") { model.shiftRest(by: RestIntent.step) }
             Button("Skip") { model.skipRest() }.buttonStyle(PrimaryStyle(compact: true))
         }
         .padding(.horizontal, Space.s2)

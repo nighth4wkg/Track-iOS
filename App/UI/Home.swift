@@ -31,7 +31,7 @@ struct HomeScreen: View {
             }
             .padding(.top, Space.s2)
             if let error = model.loadError {
-                Label(error, systemImage: "exclamationmark.triangle").type(.t14).foregroundStyle(Palette.danger).padding(.top, Space.s4)
+                Label(error, systemImage: Icon.warning.rawValue).type(.t14).foregroundStyle(Palette.danger).padding(.top, Space.s4)
             }
             UpNextCard(training: training, next: next, now: now).padding(.top, Space.s4)
             if !training.splits.isEmpty { splits(training, next: next?.split.id).padding(.top, Space.s6) }
@@ -176,7 +176,7 @@ private struct HomeTiles: View {
     }
 
     private var volume: some View {
-        let week = model.derived("volume W", at: now / 60_000) { $0.change(of: .volume, per: .week, at: now) }
+        let week = model.derived("volume W", at: minuteStamp(now)) { $0.change(of: .volume, per: .week, at: now) }
         return VStack(alignment: .leading, spacing: 0) {
             Text("Volume this week").type(.t14).foregroundStyle(Palette.muted)
             HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
@@ -240,7 +240,7 @@ private struct SplitCard: View {
                     if next && !armed { Badge(text: "Next") }
                 }
                 .pad()
-                .frame(minHeight: Size.control + Space.s4 * 2)
+                .frame(minHeight: Size.controlRow)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowStyle())

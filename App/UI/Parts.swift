@@ -10,7 +10,7 @@ struct RoundButton: View {
     let label: String
     /// An icon colour of its own (red for a delete).
     var tint: Color?
-    var size = IconSize.regular - 1
+    var size = IconSize.round
     let action: () -> Void
 
     var body: some View {
@@ -33,7 +33,7 @@ struct Badge: View {
     var body: some View {
         Text(text).type(.t12).fontWeight(.bold).monospacedDigit().lineLimit(1)
             .foregroundStyle(plain ? Palette.muted : Palette.accent)
-            .padding(.horizontal, Space.s2).padding(.vertical, Space.s1 - 1)
+            .padding(.horizontal, Space.s2).padding(.vertical, Pad.badge)
             .background(plain ? Palette.wash : Palette.greenWash, in: Capsule())
     }
 }
@@ -174,7 +174,7 @@ struct Field: View {
         .focused($focused)
         .submitLabel(.done)
         .onSubmit { submit?() }
-        .padding(.horizontal, Space.s3 + Space.s1 / 2)
+        .padding(.horizontal, Pad.field)
         .frame(height: Size.control)
         .sunk(.inner, ring: focused ? Palette.accent : nil)
         .accessibilityLabel(label ?? placeholder)
@@ -342,7 +342,7 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                     end(item)
                 }
                 .pad()
-                .frame(minHeight: Size.control + Space.s4 * 2)
+                .frame(minHeight: Size.controlRow)
                 .raised()
                 .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { step = $0 }
                 .offset(y: room(index, from, steps))

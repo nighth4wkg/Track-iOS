@@ -88,8 +88,8 @@ struct RestLiveActivity: Widget {
     private func controls(stale: Bool) -> some View {
         HStack(spacing: Space.s2) {
             if !stale {
-                Button(intent: RestIntent(seconds: -15)) { label("−15s") }
-                Button(intent: RestIntent(seconds: 15)) { label("+15s") }
+                Button(intent: RestIntent(seconds: -RestIntent.step)) { label("−\(RestIntent.step)s") }
+                Button(intent: RestIntent(seconds: RestIntent.step)) { label("+\(RestIntent.step)s") }
             }
             Button(intent: RestIntent(seconds: 0)) { label(stale ? "Done" : "Skip") }
         }
