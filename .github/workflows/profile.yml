@@ -36,14 +36,19 @@ jobs:
         run: |
           mkdir -p out
           export TEST_RUNNER_TRACK_SEED="$(python3 tools/demo-data.py)"
-          # The whole simulator is recorded (finding the app's process to attach to proved unreliable); the parse keeps Track's main thread.
-          xcrun xctrace record --template 'Time Profiler' --device "$UDID" --all-processes --time-limit 300s --output out/scroll.trace > out/xctrace.log 2>&1 &
+          # Track's own process only (a whole-simulator trace took over 13 min to save). Its command line carries the test's
+          # launch arguments, so the match allows them.
+          xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build CODE_SIGNING_ALLOWED=NO -only-testing:TrackUITests/ScrollProfile/testExerciseListScroll test-without-building > out/test.log 2>&1 &
+          test=$!
+          pid=""
+          for i in $(seq 1 600); do pid=$(pgrep -f 'Track\.app/Track( |$)' | head -n 1); [ -n "$pid" ] && break; kill -0 $test 2>/dev/null || break; sleep 0.5; done
+          [ -n "$pid" ] || { echo "Track never started"; ps -ax | grep -i track | head; tail -n 40 out/test.log; exit 1; }
+          echo "Track is process $pid"
+          xcrun xctrace record --template 'Time Profiler' --device "$UDID" --attach "$pid" --time-limit 200s --output out/scroll.trace > out/xctrace.log 2>&1 &
           trace=$!
-          sleep 10
           set +e
-          xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build             CODE_SIGNING_ALLOWED=NO -only-testing:TrackUITests/ScrollProfile/testExerciseListScroll test-without-building > out/test.log 2>&1
-          status=$?
-          kill -INT $trace; wait $trace
+          wait $test; status=$?
+          kill -INT $trace 2>/dev/null; wait $trace
           set -e
           cat out/xctrace.log
           grep -E "Test Case|error:|PERF|failed|passed" out/test.log | tail -n 40
