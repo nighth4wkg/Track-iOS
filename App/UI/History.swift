@@ -130,6 +130,9 @@ private struct HistoryRow: View {
             }
             .frame(width: Size.tile, height: Size.tile)
             .raised(.control, .inner)
+            // VoiceOver read the tile as "Mon, 26"; it says the whole date instead.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(date.formatted(.gregorian.weekday(.wide).month(.wide).day()))
             VStack(alignment: .leading, spacing: 0) {
                 Text(session.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
                 Text("\(session.minutes) min" + dot + count(session.loggedCount, "set") + dot + "\(weight(session.volume, unit)) \(unit.rawValue)")
@@ -198,6 +201,7 @@ struct HistoryCalendar: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(date.formatted(.gregorian.month(.wide).day()) + (trained.contains(key) ? ", trained" : ""))
                     .accessibilityAddTraits(picked ? .isSelected : [])
+                    .accessibilityRemoveTraits(key > today ? .isButton : []) // a day ahead does nothing on tap
                 }
             }
         }
