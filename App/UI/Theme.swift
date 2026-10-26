@@ -375,15 +375,14 @@ struct FloatingBar: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
+/// Track's window.
+@MainActor var keyWindow: UIWindow? { UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first }
+
 /// The status bar's height, where content scrolling up fades out (see Shell).
-@MainActor var statusBarHeight: CGFloat {
-    UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.top ?? 0
-}
+@MainActor var statusBarHeight: CGFloat { keyWindow?.safeAreaInsets.top ?? 0 }
 
 /// The home indicator's strip (0 on a phone with a home button), never the keyboard.
-@MainActor var homeIndicator: CGFloat {
-    UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
-}
+@MainActor var homeIndicator: CGFloat { keyWindow?.safeAreaInsets.bottom ?? 0 }
 
 // MARK: Words and numbers, as the PWA's fmt.ts
 
@@ -391,6 +390,14 @@ struct FloatingBar: PreferenceKey {
 func weight(_ kg: Double, _ unit: TrackCore.Settings.Unit) -> String {
     (kg * (unit == .lb ? Limits.poundsPerKilogram : 1)).formatted(.number.precision(.fractionLength(0)))
 }
+
+/// A set: "82.5 kg × 7".
+func setText(_ set: TrainingSet, _ unit: TrackCore.Settings.Unit) -> String {
+    "\(TrainingSet.display(kg: set.kg ?? 0, unit: unit)) \(unit.rawValue) × \(set.reps ?? 0)"
+}
+
+/// What an exercise trains, for its line: its first muscle group, or "Exercise" when Track can't tell.
+func muscleLabel(_ groups: [String]) -> String { groups.first ?? "Exercise" }
 
 /// "1 exercise", "3 sets".
 func count(_ value: Int, _ noun: String) -> String { "\(value) \(noun)\(value == 1 ? "" : "s")" }

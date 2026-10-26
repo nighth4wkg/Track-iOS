@@ -20,9 +20,7 @@ struct WorkoutScreen: View {
             let expanded: String? = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
                 ?? active.exercises.first { $0.doneCount < $0.setCount }?.id
             let splitId = active.splitId
-            let previous: Session? = model.derived("previous \(splitId)") { sessions in
-                sessions.filter { $0.splitId == splitId }.max { ($0.finishedAt ?? 0) < ($1.finishedAt ?? 0) }
-            }
+            let previous: Session? = model.derived("previous \(splitId)") { _ in model.training.latestSession(of: splitId) }
             ScrollViewReader { proxy in
                 ScrollView { content(active, expanded: expanded, previous: previous) }
                     .scrollDismissesKeyboard(.interactively)
@@ -110,11 +108,11 @@ struct WorkoutScreen: View {
         let bests = model.bests
         return VStack(spacing: Space.s3) {
             ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
-                let muscle: String = LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]).first ?? "Exercise"
+                let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
                 let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
                 ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
                              autoLog: settings.logSets != .manual, bests: bests,
-                             last: previous?.exercises.first { $0.id == exercise.id || $0.name == exercise.name },
+                             last: previous?.match(exercise),
                              restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
                              onOpen: { opened = exercise.id },
                              onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) })
@@ -287,7 +285,7 @@ struct ExerciseCard: View, Equatable {
 
     /// "1 of 3 sets · last 60×8": done of the sets as counted, and last time's first set.
     static func detail(_ exercise: Exercise, _ previous: Session?, _ unit: TrackCore.Settings.Unit, last: Exercise? = nil) -> String {
-        let last = last ?? previous?.exercises.first { $0.id == exercise.id || $0.name == exercise.name }
+        let last = last ?? previous?.match(exercise)
         return "\(exercise.doneCount) of \(count(exercise.setCount, "set"))" + dot + "last \(lastText(last?.sets.first, unit))"
     }
 

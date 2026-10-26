@@ -178,6 +178,8 @@ extension Array where Element == Session {
 
 public enum Experience {
     public static let dailyStart = 20, perSet = 5, dailySetCap = 12
+    /// The most training XP one day can earn.
+    public static let dailyCap = dailyStart + perSet * dailySetCap
 
     /// XP to go from this level to the next: attainable early, asking for consistency later.
     public static let maxRequirement = 300

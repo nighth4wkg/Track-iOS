@@ -9,6 +9,9 @@ extension Training {
             .max { a, b in a.finishedAt! == b.finishedAt! ? a.id < b.id : a.finishedAt! < b.finishedAt! }
     }
 
+    /// Starts the rest timer: it runs for the rest length set in Settings.
+    public mutating func startRest(now: Int = nowMillis()) { restUntil = now + settings.restSeconds * 1000 }
+
     /// Starts the split. Each set carries over last time's numbers (matched by exercise, else by name in order) as
     /// suggestions, not logged until marked done. The side comes from the split, so turning sides off there sticks.
     public mutating func start(_ split: Split, now: Int = nowMillis(), carryOver: Bool = true) throws {
@@ -83,6 +86,11 @@ extension Training {
             return shape
         }
     }
+}
+
+extension Session {
+    /// This workout's take on an exercise: the same one, else one of the same name (last time's, for a workout now).
+    public func match(_ exercise: Exercise) -> Exercise? { exercises.first { $0.id == exercise.id || $0.name == exercise.name } }
 }
 
 // MARK: Starter splits

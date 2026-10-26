@@ -184,6 +184,11 @@ extension Exercise {
     }
 }
 
+extension Array where Element == TrainingSet {
+    /// The heaviest set, then the one with the most reps.
+    public var top: TrainingSet? { self.max { ($0.kg ?? 0, $0.reps ?? 0) < ($1.kg ?? 0, $1.reps ?? 0) } }
+}
+
 extension Array where Element == Exercise {
     /// The sets planned, as counted.
     public var plannedCount: Int { reduce(0) { $0 + $1.setCount } }

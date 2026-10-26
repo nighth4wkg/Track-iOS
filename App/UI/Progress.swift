@@ -135,10 +135,9 @@ extension Period {
 /// comes from the XP rules, so the text can't drift from them.
 struct XpHelp: View {
     @Environment(AppModel.self) private var model
-    private static let dailyCap = Experience.dailyStart + Experience.perSet * Experience.dailySetCap
     private static let rules = [
         ("First set of the day", "+\(Experience.dailyStart) XP", "Starts each training day."),
-        ("Each extra set", "+\(Experience.perSet) XP", "Up to \(dailyCap) XP a day. L + R is one set."),
+        ("Each extra set", "+\(Experience.perSet) XP", "Up to \(Experience.dailyCap) XP a day. L + R is one set."),
         ("Achievements", "Bonus XP", "Paid once, on top of the daily limit."),
         ("Levels", "\(Experience.requirement(for: 1))–\(Experience.maxRequirement) XP",
          "+\(Experience.requirement(for: 2) - Experience.requirement(for: 1)) XP per level."),
@@ -193,9 +192,8 @@ struct QuestList: View {
     var body: some View {
         let sessions = model.training.sessions
         let awards = model.derived("awards") { $0.questAwards }
-        let cap = Experience.dailyStart + Experience.perSet * Experience.dailySetCap
         SheetFrame(title: "Achievements") {
-            Text("\(awards.count) of \(Quest.all.count) completed. Achievement XP is paid once, outside the \(cap) XP daily training limit.")
+            Text("\(awards.count) of \(Quest.all.count) completed. Achievement XP is paid once, outside the \(Experience.dailyCap) XP daily training limit.")
                 .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
             RowCard {
                 ForEach(Quest.all) { quest in

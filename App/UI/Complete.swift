@@ -15,7 +15,7 @@ struct CompleteScreen: View {
             let level = Experience.progress(of: sessions)
             let before = Dictionary(sessions.filter { $0.id != session.id }.personalRecords.map { ($0.name, $0.kg) }, uniquingKeysWith: max)
             let bests = session.exercises.compactMap { exercise -> (name: String, set: TrainingSet, fresh: Bool)? in
-                guard let set = exercise.sets.filter(\.isValid).max(by: { ($0.kg ?? 0, $0.reps ?? 0) < ($1.kg ?? 0, $1.reps ?? 0) }) else { return nil }
+                guard let set = exercise.sets.filter(\.isValid).top else { return nil }
                 return (exercise.name, set, before[exercise.name].map { (set.kg ?? 0) > $0 } ?? false)
             }
             DeepPage {
@@ -37,7 +37,7 @@ struct CompleteScreen: View {
                         ForEach(bests, id: \.name) { best in
                             Row(title: best.name) {
                                 if best.fresh { Badge(text: "New best") }
-                                Text("\(TrainingSet.display(kg: best.set.kg ?? 0, unit: unit)) \(unit.rawValue) × \(best.set.reps ?? 0)")
+                                Text(setText(best.set, unit))
                                     .type(.t14).monospacedDigit().foregroundStyle(Palette.text)
                             }
                         }
@@ -48,7 +48,7 @@ struct CompleteScreen: View {
                 Color.clear.frame(height: Size.primary + Space.s4 - homeIndicator)
             }
             .overlay(alignment: .bottom) {
-                Button("Continue") { model.finished = nil; model.go(.home) }.buttonStyle(PrimaryStyle())
+                Button("Continue", action: leave).buttonStyle(PrimaryStyle())
                     .padding(.horizontal, Space.s4)
                     .frame(maxWidth: Size.column)
                     .floatingBottom()
@@ -58,10 +58,13 @@ struct CompleteScreen: View {
         } else {
             DeepPage {
                 Text("Workout saved.").type(.t16).foregroundStyle(Palette.text)
-                Button("Continue") { model.finished = nil; model.go(.home) }.buttonStyle(PrimaryStyle()).padding(.top, Space.s4)
+                Button("Continue", action: leave).buttonStyle(PrimaryStyle()).padding(.top, Space.s4)
             }
         }
     }
+
+    /// Back to Home, done with the recap.
+    private func leave() { model.finished = nil; model.go(.home) }
 
     /// The level ring with the level, +XP, and the bar to the next level.
     private func xpCard(_ level: Experience.Progress) -> some View {

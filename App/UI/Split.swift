@@ -115,9 +115,8 @@ struct SplitScreen: View {
 
     /// Last time's best set of this exercise in this split (by id or name), or New.
     private func topSet(_ exercise: Exercise, _ last: Session?, _ unit: TrackCore.Settings.Unit) -> String {
-        let done = last?.exercises.first { $0.id == exercise.id || $0.name == exercise.name }?.sets.filter { $0.done && $0.isValid } ?? []
-        guard let best = done.max(by: { ($0.kg ?? 0, $0.reps ?? 0) < ($1.kg ?? 0, $1.reps ?? 0) }) else { return "New" }
-        return "\(TrainingSet.display(kg: best.kg ?? 0, unit: unit)) \(unit.rawValue) × \(best.reps ?? 0)"
+        guard let best = last?.match(exercise)?.sets.filter({ $0.done && $0.isValid }).top else { return "New" }
+        return setText(best, unit)
     }
 
     private func toggleEditing(_ split: Split) {

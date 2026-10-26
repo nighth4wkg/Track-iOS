@@ -96,7 +96,7 @@ struct SessionScreen: View {
                     ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
                         HStack(spacing: Space.s3) {
                             Text(labels[index]).foregroundStyle(Palette.muted).frame(width: Space.s6)
-                            Text("\(TrainingSet.display(kg: set.kg ?? 0, unit: unit)) \(unit.rawValue) × \(set.reps ?? 0)").foregroundStyle(Palette.text)
+                            Text(setText(set, unit)).foregroundStyle(Palette.text)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text("RIR \(set.rir ?? 0)").foregroundStyle(Palette.muted)
                         }

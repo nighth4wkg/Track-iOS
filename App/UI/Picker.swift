@@ -111,7 +111,7 @@ struct ExercisePicker: View {
         return HStack(spacing: Space.s3) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
-                Text(isAdded ? "Added" : groups.of(name, choices).first ?? "Exercise").type(.t14)
+                Text(isAdded ? "Added" : muscleLabel(groups.of(name, choices))).type(.t14)
                     .foregroundStyle(isAdded ? Palette.accent : Palette.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

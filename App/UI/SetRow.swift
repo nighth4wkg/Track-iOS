@@ -161,7 +161,7 @@ struct SetRow: View {
             training.updateActive(exercise: exercise.id) { exercise in
                 if let index = exercise.sets.firstIndex(where: { $0.id == set.id }) { exercise.sets[index] = next }
             }
-            if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
+            if started { training.startRest() }
         }
     }
 }

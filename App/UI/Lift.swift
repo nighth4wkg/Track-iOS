@@ -12,7 +12,7 @@ struct LiftScreen: View {
         let training = model.training
         let unit = training.settings.unit
         let entries = model.derived("lift \(name)") { $0.entries(of: name) }
-        let group = LiftTable.muscles(for: name, choices: training.settings.lifts ?? [:]).first ?? "Exercise"
+        let group = muscleLabel(LiftTable.muscles(for: name, choices: training.settings.lifts ?? [:]))
         DeepPage {
             TitleBar(title: name, subtitle: group + dot + count(entries.count, "workout"))
             Seg(label: "Period", options: Period.allCases.map { (value: $0, text: $0.name) }, value: $period, short: true)
@@ -23,7 +23,7 @@ struct LiftScreen: View {
                 let points = model.derived("lift points \(name)", at: period) { $0.oneRepMaxes(of: name, per: period) }
                 trend(points, unit: unit).padding(.top, Space.s4)
                 HStack(spacing: Space.s3) {
-                    tile("Best set", setText(Self.top(entries.flatMap(\.sets)), unit))
+                    tile("Best set", entries.flatMap(\.sets).top.map { setText($0, unit) } ?? "–")
                     tile("Last session", weight(entries[0].sets.reduce(0) { $0 + ($1.kg ?? 0) * Double($1.reps ?? 0) }, unit), unit: unit.rawValue)
                 }
                 .fixedSize(horizontal: false, vertical: true)
@@ -39,7 +39,7 @@ struct LiftScreen: View {
                                 Text(count(Exercise.groups(entry.sets).count, "set")).type(.t14).foregroundStyle(Palette.muted)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            Text(setText(Self.top(entry.sets), unit)).type(.t14).monospacedDigit().foregroundStyle(Palette.text)
+                            Text(entry.sets.top.map { setText($0, unit) } ?? "–").type(.t14).monospacedDigit().foregroundStyle(Palette.text)
                         }
                         .pad()
                         .raised()
@@ -90,17 +90,6 @@ struct LiftScreen: View {
         .pad()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .raised()
-    }
-
-    /// The heaviest set, then the most reps.
-    private static func top(_ sets: [TrainingSet]) -> TrainingSet? {
-        sets.max { ($0.kg ?? 0, $0.reps ?? 0) < ($1.kg ?? 0, $1.reps ?? 0) }
-    }
-
-    /// "80 kg × 8"
-    private func setText(_ set: TrainingSet?, _ unit: TrackCore.Settings.Unit) -> String {
-        guard let set else { return "–" }
-        return "\(weight(set.kg ?? 0, unit)) \(unit.rawValue) × \(set.reps ?? 0)"
     }
 }
 

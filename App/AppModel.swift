@@ -217,7 +217,7 @@ final class AppModel {
                 exercise.sets[index] = try exercise.sets[index].toggledDone()
                 started = exercise.sets[index].done
             }
-            if started { training.restUntil = nowMillis() + training.settings.restSeconds * 1000 }
+            if started { training.startRest() }
         }
     }
 }

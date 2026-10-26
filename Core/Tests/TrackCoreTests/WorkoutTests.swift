@@ -124,4 +124,25 @@ final class WorkoutTests: XCTestCase {
         XCTAssertEqual([1, 2, 3].moved(2, to: 0), [3, 1, 2])
         XCTAssertEqual([1, 2, 3].moved(2, to: 3), [1, 2, 3], "past the end stays put")
     }
+
+    func testRestRunsForTheSetRestLength() {
+        var training = Training()
+        training.settings.restSeconds = 120
+        training.startRest(now: 1000)
+        XCTAssertEqual(training.restUntil, 121_000)
+    }
+
+    func testLastTimesExerciseMatchesByIdThenName() {
+        let last = Session(name: "W", exercises: [Exercise(id: "a", name: "Squat", sets: []), Exercise(id: "b", name: "Bench Press", sets: [])],
+                           splitId: "s", startedAt: 0)
+        XCTAssertEqual(last.match(Exercise(id: "b", name: "Renamed", sets: []))?.id, "b")
+        XCTAssertEqual(last.match(Exercise(id: "new", name: "Squat", sets: []))?.id, "a")
+        XCTAssertNil(last.match(Exercise(id: "new", name: "Curl", sets: [])))
+    }
+
+    func testTopSetIsTheHeaviestThenTheMostReps() {
+        let sets = [TrainingSet(kg: 60, reps: 10), TrainingSet(kg: 62.5, reps: 6), TrainingSet(kg: 62.5, reps: 8)]
+        XCTAssertEqual(sets.top?.reps, 8)
+        XCTAssertNil([TrainingSet]().top)
+    }
 }

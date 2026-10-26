@@ -142,7 +142,7 @@ struct SettingsScreen: View {
 
 /// A web page over Track, as iOS apps show one (Safari's own view).
 @MainActor private func showWebPage(_ url: URL) {
-    let root = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.rootViewController
+    let root = keyWindow?.rootViewController
     var top = root
     while let shown = top?.presentedViewController { top = shown }
     top?.present(SFSafariViewController(url: url), animated: true)
