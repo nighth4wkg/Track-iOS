@@ -44,7 +44,8 @@ private struct SheetBox<Content: View>: View {
     @State private var pulling = false
     @State private var height: CGFloat = 0
     /// Let go past this share of its height (or flicked as far), it closes: the PWA's CLOSE_DRAG.
-    private static let closeShare = 0.4
+    // Computed: a generic type can't hold a stored static.
+    private static var closeShare: Double { 0.4 }
 
     var body: some View {
         VStack(spacing: 0) {
