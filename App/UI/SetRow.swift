@@ -168,7 +168,6 @@ struct SetRow: View {
     }
 }
 
-
 extension View {
     /// The workout's set numbers typed on one keyboard: an unseen input (KeyInput) stays first responder while any
     /// set is typed in, so Next only moves the highlight. A field taking the keyboard made iOS rebuild it, most of
@@ -245,7 +244,6 @@ struct KeyInput: UIViewRepresentable {
         }
     }
 }
-
 
 extension TrainingSet {
     /// What's wrong with a set's typed numbers, worded as on the website: every field out of range (each gets a red

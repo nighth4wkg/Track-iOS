@@ -124,13 +124,19 @@ extension AppModel {
         }
     }
 
+    /// Deletes a finished workout, after asking, with Undo.
     func deleteWorkout(_ session: Session) {
         confirm = Confirm(title: "Delete this workout?", message: "Its sets and XP go too. You can undo.",
                           label: "Delete workout", destructive: true) { [weak self] in
             guard let self, let index = training.sessions.firstIndex(where: { $0.id == session.id }) else { return }
             pages.removeAll { $0 == .session(session.id) }
             update { $0.sessions.remove(at: index) }
-            show("Workout deleted.") { [weak self] in self?.update { $0.sessions.insert(session, at: min(index, $0.sessions.count)) } }
+            show("Workout deleted.") { [weak self] in
+                self?.update { training in
+                    guard !training.sessions.contains(where: { $0.id == session.id }) else { return }
+                    training.sessions.insert(session, at: min(index, training.sessions.count))
+                }
+            }
         }
     }
 }

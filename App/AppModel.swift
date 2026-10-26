@@ -130,7 +130,6 @@ final class AppModel {
         UserDefaults.standard.set(choice.rawValue, forKey: Self.modeKey)
     }
 
-    /// Changes the training data and saves it on this device. A change that throws is shown and not applied.
     /// The rest's alert and Live Activity follow the data when its rest or workout changes.
     private func syncRest(_ old: Training, _ next: Training) {
         guard next.restUntil != old.restUntil || (next.active == nil) != (old.active == nil) else { return }
@@ -144,6 +143,7 @@ final class AppModel {
         }
     }
 
+    /// Changes the training data and saves it on this device. A change that throws is shown and not applied.
     func update(_ change: (inout Training) throws -> Void) {
         var next = training
         do { try change(&next) } catch { problem(error.localizedDescription); return }
