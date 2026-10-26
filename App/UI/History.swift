@@ -167,13 +167,13 @@ struct HistoryCalendar: View {
                 RoundButton(icon: .back, label: "Previous month", size: IconSize.medium) { step(-1) }
                 RoundButton(icon: .next, label: "Next month", size: IconSize.medium) { step(1) }
             }
-            Tiles(columns: columns) {
+            Cells(columns: columns) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
                     Text(letter).type(.t12).foregroundStyle(Palette.muted)
                 }
             }
             .accessibilityHidden(true)
-            Tiles(columns: columns, rowSpacing: Space.s1) {
+            Cells(columns: columns, rowSpacing: Space.s1) {
                 ForEach(0..<(lead + length + 6) / 7 * 7, id: \.self) { offset in
                     let date = calendar.date(byAdding: .day, value: offset, to: start) ?? start
                     let key = dayKey(millis(date))

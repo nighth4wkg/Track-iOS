@@ -66,7 +66,7 @@ struct ProgressScreen: View {
             .foregroundStyle(Palette.text)
             .padding(.top, Space.s2)
             Text(note).type(.t14).fontWeight(.semibold).foregroundStyle(tint)
-            Tiles(columns: columns) {
+            Cells(columns: columns) {
                 ForEach(Array(bars.enumerated()), id: \.offset) { _, bar in
                     HStack(alignment: .bottom, spacing: Space.s1) {
                         column(bar.last / top, fill: AnyShapeStyle(Palette.previous), always: true)
@@ -78,7 +78,7 @@ struct ProgressScreen: View {
             .padding(.top, Space.s4)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(tally.rawValue) by \(period == .month ? "week" : "day"), against the period before")
-            Tiles(columns: columns) {
+            Cells(columns: columns) {
                 ForEach(Array(bars.enumerated()), id: \.offset) { _, bar in
                     Text(bar.label).type(.t12).foregroundStyle(bar.today ? Palette.text : Palette.muted)
                 }

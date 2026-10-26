@@ -53,7 +53,7 @@ struct Seg<Value: Hashable>: View {
     var body: some View {
         Group {
             if let columns {
-                Tiles(columns: columns, spacing: Space.s1, rowSpacing: Space.s1) { cells }
+                Cells(columns: columns, spacing: Space.s1, rowSpacing: Space.s1) { cells }
             } else {
                 HStack(spacing: Space.s1) { cells }
             }
@@ -87,7 +87,7 @@ struct Seg<Value: Hashable>: View {
 
 /// Cells in rows of `columns`, equal widths, all built at once. A LazyVGrid builds rows only while they're on screen and
 /// can leave one blank after scrolling back to it (the picker's muscle filter on an iPhone SE).
-struct Tiles<Content: View>: View {
+struct Cells<Content: View>: View {
     let columns: Int
     var spacing: CGFloat = 0
     var rowSpacing: CGFloat = 0
