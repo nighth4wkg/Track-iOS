@@ -28,6 +28,8 @@ struct RestTimer: View {
                         }
                     }
                 }
+                // A new or shifted rest gets a fresh clock; the old one's last tick would show a second too many.
+                .id(until)
                 .task(id: until) {
                     let wait = Double(until) / 1000 - Date.now.timeIntervalSince1970
                     guard wait > 0 else { over = until; return }
