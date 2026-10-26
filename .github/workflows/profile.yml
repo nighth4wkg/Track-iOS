@@ -4,6 +4,10 @@
 name: Profile
 on:
   workflow_dispatch:
+    inputs:
+      template:
+        description: Instruments template ('Time Profiler', or 'SwiftUI' for which views update)
+        default: Time Profiler
   push:
     branches: ['perf-*']
 jobs:
@@ -44,7 +48,7 @@ jobs:
           for i in $(seq 1 600); do pid=$(pgrep -f 'Track\.app/Track( |$)' | head -n 1); [ -n "$pid" ] && break; kill -0 $test 2>/dev/null || break; sleep 0.5; done
           [ -n "$pid" ] || { echo "Track never started"; ps -ax | grep -i track | head; tail -n 40 out/test.log; exit 1; }
           echo "Track is process $pid"
-          xcrun xctrace record --template 'Time Profiler' --device "$UDID" --attach "$pid" --time-limit 200s --output out/scroll.trace > out/xctrace.log 2>&1 &
+          xcrun xctrace record --template "${{ inputs.template || 'Time Profiler' }}" --device "$UDID" --attach "$pid" --time-limit 200s --output out/scroll.trace > out/xctrace.log 2>&1 &
           trace=$!
           set +e
           wait $test; status=$?
@@ -52,7 +56,11 @@ jobs:
           set -e
           cat out/xctrace.log
           grep -E "Test Case|error:|PERF|failed|passed" out/test.log | tail -n 40
-          xcrun xctrace export --input out/scroll.trace --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]' > out/time-profile.xml
+          # Every table the template recorded, one file each (time-profile.xml is Time Profiler's samples).
+          xcrun xctrace export --input out/scroll.trace --toc > out/toc.xml
+          for schema in $(grep -o 'schema="[^"]*"' out/toc.xml | cut -d'"' -f2 | sort -u); do
+            xcrun xctrace export --input out/scroll.trace --xpath "/trace-toc/run[@number=\"1\"]/data/table[@schema=\"$schema\"]" > "out/$schema.xml" || true
+          done
           ls -la out
           exit $status
       - uses: actions/upload-artifact@v4
@@ -60,7 +68,7 @@ jobs:
         with:
           name: profile-${{ github.run_number }}
           path: |
-            out/time-profile.xml
+            out/*.xml
             out/test.log
             out/xctrace.log
           retention-days: 3
