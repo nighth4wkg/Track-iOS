@@ -36,10 +36,71 @@ public struct TrainingFile: Sendable {
     }
 
     public static func encode(_ training: Training) throws -> Data {
+        try encoder().encode(training)
+    }
+
+    static func encodeSessions(_ sessions: [Session]) throws -> Data {
+        try encoder().encode(sessions)
+    }
+
+    /// The same bytes as `encode(training)`, with the finished workouts' JSON given already encoded.
+    static func encode(_ training: Training, sessions json: Data) throws -> Data {
+        var core = training
+        core.sessions = []
+        var data = try encode(core)
+        // `"sessions":[]` can only appear once as the key itself: inside a name its quotes are escaped.
+        let empty = Data(#""sessions":[]"#.utf8)
+        guard let range = data.range(of: empty), data.range(of: empty, in: range.upperBound..<data.endIndex) == nil
+        else { return try encode(training) }
+        data.replaceSubrange(range, with: Data(#""sessions":"#.utf8) + json)
+        return data
+    }
+
+    private static func encoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        return try encoder.encode(training)
+        return encoder
     }
+}
+
+/// Saves off the main thread, in order. When saves pile up (typing a weight saves on every key) only the newest is
+/// written, and the finished workouts are encoded again only when they change, so a save during a workout stays a few
+/// kilobytes of work however long the history grows. The file is exactly what `TrainingFile.save` writes.
+public final class TrainingSaver: @unchecked Sendable {
+    private let file: TrainingFile
+    private let queue = DispatchQueue(label: "track.save", qos: .userInitiated)
+    private let lock = NSLock()
+    /// The newest copy not yet taken by the queue (guarded by `lock`).
+    private var waiting: Training?
+    /// The last workouts encoded, and their JSON (only touched on `queue`).
+    private var history: (sessions: [Session], json: Data)?
+
+    public init(file: TrainingFile) { self.file = file }
+
+    public func save(_ training: Training, failed: @escaping @Sendable (Error) -> Void) {
+        lock.lock()
+        let queued = waiting != nil
+        waiting = training
+        lock.unlock()
+        if queued { return }
+        queue.async { [self] in
+            lock.lock()
+            let next = waiting
+            waiting = nil
+            lock.unlock()
+            guard let next else { return }
+            do {
+                // Same storage is equal at once; a changed list is encoded again.
+                if history?.sessions != next.sessions { history = (next.sessions, try TrainingFile.encodeSessions(next.sessions)) }
+                try TrainingFile.encode(next, sessions: history!.json).write(to: file.url, options: .atomic)
+            } catch {
+                failed(error)
+            }
+        }
+    }
+
+    /// Waits for every save asked for so far to be written.
+    public func flush() { queue.sync {} }
 }
 
 extension Training {

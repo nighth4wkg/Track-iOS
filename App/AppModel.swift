@@ -97,7 +97,7 @@ final class AppModel {
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true
     /// Saving happens off the main thread, in order, so typing and dragging never wait on the disk.
-    @ObservationIgnored private let saver = DispatchQueue(label: "track.save", qos: .userInitiated)
+    @ObservationIgnored private let saver: TrainingSaver?
     @ObservationIgnored private var memo: [String: (stamp: AnyHashable, value: Any)] = [:]
     @ObservationIgnored private var memoSessions: [Session] = []
     private static let modeKey = "track.storageMode"
@@ -111,6 +111,7 @@ final class AppModel {
 
     init(file: TrainingFile? = try? TrainingFile.standard()) {
         self.file = file
+        saver = file.map { TrainingSaver(file: $0) }
         mode = UserDefaults.standard.string(forKey: Self.modeKey).flatMap(StorageMode.init)
         do {
             training = try file?.load() ?? Training()
@@ -153,11 +154,9 @@ final class AppModel {
         next.editedAt = nowMillis()
         syncRest(training, next)
         training = next
-        guard canSave, !Self.dryRun, let file else { return }
-        saver.async { [weak self] in
-            do { try file.save(next) } catch {
-                DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone. Free up some space and try again.") }
-            }
+        guard canSave, !Self.dryRun, let saver else { return }
+        saver.save(next) { [weak self] _ in
+            DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone. Free up some space and try again.") }
         }
     }
 

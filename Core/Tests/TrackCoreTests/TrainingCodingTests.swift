@@ -53,6 +53,33 @@ final class TrainingCodingTests: XCTestCase {
         try? FileManager.default.removeItem(at: file.url)
     }
 
+    func testWorkoutsGivenAlreadyEncodedWriteTheSameBytes() throws {
+        var training = try TrainingFile.decode(fixture())
+        // A name holding the key's own text must not be taken for it.
+        training.splits[0].name = #""sessions":[]"#
+        for sessions in [training.sessions, []] {
+            training.sessions = sessions
+            let spliced = try TrainingFile.encode(training, sessions: TrainingFile.encodeSessions(sessions))
+            XCTAssertEqual(spliced, try TrainingFile.encode(training))
+        }
+    }
+
+    func testSaverWritesTheNewestCopy() throws {
+        let file = TrainingFile(url: FileManager.default.temporaryDirectory.appendingPathComponent("\(newID()).json"))
+        let saver = TrainingSaver(file: file)
+        var training = try TrainingFile.decode(fixture())
+        for goal in 1...5 {
+            training.settings.weeklyGoal = goal
+            saver.save(training) { XCTFail("\($0)") }
+        }
+        training.sessions.removeFirst()
+        saver.save(training) { XCTFail("\($0)") }
+        saver.flush()
+        XCTAssertEqual(try file.load(), training)
+        XCTAssertEqual(try Data(contentsOf: file.url), try TrainingFile.encode(training))
+        try? FileManager.default.removeItem(at: file.url)
+    }
+
     func testIdentifiersLookLikeTheWebsites() {
         let id = newID()
         XCTAssertEqual(id, id.lowercased())
