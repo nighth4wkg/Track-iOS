@@ -14,6 +14,8 @@ struct SettingsScreen: View {
     @State private var restored = 0
     @State private var copied = false
     private static let contact = "n1ghthawq"
+    /// How long "Copied" shows before the row reads as before (the PWA's COPIED_MS).
+    private static let copiedFor = Duration.seconds(2)
     private static let privacy = URL(string: "https://trackk.pages.dev/privacy#iphone")
 
     var body: some View {
@@ -77,7 +79,7 @@ struct SettingsScreen: View {
                     .buttonStyle(RowStyle())
                     .accessibilityLabel("Found a problem? " + (copied ? "Discord username copied" : "Copy Discord username \(Self.contact)"))
                     .sensoryFeedback(.success, trigger: copied) { _, now in now }
-                    .task(id: copied) { if copied { try? await Task.sleep(for: .seconds(2)); copied = false } }
+                    .task(id: copied) { if copied { try? await Task.sleep(for: Self.copiedFor); copied = false } }
                 // Inside Track, as iOS apps show a web page, rather than switching to Safari.
                 Button { if let url = Self.privacy { showWebPage(url) } } label: { Row(title: "Privacy", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
