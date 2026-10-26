@@ -21,8 +21,6 @@ struct SheetLayer: View {
                     SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
                         .environment(\.closeSheet, { close(sheet) })
                 }
-                // Only the top sheet speaks to VoiceOver (none while the question is up).
-                .accessibilityHidden(sheet.id != model.sheets.last?.id || model.confirm != nil)
                 // The layer reaches the screen's bottom edge (not the home indicator's), so the sheet sits 8 above
                 // it; the keyboard still lifts it.
                 .ignoresSafeArea(.container, edges: .bottom)
