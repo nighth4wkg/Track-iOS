@@ -115,6 +115,8 @@ struct SheetFrame<Content: View, Action: View>: View {
     let title: String
     var subtitle: String?
     var closeLabel = "Done"
+    /// What stays under the title (a search and its filters): scrolled away, it slid half under the title.
+    var pinned: AnyView? = nil
     @ViewBuilder var action: Action
     @ViewBuilder let content: Content
 
@@ -136,6 +138,7 @@ struct SheetFrame<Content: View, Action: View>: View {
                 }
             }
             .padding(.horizontal, Space.s4)
+            if let pinned { pinned.padding(.horizontal, Space.s4) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) { content }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -148,8 +151,8 @@ struct SheetFrame<Content: View, Action: View>: View {
 }
 
 extension SheetFrame where Action == EmptyView {
-    init(title: String, subtitle: String? = nil, closeLabel: String = "Done", @ViewBuilder content: () -> Content) {
-        self.init(title: title, subtitle: subtitle, closeLabel: closeLabel, action: { EmptyView() }, content: content)
+    init(title: String, subtitle: String? = nil, closeLabel: String = "Done", pinned: AnyView? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title: title, subtitle: subtitle, closeLabel: closeLabel, pinned: pinned, action: { EmptyView() }, content: content)
     }
 }
 

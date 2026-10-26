@@ -63,12 +63,11 @@ struct ExercisePicker: View {
         let custom = !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
         // The count rides on Done: a line appearing under the title pushed the whole list down.
         SheetFrame(title: replacing == nil ? "Add exercise" : "Swap exercise", subtitle: replacing,
-                   closeLabel: added.isEmpty ? "Done" : "Done · \(added.count)") {
+                   closeLabel: added.isEmpty ? "Done" : "Done · \(added.count)", pinned: AnyView(VStack(spacing: Space.s3) {
             Field(placeholder: "Search exercises", text: $query, label: "Search exercises", icon: .search,
                   submit: { if custom { pick(typed) } else if let first = results.first { pick(first) } })
-                .padding(.top, Space.s3)
             Seg(label: "Muscle", options: (["All"] + LiftTable.groups).map { (value: $0, text: $0) }, value: $group, columns: 3)
-                .padding(.top, Space.s3)
+        }.padding(.top, Space.s3))) {
             if custom {
                 RowCard { row(typed, choices) }.padding(.top, Space.s4)
             }
