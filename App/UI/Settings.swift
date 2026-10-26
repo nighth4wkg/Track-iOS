@@ -75,7 +75,7 @@ struct SettingsScreen: View {
                     copied = true
                 } label: { Row(title: "Found a problem?", value: copied ? "Copied" : Self.contact) }
                     .buttonStyle(RowStyle())
-                    .accessibilityLabel(copied ? "Discord username copied" : "Copy Discord username \(Self.contact)")
+                    .accessibilityLabel("Found a problem? " + (copied ? "Discord username copied" : "Copy Discord username \(Self.contact)"))
                     .sensoryFeedback(.success, trigger: copied) { _, now in now }
                     .task(id: copied) { if copied { try? await Task.sleep(for: .seconds(2)); copied = false } }
                 // Inside Track, as iOS apps show a web page, rather than switching to Safari.

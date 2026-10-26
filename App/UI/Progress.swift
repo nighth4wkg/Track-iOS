@@ -25,7 +25,7 @@ struct ProgressScreen: View {
                     .buttonStyle(CardStyle()).accessibilityLabel("Level \(level). How XP works")
                 let earned = model.derived("award count") { $0.questAwards.count }
                 Button { model.present(QuestList(), tall: true) } label: { tile("Badges", "\(earned)", unit: "/\(Quest.all.count)", tight: true) }
-                    .buttonStyle(CardStyle()).accessibilityLabel("\(earned) of \(Quest.all.count) achievements. Show all")
+                    .buttonStyle(CardStyle()).accessibilityLabel("Badges: \(earned) of \(Quest.all.count). Show all")
             }
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, Space.s3)
