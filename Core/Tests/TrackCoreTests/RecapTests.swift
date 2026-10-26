@@ -62,13 +62,6 @@ final class RecapTests: XCTestCase {
         XCTAssertNil(deeper.record(for: "Bench Press", set(200, 6, false)), "not logged")
     }
 
-    func testDurationsReadLikeTheWebsite() {
-        XCTAssertEqual(trainingDuration(45), "45 min")
-        XCTAssertEqual(trainingDuration(125), "2h 5m")
-        XCTAssertEqual(trainingDuration(60), "1h")
-        XCTAssertEqual(trainingDuration(28_884), "20d 1h")
-    }
-
     func testFiltersMatchEveryWordAndTheDayRange() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Bangkok")!

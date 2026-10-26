@@ -3,8 +3,6 @@ import TrackCore
 
 /// The workout's actions that ask first or can be undone, as on the website (hooks/use-workout-actions.ts).
 extension AppModel {
-    func startRest() { update { $0.restUntil = nowMillis() + $0.settings.restSeconds * 1000 } }
-
     /// Ends the rest: Skip, in Track and on the Live Activity. With none to end (the Live Activity still showing one
     /// that ran out), it only puts the Live Activity right; there's nothing to save.
     func skipRest() {

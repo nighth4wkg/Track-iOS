@@ -83,12 +83,6 @@ extension Array where Element == Session {
         return finished.filter { weekStart($0.finishedAt!, calendar: calendar) == start }
     }
 
-    /// This period's volume so far, and its percentage change against the last one up to the same moment.
-    public func volumeChange(per period: Period, at time: Int, calendar: Calendar = Calendars.local) -> (volume: Double, change: Int?) {
-        let result = change(of: .volume, per: period, at: time, calendar: calendar)
-        return (result.value, result.change)
-    }
-
     /// The tally over these workouts (Progress's measures).
     public func amount(_ tally: Tally) -> Double {
         switch tally {

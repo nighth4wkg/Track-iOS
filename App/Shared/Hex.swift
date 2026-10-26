@@ -3,7 +3,7 @@ import SwiftUI
 /// Track's colours that the rest Live Activity draws too: the widget extension can't see the app's Palette, so both
 /// read them here.
 enum Hex {
-    /// The dark theme's mint (Palette.primary and accent).
+    /// The dark theme's mint (Palette.accent).
     static let mint: UInt32 = 0x48E58D
     /// The dark theme's page (Palette.background).
     static let night: UInt32 = 0x121418

@@ -412,7 +412,6 @@ private struct Follow: ViewModifier {
 struct SidewaysPan: UIGestureRecognizerRepresentable {
     /// A release this fast (pt/s) decides by its direction, however short.
     static let flick: CGFloat = 300
-    var onChange: (CGFloat) -> Void = { _ in }
     var onEnd: (_ translation: CGFloat, _ velocity: CGFloat) -> Void
 
     func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
@@ -424,12 +423,8 @@ struct SidewaysPan: UIGestureRecognizerRepresentable {
     func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
 
     func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
-        let x = pan.translation(in: pan.view).x
-        switch pan.state {
-        case .changed: onChange(x)
-        case .ended, .cancelled, .failed: onEnd(x, pan.velocity(in: pan.view).x)
-        default: break
-        }
+        guard [.ended, .cancelled, .failed].contains(pan.state) else { return }
+        onEnd(pan.translation(in: pan.view).x, pan.velocity(in: pan.view).x)
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {

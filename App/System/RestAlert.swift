@@ -9,8 +9,6 @@ enum RestAlert {
     /// Schedules the alert. The very first rest asks whether Track may notify (iOS asks only once, ever), so the
     /// question comes when its point is plain, not over the workout as it opens.
     static func schedule(at until: Int) {
-        // A profiling run (PerfDrive) is filmed and timed: no permission question over it.
-        if ProcessInfo.processInfo.arguments.contains("-perfActions") { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             if settings.authorizationStatus == .notDetermined {

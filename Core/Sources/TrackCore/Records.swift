@@ -1,6 +1,6 @@
 import Foundation
 
-// Personal records as improvements (lib/training-progress.ts) and the weekly volume behind the Progress chart.
+// Personal records as improvements (lib/training-progress.ts).
 
 /// A logged set, as evidence for a record.
 public struct Evidence: Equatable, Sendable {
@@ -56,22 +56,5 @@ extension Array where Element == Session {
             }
         }
         return records.sorted { a, b in a.after.date == b.after.date ? a.after.sessionId > b.after.sessionId : a.after.date > b.after.date }
-    }
-
-    /// The latest improvement per exercise, newest first: the Personal records list.
-    public var latestRecords: [Improvement] {
-        var seen = Set<String>()
-        return improvements.filter { seen.insert(exerciseKey($0.after.exercise)).inserted }
-    }
-
-    /// Volume per period for the last `count` periods, oldest first, ending with the time's.
-    public func volumes(_ count: Int, per period: Period, at time: Int, calendar: Calendar = Calendars.local) -> [Double] {
-        let current = date(periodStart(time, period, calendar: calendar))
-        let starts = (0..<count).reversed().map { back in
-            periodStart(millis(calendar.date(byAdding: period.component, value: -back, to: current)!), period, calendar: calendar)
-        }
-        var totals = [Int: Double]()
-        for session in finished { totals[periodStart(session.finishedAt!, period, calendar: calendar), default: 0] += session.volume }
-        return starts.map { totals[$0] ?? 0 }
     }
 }

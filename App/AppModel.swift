@@ -101,13 +101,9 @@ final class AppModel {
     @ObservationIgnored private var memo: [String: (stamp: AnyHashable, value: Any)] = [:]
     @ObservationIgnored private var memoSessions: [Session] = []
     private static let modeKey = "track.storageMode"
-    /// -dryRun (PerfDrive's -perfWork on a phone with real data): changes stay in memory and nothing is saved; the rest
-    /// alert and Live Activity still run (they hold no data, so they can be checked), and the drive puts the data back
-    /// as it found it.
+    /// -dryRun (testing on a phone with real data): changes stay in memory and nothing is saved; the rest alert and
+    /// Live Activity still run (they hold no data, so they can be checked).
     static let dryRun = ProcessInfo.processInfo.arguments.contains("-dryRun")
-
-    /// The dry run is over: the data as it was before it began.
-    func dryRunEnd(_ before: Training) { if Self.dryRun { syncRest(training, before); training = before; workoutOpen = false } }
 
     init(file: TrainingFile? = try? TrainingFile.standard()) {
         self.file = file

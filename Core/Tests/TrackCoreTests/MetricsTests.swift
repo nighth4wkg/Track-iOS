@@ -43,12 +43,12 @@ final class MetricsTests: XCTestCase {
 
     func testWeekVolumeComparesWithLastWeekUpToTheSameMoment() {
         let sessions = [workout(at(2026, 9, 22), kg: 100), workout(at(2026, 9, 26), kg: 100), workout(at(2026, 9, 29), kg: 110)]
-        let result = sessions.volumeChange(per: .week, at: at(2026, 9, 30), calendar: calendar)
-        XCTAssertEqual(result.volume, 3300)
+        let result = sessions.change(of: .volume, per: .week, at: at(2026, 9, 30), calendar: calendar)
+        XCTAssertEqual(result.value, 3300)
         XCTAssertEqual(result.change, 10, "against last Mon–Wed only, not the whole of last week")
-        XCTAssertNil([workout(at(2026, 9, 29))].volumeChange(per: .week, at: at(2026, 9, 30), calendar: calendar).change)
-        XCTAssertEqual(sessions.volumeChange(per: .day, at: at(2026, 9, 29, 23), calendar: calendar).volume, 3300)
-        XCTAssertEqual(sessions.volumeChange(per: .month, at: at(2026, 9, 30), calendar: calendar).volume, 9300)
+        XCTAssertNil([workout(at(2026, 9, 29))].change(of: .volume, per: .week, at: at(2026, 9, 30), calendar: calendar).change)
+        XCTAssertEqual(sessions.change(of: .volume, per: .day, at: at(2026, 9, 29, 23), calendar: calendar).value, 3300)
+        XCTAssertEqual(sessions.change(of: .volume, per: .month, at: at(2026, 9, 30), calendar: calendar).value, 9300)
     }
 
     func testALeftAndRightPairEarnsOneSetOfXP() {

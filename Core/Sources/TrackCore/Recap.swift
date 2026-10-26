@@ -1,16 +1,7 @@
 import Foundation
 
 // The finished-workout recap (lib/workout-recap.ts), live records while logging (lib/records-live.ts), history
-// filters (lib/history.ts), training days this week, and the website's duration wording (lib/format.ts).
-
-/// "45 min", "1h", "2h 5m", "20d 1h".
-public func trainingDuration(_ minutes: Int) -> String {
-    let total = max(0, minutes)
-    if total < 60 { return "\(total) min" }
-    let hours = total / 60
-    if hours < 24 { return total % 60 == 0 ? "\(hours)h" : "\(hours)h \(total % 60)m" }
-    return "\(hours / 24)d" + (hours % 24 == 0 ? "" : " \(hours % 24)h")
-}
+// filters (lib/history.ts) and training days this week.
 
 public struct Recap: Sendable {
     public let session: Session

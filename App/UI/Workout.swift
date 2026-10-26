@@ -53,7 +53,6 @@ struct WorkoutScreen: View {
                         focus = nil
                         reveal(proxy, active.exercises.first { $0.doneCount < $0.setCount }?.id ?? Self.top, anchor: .top)
                     }
-                    .task { await FrameLog.driveNext(fields) { focus = $0 } }
             }
             .onDisappear { focus = nil }
         }

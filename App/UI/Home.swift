@@ -176,17 +176,17 @@ private struct HomeTiles: View {
     }
 
     private var volume: some View {
-        let week = model.derived("volume W", at: now / 60_000) { $0.volumeChange(per: .week, at: now) }
+        let week = model.derived("volume W", at: now / 60_000) { $0.change(of: .volume, per: .week, at: now) }
         return VStack(alignment: .leading, spacing: 0) {
             Text("Volume this week").type(.t14).foregroundStyle(Palette.muted)
             HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
-                Text(weight(week.volume, training.settings.unit)).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
+                Text(weight(week.value, training.settings.unit)).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
                 Text(training.settings.unit.rawValue).type(.t14).foregroundStyle(Palette.muted)
             }
             .padding(.top, Space.s2)
             if let change = week.change {
-                Text(week.volume == 0 ? "Nothing logged yet" : change == 0 ? "Same as last week" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs last week")
-                    .type(.t14).foregroundStyle(week.volume > 0 && change > 0 ? Palette.accent : Palette.muted)
+                Text(week.value == 0 ? "Nothing logged yet" : change == 0 ? "Same as last week" : "\(change > 0 ? "▲" : "▼") \(abs(change))% vs last week")
+                    .type(.t14).foregroundStyle(week.value > 0 && change > 0 ? Palette.accent : Palette.muted)
             }
         }
         .tileCard()
