@@ -36,14 +36,16 @@ jobs:
         run: |
           mkdir -p out
           export TEST_RUNNER_TRACK_SEED="$(python3 tools/demo-data.py)"
-          xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build             CODE_SIGNING_ALLOWED=NO -only-testing:TrackUITests/ScrollProfile/testExerciseListScroll test-without-building > out/test.log 2>&1 &
-          test=$!
-          pid=""
-          for i in $(seq 1 180); do pid=$(pgrep -f 'Track\.app/Track$' | head -n 1); [ -n "$pid" ] && break; sleep 1; done
-          [ -n "$pid" ] || { tail -n 40 out/test.log; exit 1; }
-          echo "Track is process $pid"
-          xcrun xctrace record --template 'Time Profiler' --device "$UDID" --attach "$pid" --time-limit 75s --output out/scroll.trace > out/xctrace.log 2>&1 || cat out/xctrace.log
-          set +e; wait $test; status=$?; set -e
+          # The whole simulator is recorded (finding the app's process to attach to proved unreliable); the parse keeps Track's main thread.
+          xcrun xctrace record --template 'Time Profiler' --device "$UDID" --all-processes --time-limit 300s --output out/scroll.trace > out/xctrace.log 2>&1 &
+          trace=$!
+          sleep 10
+          set +e
+          xcodebuild -project Track.xcodeproj -scheme Track -destination "id=$UDID" -derivedDataPath build             CODE_SIGNING_ALLOWED=NO -only-testing:TrackUITests/ScrollProfile/testExerciseListScroll test-without-building > out/test.log 2>&1
+          status=$?
+          kill -INT $trace; wait $trace
+          set -e
+          cat out/xctrace.log
           grep -E "Test Case|error:|PERF|failed|passed" out/test.log | tail -n 40
           xcrun xctrace export --input out/scroll.trace --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]' > out/time-profile.xml
           ls -la out
