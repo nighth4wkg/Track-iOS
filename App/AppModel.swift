@@ -198,6 +198,7 @@ final class AppModel {
     // MARK: Workouts
 
     func start(_ split: Split, carryOver: Bool = true) {
+        Sampler.begin("start workout")
         update { try $0.start(split, carryOver: carryOver) }
         if training.active != nil { workoutOpen = true }
     }

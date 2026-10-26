@@ -24,7 +24,7 @@ struct TrackApp: App {
             .preferredColorScheme(.dark)
             .onAppear {
                 TestSeed.apply(model)
-                FrameLog.install()
+                FrameLog.install(); Sampler.install()
                 // The library's and your own exercises' muscles worked out off the main thread, ahead of the picker,
                 // the workout's cards and the ranks.
                 let names = Catalog.names + model.training.sessions.flatMap { $0.exercises.map(\.name) }

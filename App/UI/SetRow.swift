@@ -191,7 +191,7 @@ private struct SetKeyboard: ViewModifier {
                             .frame(width: Size.anchor, height: Size.anchor).allowsHitTesting(false).accessibilityHidden(true)
                     }
                 }
-                .onChange(of: focus) { reveal(proxy) }
+                .onChange(of: focus) { old, new in if (old == nil) != (new == nil) { Sampler.begin(new == nil ? "keyboard down" : "keyboard up") }; reveal(proxy) }
                 // A question over the workout ends the typing, rather than leaving the keyboard under it.
                 .onChange(of: model.confirm != nil) { _, open in if open { focus = nil } }
                 // The keyboard coming up (or the bar over it changing) can cover the set.
