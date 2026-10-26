@@ -102,6 +102,8 @@ struct SetRow: View {
             .sunk(.inner, ring: bad ? Palette.danger : focused == id ? Palette.accent : nil)
             .contentShape(Rectangle())
             .onTapGesture { focus.wrappedValue = "\(set.id).\(id)" }
+            // Its own element: an empty Text drops out of VoiceOver (and UI tests) otherwise.
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel(label).accessibilityValue(text)
             .accessibilityAddTraits(focused == id ? [.isButton, .isSelected] : .isButton)
             .accessibilityAction { focus.wrappedValue = "\(set.id).\(id)" }
