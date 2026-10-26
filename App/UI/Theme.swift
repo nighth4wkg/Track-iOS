@@ -242,11 +242,12 @@ private struct Pressed: ViewModifier {
     func body(content: Content) -> some View { content.opacity(on ? 0.75 : 1) }
 }
 
-/// A disabled control or card fades, as the PWA's button:disabled (the main button and rows have their own looks).
+/// A disabled control, card or row fades, as the PWA's button:disabled (the main button has its own look).
 private struct Faded: ViewModifier {
     @Environment(\.isEnabled) private var enabled
+    var keep = false
     static let opacity = 0.45
-    func body(content: Content) -> some View { content.opacity(enabled ? 1 : Self.opacity) }
+    func body(content: Content) -> some View { content.opacity(enabled || keep ? 1 : Self.opacity) }
 }
 
 /// The screen's main action: the green pill. `compact` beside other controls: a control's height, as wide as its words.
@@ -292,10 +293,12 @@ struct SecondaryStyle: ButtonStyle {
     }
 }
 
-/// A row inside a card: it lights up while pressed, as iOS lists do (it doesn't dim or shrink inside its card).
+/// A row inside a card: it lights up while pressed, as iOS lists do (it doesn't dim or shrink inside its card). One
+/// that can't act now (Remove last set at one set) fades; a `still` one, with only nothing to open, stays solid.
 struct RowStyle: ButtonStyle {
+    var still = false
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.background(configuration.isPressed ? Palette.wash : .clear)
+        configuration.label.background(configuration.isPressed ? Palette.wash : .clear).modifier(Faded(keep: still))
     }
 }
 

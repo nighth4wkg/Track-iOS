@@ -21,6 +21,8 @@ struct SheetLayer: View {
                     SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
                         .environment(\.closeSheet, { close(sheet) })
                 }
+                // Only the top sheet speaks to VoiceOver (none while the question is up).
+                .accessibilityHidden(sheet.id != model.sheets.last?.id || model.confirm != nil)
                 // The layer reaches the screen's bottom edge (not the home indicator's), so the sheet sits 8 above
                 // it; the keyboard still lifts it.
                 .ignoresSafeArea(.container, edges: .bottom)
@@ -34,8 +36,8 @@ struct SheetLayer: View {
 }
 
 /// One sheet's box: the SHEET surface, 8 above the screen's bottom edge (above the keyboard while it's up), as tall
-/// as what it holds up to the screen, scrolling past that. Its top (grab bar and title row) follows a finger down and
-/// closes it when let go past 40% of its height or flicked.
+/// as what it holds up to the screen (SheetFrame scrolls what's under its title past that). Its top (grab bar and
+/// title row) follows a finger down and closes it when let go past 40% of its height or flicked.
 private struct SheetBox<Content: View>: View {
     let tall: Bool
     let close: () -> Void
@@ -53,9 +55,9 @@ private struct SheetBox<Content: View>: View {
                 .contentShape(Rectangle())
                 .gesture(drag)
                 .accessibilityHidden(true)
-            // One scroll view, as tall as what it holds up to the room there is: swapping a plain copy for a scrolling
-            // one (ViewThatFits) when the keyboard came up rebuilt the content, so it jumped and its field lost the keyboard.
-            Group { if tall { scroller } else { UpToContent { scroller } } }
+            // As tall as what it holds up to the room there is: swapping a plain copy for a scrolling one
+            // (ViewThatFits) when the keyboard came up rebuilt the content, so it jumped and its field lost the keyboard.
+            Group { if tall { content } else { UpToContent { content } } }
             .environment(\.sheetDrag, drag)
         }
         .frame(maxWidth: Size.column - Space.s4, maxHeight: tall ? .infinity : nil, alignment: .top)
@@ -67,14 +69,6 @@ private struct SheetBox<Content: View>: View {
         .padding(.bottom, Space.s2)
         .accessibilityAddTraits(.isModal)
         .accessibilityAction(.escape, close)
-    }
-
-    private var inside: some View {
-        VStack(alignment: .leading, spacing: 0) { content }.padding(.horizontal, Space.s4).padding(.bottom, Space.s4)
-    }
-
-    private var scroller: some View {
-        ScrollView { inside }.scrollDismissesKeyboard(.interactively).scrollBounceBehavior(.basedOnSize)
     }
 
     private var drag: AnyGesture<DragGesture.Value> {
@@ -113,7 +107,8 @@ extension EnvironmentValues {
 }
 
 /// A sheet's head and content (the PWA's Sheet): the title (and a line under it) beside one button (Done, or Cancel
-/// on a sheet that saves, or `action` in its place), then the content.
+/// on a sheet that saves, or `action` in its place), then the content. Only the content scrolls: the title row and
+/// its Done stay put, as in iOS's own sheets.
 struct SheetFrame<Content: View, Action: View>: View {
     @Environment(\.closeSheet) private var close
     @Environment(\.sheetDrag) private var drag
@@ -140,7 +135,13 @@ struct SheetFrame<Content: View, Action: View>: View {
                     action
                 }
             }
-            content
+            .padding(.horizontal, Space.s4)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) { content }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Space.s4).padding(.bottom, Space.s4)
+            }
+            .scrollDismissesKeyboard(.interactively).scrollBounceBehavior(.basedOnSize)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

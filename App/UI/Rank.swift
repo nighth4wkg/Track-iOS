@@ -158,7 +158,7 @@ private struct MuscleRow: View {
                 .frame(maxWidth: .infinity, minHeight: Size.row, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(RowStyle())
+            .buttonStyle(RowStyle(still: true))
             .disabled(!opens)
             .accessibilityLabel("\(rank.muscle.rawValue): \(rank.best == nil ? "Unranked" : rank.name)")
             .accessibilityValue(opens ? (open ? "Open" : "Closed") : "")

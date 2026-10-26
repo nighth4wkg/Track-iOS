@@ -111,7 +111,7 @@ struct WorkoutScreen: View {
         let bests = model.bests
         return VStack(spacing: Space.s3) {
             ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
-                let muscle: String = LiftTable.ranking(for: exercise.name, choices: settings.lifts ?? [:])?.groups.first ?? "Exercise"
+                let muscle: String = LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]).first ?? "Exercise"
                 let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
                 ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
                              autoLog: settings.logSets != .manual, bests: bests,

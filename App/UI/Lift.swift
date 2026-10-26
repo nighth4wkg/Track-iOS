@@ -12,7 +12,7 @@ struct LiftScreen: View {
         let training = model.training
         let unit = training.settings.unit
         let entries = model.derived("lift \(name)") { $0.entries(of: name) }
-        let group = LiftTable.ranking(for: name, choices: training.settings.lifts ?? [:])?.groups.first ?? "Exercise"
+        let group = LiftTable.muscles(for: name, choices: training.settings.lifts ?? [:]).first ?? "Exercise"
         DeepPage {
             TitleBar(title: name, subtitle: group + dot + count(entries.count, "workout"))
             Seg(label: "Period", options: Period.allCases.map { (value: $0, text: $0.name) }, value: $period, short: true)

@@ -153,6 +153,13 @@ public enum LiftTable {
         return (own ?? standards[chosen]).map { ($0, [chosen]) }
     }
 
+    /// The rank groups a name works, for labels and the muscle filter: its ranking's, else its own lift's (Air Squat has
+    /// no standard to rank on but is still Legs). None when the user said it doesn't count.
+    public static func muscles(for name: String, choices: [String: String] = [:]) -> [String] {
+        if choice(for: name, choices: choices) == none { return [] }
+        return ranking(for: name, choices: choices)?.groups ?? detect(name).lift?.groups ?? []
+    }
+
     /// How the logged weight turns into load on the lift's standard, from the equipment the name says.
     static func load(for lift: Lift, name: String) -> (oneSided: Bool, sign: Double, scale: Double) {
         let key = matchKey(name)

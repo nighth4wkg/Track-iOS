@@ -61,8 +61,9 @@ struct ExercisePicker: View {
         let results = group == "All" ? matches : matches.filter { groups.of($0, choices).contains(group) }
         let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
         let custom = !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
-        SheetFrame(title: replacing == nil ? "Add exercise" : "Swap exercise",
-                   subtitle: replacing ?? (added.isEmpty ? nil : "\(added.count) added")) {
+        // The count rides on Done: a line appearing under the title pushed the whole list down.
+        SheetFrame(title: replacing == nil ? "Add exercise" : "Swap exercise", subtitle: replacing,
+                   closeLabel: added.isEmpty ? "Done" : "Done · \(added.count)") {
             Field(placeholder: "Search exercises", text: $query, label: "Search exercises", icon: .search,
                   submit: { if custom { pick(typed) } else if let first = results.first { pick(first) } })
                 .padding(.top, Space.s3)
@@ -144,7 +145,7 @@ private final class Groups {
 
     func of(_ name: String, _ choices: [String: String]) -> [String] {
         if let known = map[name] { return known }
-        let found = LiftTable.ranking(for: name, choices: choices)?.groups ?? []
+        let found = LiftTable.muscles(for: name, choices: choices)
         map[name] = found
         return found
     }

@@ -187,7 +187,7 @@ struct HistoryCalendar: View {
                     } label: {
                         VStack(spacing: Space.s1) {
                             Text(date.formatted(.gregorian.day())).type(.t14).fontWeight(isToday ? .bold : nil).monospacedDigit()
-                                .foregroundStyle(!inMonth ? Palette.faint : isToday ? Palette.accent : Palette.text)
+                                .foregroundStyle(!inMonth || key > today ? Palette.faint : isToday ? Palette.accent : Palette.text)
                             Circle().fill(trained.contains(key) ? Palette.accent : .clear).frame(width: Size.dot, height: Size.dot)
                         }
                         .frame(width: Size.tile, height: Size.tile)

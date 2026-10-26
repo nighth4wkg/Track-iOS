@@ -15,31 +15,36 @@ struct Shell: View {
 
     var body: some View {
         let covered = !model.pages.isEmpty || model.workoutOpen || model.finished != nil
+        // What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's.
+        let behind = !model.sheets.isEmpty || model.confirm != nil
         ZStack {
-            ForEach(AppTab.allCases, id: \.self) { tab in
-                let shown = !covered && model.tab == tab
-                page(tab)
-                    .environment(\.shown, shown)
-                    .opacity(shown ? 1 : 0)
-                    .allowsHitTesting(shown)
-                    .accessibilityHidden(!shown)
+            Group {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    let shown = !covered && model.tab == tab
+                    page(tab)
+                        .environment(\.shown, shown)
+                        .opacity(shown ? 1 : 0)
+                        .allowsHitTesting(shown)
+                        .accessibilityHidden(!shown)
+                }
+                ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
+                    let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
+                    deeper(route)
+                        .id(route)
+                        .opacity(shown ? 1 : 0)
+                        .allowsHitTesting(shown)
+                        .accessibilityHidden(!shown)
+                        .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
+                        .edgeBack(shown) { model.back() }
+                }
+                if model.workoutOpen, model.training.active != nil { WorkoutScreen() }
+                if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
+                StatusFade()
+                if !covered && !keyboard {
+                    NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
+                }
             }
-            ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
-                let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
-                deeper(route)
-                    .id(route)
-                    .opacity(shown ? 1 : 0)
-                    .allowsHitTesting(shown)
-                    .accessibilityHidden(!shown)
-                    .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
-                    .edgeBack(shown) { model.back() }
-            }
-            if model.workoutOpen, model.training.active != nil { WorkoutScreen() }
-            if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
-            StatusFade()
-            if !covered && !keyboard {
-                NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
-            }
+            .accessibilityHidden(behind)
             SheetLayer()
             AskLayer()
             ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3)

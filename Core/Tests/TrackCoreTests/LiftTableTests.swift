@@ -59,6 +59,15 @@ final class LiftTableTests: XCTestCase {
         XCTAssertNil(ranking("Constructor"))
     }
 
+    func testMusclesForLabelsIncludeUnrankedLifts() {
+        XCTAssertEqual(LiftTable.muscles(for: "Air Squat"), ["Legs"])
+        XCTAssertEqual(LiftTable.muscles(for: "Bench press"), ["Chest"])
+        XCTAssertEqual(LiftTable.muscles(for: "Bench press", choices: [LiftTable.nameKey("Bench press"): "Back"]), ["Back"])
+        XCTAssertEqual(LiftTable.muscles(for: "Air Squat", choices: [LiftTable.nameKey("Air Squat"): LiftTable.none]), [])
+        XCTAssertEqual(LiftTable.muscles(for: "Plank"), [])
+        XCTAssertEqual(LiftTable.muscles(for: "Zzz unknown"), [])
+    }
+
     func testEachGroupsMainLiftRanksForThatGroup() {
         XCTAssertEqual(Set(LiftTable.file.standards.keys), Set(LiftTable.groups))
         for (group, id) in LiftTable.file.standards {
