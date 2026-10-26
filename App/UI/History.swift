@@ -54,7 +54,8 @@ struct HistoryScreen: View {
                 Text(model.derived("any finished") { $0.finished.isEmpty } ? "Finish a workout and it shows up here." : "No workouts match. Try another name or date.")
                     .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
             } else {
-                LazyVStack(spacing: Space.s3) {
+                // One page, built whole: a lazy list rebuilt rows as they scrolled in and stalled the scroll.
+                VStack(spacing: Space.s3) {
                     ForEach(results.prefix(shown)) { session in
                         Button { model.open(.session(session.id)) } label: { HistoryRow(session: session, unit: unit) }.buttonStyle(CardStyle())
                     }

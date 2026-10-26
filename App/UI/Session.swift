@@ -27,7 +27,7 @@ struct SessionScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s4)
                 Text("Exercises").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6).accessibilityAddTraits(.isHeader)
-                LazyVStack(spacing: Space.s3) {
+                VStack(spacing: Space.s3) {
                     ForEach(current.exercises) { exercise in card(exercise, unit: unit) }
                 }
                 .padding(.top, Space.s2)
