@@ -201,18 +201,21 @@ struct AskLayer: View {
 /// The pill at the bottom (model.toast): a tick when something worked, Undo when there's something to bring back.
 /// Gone after a few seconds, on ✕, or on a swipe down. It sits `above` the floating bar under it (the nav pill, the rest
 /// timer, a docked button); while
-/// typing, or while a sheet is open, it moves to the top, off the fields and the sheet's buttons.
+/// typing, or when it appears over a sheet, it sits at the top, off the fields and the sheet's buttons.
 struct ToastLayer: View {
     @Environment(AppModel.self) private var model
     let above: CGFloat
     @State private var keyboard = false
+    /// Whether the showing toast appeared over a sheet: chosen as it appears and kept, so one fired as a sheet closes
+    /// doesn't start at the top and then drop.
+    @State private var placed: (id: UUID, overSheet: Bool)?
     /// How long a pill stays, as the PWA's PILL_MS: a problem a little longer to read, Undo longer to reach it.
     private static let seconds = (done: 3.0, problem: 4.0, undo: 6.0)
 
     var body: some View {
-        let top = keyboard || !model.sheets.isEmpty
         VStack {
             if let toast = model.toast {
+                let top = keyboard || (placed?.id == toast.id ? placed!.overSheet : !model.sheets.isEmpty)
                 let dismiss = { model.toast = nil }
                 HStack(spacing: Space.s3) {
                     if toast.problem {
@@ -240,6 +243,7 @@ struct ToastLayer: View {
                     try? await Task.sleep(for: .seconds(toast.undo != nil ? Self.seconds.undo : toast.problem ? Self.seconds.problem : Self.seconds.done))
                     if model.toast?.id == toast.id { dismiss() }
                 }
+                .onChange(of: toast.id, initial: true) { placed = (toast.id, !model.sheets.isEmpty) }
                 .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
                 .padding(.top, top ? Space.s2 : 0)
                 .floatingBottom(top ? 0 : above)
