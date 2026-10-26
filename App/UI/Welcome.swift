@@ -10,7 +10,7 @@ struct WelcomeScreen: View {
             ScrollView {
                 VStack(spacing: 0) {
                     VStack(spacing: 0) {
-                        TrackMark(size: IconSize.emblem).foregroundStyle(Palette.text)
+                        TrackMark(size: IconSize.mark).foregroundStyle(Palette.text)
                             .frame(width: Size.emblem, height: Size.emblem).raised(.control, .inner).accessibilityHidden(true)
                         Text("Welcome to Track").type(.t32).foregroundStyle(Palette.text).padding(.top, Space.s4)
                         Text("Your splits, sets and progress.").type(.t14).foregroundStyle(Palette.muted)
