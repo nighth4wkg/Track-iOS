@@ -84,39 +84,45 @@ final class TrackTour: XCTestCase {
         Thread.sleep(forTimeInterval: 0.6)
     }
 
-    /// A first install, in light mode with pounds and ✓-only logging: the welcome, every empty screen, a template,
-    /// and a first workout to its recap.
+    /// A first install with pounds: the welcome, every empty screen, the new-split sheet (templates), a split of
+    /// one exercise, and a first workout typed in on the keyboard, to its recap.
     func testFirstRun() {
         app.terminate()
         var seed = (try? JSONSerialization.jsonObject(with: Data((ProcessInfo.processInfo.environment["TRACK_SEED"] ?? "{}").utf8))) as? [String: Any] ?? [:]
         seed["splits"] = []; seed["sessions"] = []; seed["active"] = NSNull(); seed["restUntil"] = NSNull()
         var settings = seed["settings"] as? [String: Any] ?? [:]
-        settings["theme"] = "light"; settings["logSets"] = "manual"; settings["unit"] = "lb"; settings["bodyweight"] = NSNull()
+        settings["unit"] = "lb"; settings["bodyweight"] = NSNull()
         seed["settings"] = settings
         app.launchArguments = []
         app.launchEnvironment["TRACK_SEED"] = String(data: try! JSONSerialization.data(withJSONObject: seed), encoding: .utf8)
         app.launch()
         snap("welcome", after: 1)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Sync across'")).firstMatch, "sync card"); snap("sync-soon")
-        tap(app.buttons["Not now"], "Not now")
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Keep it on'")).firstMatch, "local card"); snap("empty-home", after: 1)
-        for tab in ["History", "Progress", "Rank"] { tap(app.tabBars.buttons[tab], tab); snap("empty-\(tab)", after: 0.8) }
-        tap(app.textFields["Bodyweight"], "bodyweight field"); app.typeText("165"); snap("rank-bodyweight-typed")
-        tap(app.buttons["Save"].firstMatch, "save bodyweight"); snap("rank-unranked", after: 1)
-        tap(app.tabBars.buttons["Home"], "Home")
-        tap(app.buttons["Push"].firstMatch, "Push template"); snap("template-added", after: 1)
-        tap(app.buttons["Start workout"].firstMatch, "Start"); allowNotificationsIfAsked(); snap("first-workout", after: 1)
-        tap(check("Bench Press set 1"), "✓ empty set"); snap("tick-empty-set", after: 0.8)
-        let kg = app.buttons["Bench Press set 1 weight in lb"]
-        tap(kg, "lb field"); app.typeKeys("135"); app.buttons["Bench Press set 1 reps"].tap(); app.typeKeys("10")
-        app.buttons["Bench Press set 1 RIR"].tap(); app.typeKeys("2"); snap("manual-typed-not-logged", after: 1)
-        tap(check("Bench Press set 1"), "✓ set 1"); allowNotificationsIfAsked(); snap("manual-ticked", after: 0.8)
-        tap(app.buttons["Done"].firstMatch, "keyboard Done")
-        tap(app.buttons["Finish workout"].firstMatch, "Finish"); tap(app.buttons["dialog-action"], "confirm"); snap("first-recap", after: 1.5)
-        tap(app.buttons["Continue"].firstMatch, "Continue"); snap("first-progress", after: 1)
-        tap(app.tabBars.buttons["History"], "History"); snap("first-history", after: 0.8)
-        tap(app.tabBars.buttons["Rank"], "Rank"); snap("first-rank", after: 0.8)
-        tap(app.tabBars.buttons["Home"], "Home"); snap("home-after-first", after: 0.8)
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Sync with an account'")).firstMatch, "sync"); snap("sync-soon")
+        tap(app.buttons["Continue locally"].firstMatch, "Continue locally"); snap("empty-home", after: 1)
+        for tab in ["History", "Progress", "Rank"] { tap(app.buttons[tab].firstMatch, tab); snap("empty-\(tab)", after: 0.8) }
+        tap(app.buttons["Home"].firstMatch, "Home")
+
+        tap(app.buttons["New split"].firstMatch, "New split"); snap("new-split", after: 0.8)
+        tap(app.textFields.firstMatch, "split name"); app.typeText("Arms")
+        tap(app.buttons["Create"].firstMatch, "Create"); snap("split-new", after: 1)
+        tap(app.buttons["Add exercise"].firstMatch, "Add exercise")
+        tap(app.textFields.matching(NSPredicate(format: "placeholderValue == 'Search exercises'")).firstMatch, "search")
+        app.typeText("Barbell curl")
+        tap(app.buttons["Add Barbell curl"].firstMatch, "Add Barbell curl"); snap("picker-added", after: 0.8)
+        dismissSheet(); snap("split-one-exercise"); back("split")
+
+        tap(app.buttons["Start workout"].firstMatch, "Start"); snap("first-workout", after: 1)
+        tap(app.buttons["lb, Set 1"].firstMatch, "set 1 lb")
+        for value in ["60", "10", "2", "60", "10", "2", "60", "10", "2"] {
+            app.typeKeys(value)
+            if app.buttons["Next"].firstMatch.exists { app.buttons["Next"].firstMatch.tap() }
+        }
+        allowNotificationsIfAsked(); snap("first-typed", after: 1)
+        if app.buttons["Done"].firstMatch.exists { app.buttons["Done"].firstMatch.tap() }
+        tickEverySet(); snap("first-ticked", after: 1)
+        tap(app.buttons["Finish workout"].firstMatch, "Finish"); snap("first-recap", after: 1.5)
+        tap(app.buttons["Continue"].firstMatch, "Continue"); snap("home-after-first", after: 1)
+        for tab in ["History", "Progress", "Rank"] { tap(app.buttons[tab].firstMatch, tab); snap("first-\(tab)", after: 0.8) }
     }
 
     private func snap(_ name: String, after delay: TimeInterval = 0.5) {
@@ -130,9 +136,5 @@ final class TrackTour: XCTestCase {
 
     private func tap(_ element: XCUIElement, _ what: String) {
         if element.waitForExistence(timeout: 4), element.isHittable { element.tap() } else { missing.append(what); print("TOUR missing: \(what) (step \(step))") }
-    }
-
-    private func check(_ set: String) -> XCUIElement {
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", set + ":")).firstMatch
     }
 }

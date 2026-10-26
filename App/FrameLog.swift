@@ -1,7 +1,7 @@
 import UIKit
 import os
 
-/// For measuring smoothness (UITests/PerfTour.swift, or on a phone): launched with -frameLog, every screen refresh is
+/// For measuring smoothness (UITests/ScrollProfile.swift, or on a phone): launched with -frameLog, every screen refresh is
 /// timed, and a frame that came later than its slot by half a frame or more counts as a hitch: "jank" when it's
 /// under a quarter second (a stutter you see), a stall when longer (the UI tests reading the screen cause those). The running tally is
 /// read as the label of a hidden element ("frame-log"), worked out when it's read, so reading it costs no frames, and each
@@ -56,7 +56,7 @@ import os
     }
 
     /// With -perfNext too: once a workout opens, the keyboard moves on through its fields every 150 ms, as when Next
-    /// is pressed over and over, with no test tool touching the app meanwhile (PerfTour reads the tally around it).
+    /// is pressed over and over, with no test tool touching the app meanwhile (a test reads the tally around it).
     static func driveNext(_ fields: [String], focus: (String) -> Void) async {
         guard ProcessInfo.processInfo.arguments.contains("-perfNext") else { return }
         try? await Task.sleep(for: .seconds(6))

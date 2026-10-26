@@ -1,12 +1,12 @@
 # Track iOS driven by UI tests in the Simulator, with a screen recording and each test's last screenshot attached to
 # the run. Run by hand, or on pushes to the app (free: the repository is public). The tests run in parallel, one
-# group per Mac (the longest decides how long it takes); PerfTour only measures, so it runs only when asked by name.
+# group per Mac (the longest decides how long it takes); ScrollProfile only measures, so it runs from profile.yml.
 name: UI tests
 on:
   workflow_dispatch:
     inputs:
       only:
-        description: 'Run just these tests (e.g. TrackUITests/PerfTour)'
+        description: 'Run just these tests (e.g. TrackUITests/TrackTour/testTour)'
         default: ''
       phone:
         description: 'On this iPhone, by name start (e.g. "iPhone SE" for the narrowest screen); newest Pro if empty'
@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tests: ${{ fromJSON(inputs.only && format('["{0}"]', inputs.only) || '["TrackUITests/TrackUITests", "TrackUITests/TrackTour/testTour", "TrackUITests/TrackTour/testFirstRun"]') }}
+        tests: ${{ fromJSON(inputs.only && format('["{0}"]', inputs.only) || '["TrackUITests/TrackTour/testTour", "TrackUITests/TrackTour/testFirstRun"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Use the newest Xcode
