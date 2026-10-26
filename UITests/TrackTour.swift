@@ -28,7 +28,8 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Done"].firstMatch, "keypad Done"); snap("keypad-gone", after: 0.6)
         app.swipeUp(); app.swipeUp()
         tap(app.buttons["Add exercise"].firstMatch, "Add exercise"); snap("picker", after: 1)
-        app.swipeUp(); snap("picker-scrolled"); dismissSheet(); app.swipeDown(); app.swipeDown()
+        // The sheet's title row (Done) scrolls with it, as the PWA's: back to the top first.
+        app.swipeUp(); snap("picker-scrolled"); app.swipeDown(); dismissSheet(); app.swipeDown(); app.swipeDown()
         tap(app.buttons.matching(NSPredicate(format: "label ENDSWITH ' options'")).firstMatch, "exercise options")
         snap("exercise-options", after: 0.8); dismissSheet()
         tickEverySet(); snap("all-ticked", after: 1)
