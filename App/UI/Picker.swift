@@ -77,8 +77,15 @@ struct ExercisePicker: View {
             }
             Text(query.isEmpty ? "All exercises" : count(results.count, "result")).type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
             if !results.isEmpty {
-                // One page, built whole: a lazy list rebuilt rows as they scrolled in and stalled the scroll (measured on the phone).
-                RowCard { ForEach(results.prefix(shown), id: \.self) { row($0, choices) } }.padding(.top, Space.s2)
+                // Built as they scroll in (RowCard builds every row): a filter tap costs a screenful, not the list.
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(results.prefix(shown).enumerated()), id: \.element) { index, name in
+                        row(name, choices).overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: Size.hairline) } }
+                    }
+                }
+                .clipShape(Corner.card.shape)
+                .raised()
+                .padding(.top, Space.s2)
             }
             if results.count > shown {
                 Button("Show more") { shown += Self.page }.buttonStyle(SecondaryStyle()).padding(.top, Space.s3)
