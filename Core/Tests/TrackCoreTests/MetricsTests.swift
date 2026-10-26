@@ -51,6 +51,15 @@ final class MetricsTests: XCTestCase {
         XCTAssertEqual(sessions.volumeChange(per: .month, at: at(2026, 9, 30), calendar: calendar).volume, 9300)
     }
 
+    func testALeftAndRightPairEarnsOneSetOfXP() {
+        let sides: [Side] = [.left, .right, .left, .right]
+        var session = Session(id: newID(), name: "W", exercises: [Exercise(name: "Lunge", sets: sides.map {
+            TrainingSet(kg: 40, reps: 10, rir: 2, done: true, side: $0)
+        })], splitId: "s", startedAt: at(2026, 10, 2) - 3_600_000)
+        session.finishedAt = at(2026, 10, 2)
+        XCTAssertEqual(Experience.rewards(of: [session], calendar: calendar).first?.1, Experience.dailyStart + 2 * Experience.perSet)
+    }
+
     func testMonthBarsStayInsideTheirMonth() {
         // September has 30 days: its "29" span is 29-30 only, so 2 October counts for October, not as last month.
         let sessions = [workout(at(2026, 9, 29)), workout(at(2026, 10, 2))]

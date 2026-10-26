@@ -62,7 +62,7 @@ extension Array where Element == Session {
         for session in history {
             count += 1
             for exercise in session.exercises {
-                let valid = exercise.sets.filter { $0.done && $0.isValid }.count
+                let valid = Exercise.groups(exercise.sets.filter { $0.done && $0.isValid }).count // a pair is one set
                 sets += valid
                 if valid > 0 { exercises.insert(exerciseKey(exercise.name)) }
             }

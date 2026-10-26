@@ -214,7 +214,7 @@ public enum Experience {
         return ordered.map { session in
             let key = dayKey(session.finishedAt!, calendar: calendar)
             let prior = Swift.min(dailySetCap, dailySets[key] ?? 0)
-            let sets = session.completedSets.count
+            let sets = session.loggedCount // a left + right pair is one set
             let counted = sets == 0 || prior >= dailySetCap ? 0 : Swift.min(dailySetCap - prior, sets)
             let computed = counted == 0 ? 0 : (prior == 0 ? dailyStart : 0) + counted * perSet
             dailySets[key] = Swift.min(dailySetCap, prior + sets)
