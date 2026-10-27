@@ -94,9 +94,9 @@ enum Pad {
     static let secondary: CGFloat = 18, field: CGFloat = 14, toast: CGFloat = 20, badge: CGFloat = 3
 }
 
-/// Gaps of single parts (the PWA's --gap-*): a tab's icon to its word.
+/// Gaps of single parts (the PWA's --gap-*): a tab's icon to its word, a chart key's swatch to its word.
 enum Gap {
-    static let tab: CGFloat = 2
+    static let tab: CGFloat = 2, key: CGFloat = 6
 }
 
 /// How far a one-line figure may shrink to fit a narrow screen rather than wrap: a tile's figure or a set's

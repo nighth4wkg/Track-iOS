@@ -103,7 +103,7 @@ struct ProgressScreen: View {
     }
 
     private func key(_ text: String, _ color: Color) -> some View {
-        HStack(spacing: Space.s1) {
+        HStack(spacing: Gap.key) {
             RoundedRectangle(cornerRadius: Radius.key).fill(color).frame(width: Space.s2, height: Space.s2)
             Text(text).type(.t12).foregroundStyle(Palette.muted)
         }

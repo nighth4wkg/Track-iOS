@@ -108,7 +108,8 @@ extension AppModel {
 
     /// A split name already used by another split (`except`: the one being renamed), as the naming dialog's problem.
     func splitNameTaken(_ name: String, except id: String? = nil) -> String? {
-        training.splits.contains { $0.id != id && $0.name.caseInsensitiveCompare(name) == .orderedSame } ? "You already have a split called \(name)." : nil
+        let wanted = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
+        return training.splits.contains { $0.id != id && $0.name.caseInsensitiveCompare(wanted) == .orderedSame } ? "You already have a split called \(wanted)." : nil
     }
 
     func deleteSplit(_ split: Split) {

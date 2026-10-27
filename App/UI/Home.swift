@@ -260,6 +260,8 @@ struct NewSplitSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     @State private var name = ""
+    /// A template whose name is taken isn't added twice: its message shows under the templates.
+    @State private var templateProblem: String?
 
     var body: some View {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -268,6 +270,7 @@ struct NewSplitSheet: View {
         SheetFrame(title: "New split", closeLabel: "Cancel") {
             VStack(alignment: .leading, spacing: Space.s4) {
                 Field(placeholder: "Name, like Push A", text: $name, label: "Split name", submit: save)
+                    .onChange(of: name) { templateProblem = nil }
                 if let problem { Text(problem).type(.t14).foregroundStyle(Palette.danger) }
                 Button("Create", action: save).buttonStyle(PrimaryStyle()).disabled(trimmed.isEmpty || problem != nil)
             }
@@ -292,10 +295,12 @@ struct NewSplitSheet: View {
                 }
             }
             .padding(.top, Space.s2)
+            if let templateProblem { Text(templateProblem).type(.t14).foregroundStyle(Palette.danger).padding(.top, Space.s2) }
         }
     }
 
     private func create(_ split: Split) {
+        if let taken = model.splitNameTaken(split.name) { templateProblem = taken; return }
         model.update { $0.splits.append(split) }
         close()
         model.open(.split(split.id))

@@ -25,6 +25,7 @@ struct SplitScreen: View {
                     VStack(alignment: .leading, spacing: Space.s2) {
                         Text("Split name").type(.t14).foregroundStyle(Palette.muted)
                         Field(placeholder: "Split name", text: $name, label: "Split name") { rename(split) }
+                        if let problem = nameProblem(split) { Text(problem).type(.t14).foregroundStyle(Palette.danger) }
                     }
                     .padding(.top, Space.s4)
                 }
@@ -119,14 +120,20 @@ struct SplitScreen: View {
         return setText(best, unit)
     }
 
+    /// Done waits while the name is another split's (its message shows under the field).
     private func toggleEditing(_ split: Split) {
-        if editingOn { rename(split) } else { name = split.name }
+        if editingOn { guard nameProblem(split) == nil else { return }; rename(split) } else { name = split.name }
         editingOn.toggle()
+    }
+
+    /// Another split's name, as the field's message (not saved).
+    private func nameProblem(_ split: Split) -> String? {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : model.splitNameTaken(name, except: split.id)
     }
 
     private func rename(_ split: Split) {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
-        if !trimmed.isEmpty, trimmed != split.name { model.update { $0.edit(splitId) { $0.name = trimmed } } }
+        if !trimmed.isEmpty, trimmed != split.name, nameProblem(split) == nil { model.update { $0.edit(splitId) { $0.name = trimmed } } }
     }
 
     /// Asks first, then offers Undo, as every delete does.
