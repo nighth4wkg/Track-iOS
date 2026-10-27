@@ -106,7 +106,7 @@ struct WorkoutScreen: View {
     private func cards(_ active: Session, expanded: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
         let settings = model.training.settings
         let bests = model.bests
-        return VStack(spacing: Space.s3) {
+        return LazyVStack(spacing: Space.s3) {
             ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
                 let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
                 let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
