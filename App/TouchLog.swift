@@ -67,7 +67,7 @@ import os
     private func start(_ name: String, _ at: CFTimeInterval) {
         if watching != nil { finish() }
         count += 1
-        watching = Watch(name: "touch \(count) \(name)", at: at, before: layers(), lastTick: CACurrentMediaTime())
+        watching = Watch(name: "touch \(count) \(name)", at: at, before: layers(), ready: nil, frame: nil, change: nil, lastTick: CACurrentMediaTime())
     }
 
     private func finish() {
