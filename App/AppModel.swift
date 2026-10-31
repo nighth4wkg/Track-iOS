@@ -78,16 +78,21 @@ final class AppModel {
     var finished: Finished?
 
     /// A tab, from the nav pill: whatever was open over the last one closes.
-    func go(_ next: AppTab) { tab = next; pages = []; sheets = [] }
+    // Written only when they change: any write wakes every view that reads them (a tap on the chosen tab redrew all).
+    func go(_ next: AppTab) {
+        if tab != next { tab = next }
+        if !pages.isEmpty { pages = [] }
+        if !sheets.isEmpty { sheets = [] }
+    }
     func open(_ route: Route) { pages.append(route) }
-    func back() { _ = pages.popLast() }
+    func back() { if !pages.isEmpty { pages.removeLast() } }
     /// Shows a sheet; returns its id for closing it.
     @discardableResult func present(_ view: some View, tall: Bool = false, onClose: (() -> Void)? = nil) -> UUID {
         let sheet = Presented(view: AnyView(view), tall: tall, onClose: onClose)
         sheets.append(sheet)
         return sheet.id
     }
-    func dismiss(_ id: UUID) { sheets.removeAll { $0.id == id } }
+    func dismiss(_ id: UUID) { if let index = sheets.firstIndex(where: { $0.id == id }) { sheets.remove(at: index) } }
     /// The top sheet closes as a tap outside or a drag down closes it.
     func closeTop() {
         guard let top = sheets.last else { return }

@@ -56,7 +56,7 @@ import os
         watch.gap = max(watch.gap, link.timestamp - watch.lastTick)
         watch.lastTick = link.timestamp
         // The first refresh after it was ready is when it shows.
-        if watch.ready != nil, watch.frame == nil { watch.frame = link.timestamp }
+        if watch.ready != nil, watch.frame == nil { watch.frame = link.targetTimestamp }
         watching = watch
         if link.timestamp - watch.at > Self.window { finish() }
     }
