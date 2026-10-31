@@ -8,12 +8,12 @@ public enum TrainingError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .activeWorkout: "Finish or discard the current workout first."
+        case .activeWorkout: "Finish or discard your workout first."
         case .noExercises: "Add at least one exercise before starting."
         case .noActiveWorkout: "No active workout."
         case .finishBeforeStart: "Workout cannot finish before it starts."
         case .nothingLogged: "Mark at least one set done to save this workout."
-        case .needWeightAndReps: "Enter the weight and reps for this set first."
+        case .needWeightAndReps: "Enter weight and reps first."
         }
     }
 }

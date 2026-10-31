@@ -32,8 +32,11 @@ struct HistoryScreen: View {
                 }
                 .padding(.top, Space.s3)
             }
-            HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days") { Set($0.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) })
-                .padding(.top, Space.s3)
+            // While a search is typed, its results take the calendar's place: under it they sat behind the keyboard.
+            if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days") { Set($0.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) })
+                    .padding(.top, Space.s3)
+            }
             list(results, filtering: filtering, unit: training.settings.unit).padding(.top, Space.s6)
         }
         .sensoryFeedback(.selection, trigger: from + to)
@@ -116,7 +119,7 @@ private struct DateSheet: View {
     }
 }
 
-/// A workout in the list: its date tile (weekday over the day), its name over time · sets · volume.
+/// A workout in the list: its date tile (month over the day, so rows a month apart differ), its name over time · sets · volume.
 private struct HistoryRow: View {
     let session: Session
     let unit: TrackCore.Settings.Unit
@@ -125,12 +128,12 @@ private struct HistoryRow: View {
         let date = Date(timeIntervalSince1970: Double(session.finishedAt ?? session.startedAt) / 1000)
         HStack(spacing: Space.s3) {
             VStack(spacing: 0) {
-                Text(date.formatted(.gregorian.weekday(.abbreviated))).type(.t12).foregroundStyle(Palette.muted)
+                Text(date.formatted(.gregorian.month(.abbreviated))).type(.t12).foregroundStyle(Palette.muted)
                 Text(date.formatted(.gregorian.day())).type(.t16).monospacedDigit().foregroundStyle(Palette.text)
             }
             .frame(width: Size.tile, height: Size.tile)
             .raised(.control, .inner)
-            // VoiceOver read the tile as "Mon, 26"; it says the whole date instead.
+            // VoiceOver read the tile as "Oct, 26"; it says the whole date instead.
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(date.formatted(.gregorian.weekday(.wide).month(.wide).day()))
             VStack(alignment: .leading, spacing: 0) {

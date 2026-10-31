@@ -35,7 +35,7 @@ struct Shell: View {
                     .allowsHitTesting(shown)
                     .accessibilityHidden(!shown || behind)
                     .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
-                    .edgeBack(shown) { model.back() }
+                    .swipeBack(shown) { model.back() }
             }
             if model.workoutOpen, model.training.active != nil { WorkoutScreen() }
             if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
@@ -180,31 +180,56 @@ private struct StatusFade: View {
     }
 }
 
-// MARK: Back by the left edge
+// MARK: Back by a swipe right
 
 extension View {
-    /// A swipe in from the left edge goes back, as iOS's own pages do, at once when let go far or fast enough.
-    func edgeBack(_ on: Bool, back: @escaping () -> Void) -> some View {
-        gesture(EdgePan(on: on, onEnd: { x, velocity in if x > EdgePan.distance || velocity > EdgePan.flick { back() } }))
+    /// A swipe right from anywhere goes back (the PWA's swipe back), at once when let go far or fast enough. Not while
+    /// a row is armed (its swipe right disarms it) or a grip is held.
+    func swipeBack(_ on: Bool, back: @escaping () -> Void) -> some View {
+        gesture(BackPan(on: on, onEnd: { x, velocity in if x > BackPan.distance || velocity > BackPan.flick { back() } }))
     }
 }
 
-private struct EdgePan: UIGestureRecognizerRepresentable {
+struct BackPan: UIGestureRecognizerRepresentable {
     static let distance: CGFloat = 64, flick: CGFloat = 600
+    /// An arrange grip held (ArrangeList): its drag is the finger's, whichever way it goes.
+    @MainActor static var holding = false
     let on: Bool
     let onEnd: (_ x: CGFloat, _ velocity: CGFloat) -> Void
 
-    func makeUIGestureRecognizer(context: Context) -> UIScreenEdgePanGestureRecognizer {
-        let pan = UIScreenEdgePanGestureRecognizer()
-        pan.edges = .left
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let pan = UIPanGestureRecognizer()
+        pan.delegate = context.coordinator
         pan.isEnabled = on
         return pan
     }
 
-    func updateUIGestureRecognizer(_ pan: UIScreenEdgePanGestureRecognizer, context: Context) { pan.isEnabled = on }
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
 
-    func handleUIGestureRecognizerAction(_ pan: UIScreenEdgePanGestureRecognizer, context: Context) {
+    func updateUIGestureRecognizer(_ pan: UIPanGestureRecognizer, context: Context) { pan.isEnabled = on }
+
+    func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
         guard pan.state == .ended else { return }
         onEnd(pan.translation(in: pan.view).x, pan.velocity(in: pan.view).x)
+    }
+
+    @MainActor final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        /// Only a move right, more sideways than up or down: anything else is the page's scroll.
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer, !BackPan.holding else { return false }
+            let velocity = pan.velocity(in: pan.view)
+            return velocity.x > abs(velocity.y)
+        }
+
+        /// An armed row's swipe right (it disarms) comes first.
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRequireFailureOf other: UIGestureRecognizer) -> Bool {
+            other.delegate is SidewaysPan.Coordinator
+        }
+
+        /// Alongside the page's scroll, which never waits for it (owner: lowest touch latency); a swipe right that
+        /// scrolls a little as it goes back is the cost.
+        func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            other.view is UIScrollView
+        }
     }
 }

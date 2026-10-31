@@ -308,6 +308,8 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     @ViewBuilder let row: (Item) -> Content
     @ViewBuilder var end: (Item) -> End
     @State private var held: Item.ID?
+    /// A grip under the finger; reset by SwiftUI even when the drag is cancelled, so swipe back can't stay off.
+    @GestureState private var gripping = false
     @State private var finger = Finger()
     /// Places the held row has crossed: the only part of the drag that redraws the list.
     @State private var steps = 0
@@ -324,6 +326,7 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                         .frame(width: Size.control, height: Size.control).raised(.control, .pill)
                         .contentShape(Circle())
                         .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                            .updating($gripping) { _, state, _ in state = true }
                             .onChanged {
                                 finger.y = $0.translation.height
                                 let crossed = max(-index, min(items.count - 1 - index, Int((finger.y / step).rounded())))
@@ -351,6 +354,7 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
             }
         }
         .sensoryFeedback(.selection, trigger: steps)
+        .onChange(of: gripping) { _, now in BackPan.holding = now }
     }
 
     /// Those between the held row's place and where it would go stand one place its way.
@@ -412,15 +416,20 @@ private struct Follow: ViewModifier {
 struct SidewaysPan: UIGestureRecognizerRepresentable {
     /// A release this fast (pt/s) decides by its direction, however short.
     static let flick: CGFloat = 300
+    /// Whether a swipe right is its own (an armed row's disarms); otherwise it's the page's swipe back (BackPan).
+    var right = true
     var onEnd: (_ translation: CGFloat, _ velocity: CGFloat) -> Void
 
     func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
         let pan = UIPanGestureRecognizer()
         pan.delegate = context.coordinator
+        context.coordinator.right = right
         return pan
     }
 
     func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    func updateUIGestureRecognizer(_ pan: UIPanGestureRecognizer, context: Context) { context.coordinator.right = right }
 
     func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
         guard [.ended, .cancelled, .failed].contains(pan.state) else { return }
@@ -428,10 +437,12 @@ struct SidewaysPan: UIGestureRecognizerRepresentable {
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var right = true
+
         func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
             guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
             let velocity = pan.velocity(in: pan.view)
-            return abs(velocity.x) > abs(velocity.y)
+            return abs(velocity.x) > abs(velocity.y) && (right || velocity.x < 0)
         }
     }
 }
@@ -446,7 +457,7 @@ struct SwipeToArm: ViewModifier {
     func body(content: Content) -> some View {
         content
             .contentShape(Rectangle())
-            .gesture(SidewaysPan { x, velocity in armed = abs(velocity) > SidewaysPan.flick ? velocity < 0 : x < 0 })
+            .gesture(SidewaysPan(right: armed) { x, velocity in armed = abs(velocity) > SidewaysPan.flick ? velocity < 0 : x < 0 })
             .onLongPressGesture(minimumDuration: Self.hold) { armed = true }
             .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
     }

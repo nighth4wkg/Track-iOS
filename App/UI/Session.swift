@@ -127,7 +127,7 @@ struct SessionScreen: View {
 
     /// While another workout is on, it says why instead of doing nothing.
     private func repeatWorkout(_ current: Session) {
-        if model.training.active == nil { model.repeatWorkout(current) } else { model.problem("Finish or discard your current workout first.") }
+        if model.training.active == nil { model.repeatWorkout(current) } else { model.problem(TrainingError.activeWorkout.localizedDescription) }
     }
 
     private func save(_ current: Session) {

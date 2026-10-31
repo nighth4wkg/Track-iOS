@@ -1,7 +1,7 @@
 import SwiftUI
 import TrackCore
 
-/// The workout in progress (the PWA's Workout): ⌄ keeps it for later (or a swipe in from the left edge), the name opens
+/// The workout in progress (the PWA's Workout): ⌄ keeps it for later (or a swipe right), the name opens
 /// its options, Finish; the progress bar; one exercise open at a time (the first with a set to do, unless you opened
 /// another), each closed one a card to tap; Add exercise; the rest timer floating at the bottom. The keyboard's Next
 /// walks weight → reps → RIR → next set.
@@ -31,7 +31,7 @@ struct WorkoutScreen: View {
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         if focus != nil { keyboardBar(fields) } else { RestTimer().floatingBottom() }
                     }
-                    .edgeBack(true) { model.workoutOpen = false }
+                    .swipeBack(true) { model.workoutOpen = false }
                     // The keyboard's Next reaching a closed card opens it.
                     .onChange(of: focus) { _, id in
                         guard let id, let exercise = active.exercises.first(where: { ex in ex.sets.contains { id.hasPrefix($0.id) } }), exercise.id != expanded else { return }
@@ -69,7 +69,7 @@ struct WorkoutScreen: View {
         let done = active.exercises.doneCount, planned = active.exercises.plannedCount
         let unit = model.training.settings.unit
         return VStack(alignment: .leading, spacing: 0) {
-            header(active, done: done, planned: planned).id(Self.top)
+            header(active, done: done, planned: planned)
             Bar(value: Double(done) / Double(max(1, planned)))
                 .padding(.top, Space.s3)
                 .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
@@ -79,6 +79,8 @@ struct WorkoutScreen: View {
             .padding(.top, Space.s4)
         }
         .padding(.horizontal, Space.s4).padding(.top, Space.s4).padding(.bottom, Space.s6)
+        // The top with its padding: on the header, going up to Finish stopped 16 short of the page's top.
+        .id(Self.top)
         .frame(maxWidth: Size.column).frame(maxWidth: .infinity)
         .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
         // A set done (or undone), each side of a pair too: here, since the last set's row goes with its card.
