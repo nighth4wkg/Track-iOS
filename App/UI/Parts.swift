@@ -171,6 +171,7 @@ struct Field: View {
         .type(.t16).fontWeight(.regular)
         .foregroundStyle(Palette.text)
         .keyboardType(keyboard)
+        .autocorrectionDisabled(Probe.off("predict"))
         .focused($focused)
         .submitLabel(.done)
         .onSubmit { submit?() }

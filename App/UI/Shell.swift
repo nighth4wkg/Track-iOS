@@ -49,8 +49,9 @@ struct Shell: View {
         }
         .onPreferenceChange(FloatingBar.self) { bar = $0 }
         .background(Backdrop())
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in if !Probe.off("kbstate") { keyboard = true } }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
+        .probe("avoid") { $0.ignoresSafeArea(.keyboard) }
         .onChange(of: phase) { _, now in
             guard now == .active else { return }
             model.refreshDay()
