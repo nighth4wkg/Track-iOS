@@ -2,22 +2,26 @@ import UIKit
 import UIKit.UIGestureRecognizerSubclass
 import os
 
-/// For measuring how fast a touch shows (-touchLog, driven by ~/.pmd3/bench/stress.py): every finger down and up is
-/// timed from the touch's own timestamp to the first screen refresh whose pixels differ, found by comparing a small
-/// copy of what's on screen (SwiftUI draws many views into one layer, so comparing layers would miss changes). Each goes
-/// to the device log ("Track touch"), numbered so a script can match it to its step:
-/// "touch 12 up at 196,801: shown 9 ms, 1 frames, longest gap 8 ms, copy 2.1 ms" or "… no change in 600 ms".
-/// The longest gap between refreshes says whether a slow one was the app busy; the copy's own cost is logged too.
-/// Without the argument nothing here runs.
+/// For measuring how fast a touch shows (-touchLog, driven by ~/.pmd3/bench/stress.py). Every finger down and up is
+/// timed from the touch's own timestamp: "ready" when the main thread has handled it and handed its frame over (idle
+/// after the system's commit), "frame" at the next screen refresh after that, when it shows. The layers are compared
+/// at each idle, so a response that comes later (after an async step) is timed too, and a touch that changed no layer
+/// says so (SwiftUI can redraw inside one layer, so "no layer change" is a hint to check, not proof of a dead tap).
+/// Each goes to the device log ("Track touch"), numbered so a script can match it to its step:
+/// "touch 12 up at 196,801: ready 3 ms, frame 8 ms, last change 3 ms, longest gap 8 ms, check 0.4 ms".
+/// Without the argument nothing here runs. (A copy of the screen per refresh cost 50–90 ms: it was the delay itself.)
 @MainActor final class TouchLog: NSObject, UIGestureRecognizerDelegate {
     private static var shared: TouchLog?
     private let logger = Logger(subsystem: "Track", category: "touch")
     private weak var scene: UIWindowScene?
-    /// A touch being watched: what it was, when, the screen before it, and the refreshes since.
-    private var watching: (name: String, at: CFTimeInterval, before: [UInt8], frames: Int, gap: CFTimeInterval, last: CFTimeInterval)?
-    private var count = 0, copyTime: CFTimeInterval = 0, copies = 0
-    /// How long a touch is watched for a change, and the copy's scale (a quarter of a point per pixel).
-    private static let window: CFTimeInterval = 0.6, scale: CGFloat = 0.25
+    private struct Watch {
+        let name: String, at: CFTimeInterval, before: Int
+        var ready: CFTimeInterval?, frame: CFTimeInterval?, change: CFTimeInterval?, lastTick: CFTimeInterval, gap: CFTimeInterval = 0
+    }
+    private var watching: Watch?
+    private var count = 0, checkTime: CFTimeInterval = 0, checks = 0
+    /// How long a touch is watched for a later change.
+    private static let window: CFTimeInterval = 0.6
 
     static func install() {
         guard shared == nil, ProcessInfo.processInfo.arguments.contains("-touchLog"),
@@ -27,6 +31,11 @@ import os
         let link = CADisplayLink(target: log, selector: #selector(tick))
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
         link.add(to: .main, forMode: .common)
+        // After everything else in a pass, the system's commit (2000000) included: the frame is handed over.
+        let idle = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, Int(Int32.max)) { _, _ in
+            MainActor.assumeIsolated { log.idle() }
+        }
+        CFRunLoopAddObserver(CFRunLoopGetMain(), idle, .commonModes)
         shared = log
     }
 
@@ -39,50 +48,56 @@ import os
             window.addGestureRecognizer(watcher)
         }
         guard var watch = watching else { return }
-        watch.frames += 1
-        watch.gap = max(watch.gap, link.timestamp - watch.last)
-        watch.last = link.timestamp
+        watch.gap = max(watch.gap, link.timestamp - watch.lastTick)
+        watch.lastTick = link.timestamp
+        // The first refresh after it was ready is when it shows.
+        if watch.ready != nil, watch.frame == nil { watch.frame = link.timestamp }
         watching = watch
-        if copy() != watch.before { finish("shown \(ms(link.timestamp - watch.at)) ms, \(watch.frames) frames") }
-        else if link.timestamp - watch.at > Self.window { finish("no change in \(ms(Self.window)) ms") }
+        if link.timestamp - watch.at > Self.window { finish() }
+    }
+
+    private func idle() {
+        guard var watch = watching else { return }
+        let now = CACurrentMediaTime()
+        if watch.ready == nil { watch.ready = now }
+        if layers() != watch.before { watch.change = now }
+        watching = watch
     }
 
     private func start(_ name: String, _ at: CFTimeInterval) {
-        if watching != nil { finish("cut short by the next touch") }
+        if watching != nil { finish() }
         count += 1
-        watching = ("touch \(count) \(name)", at, copy(), 0, 0, CACurrentMediaTime())
+        watching = Watch(name: "touch \(count) \(name)", at: at, before: layers(), lastTick: CACurrentMediaTime())
     }
 
-    private func finish(_ result: String) {
+    private func finish() {
         guard let watch = watching else { return }
         watching = nil
-        let copyAverage = copies > 0 ? copyTime / Double(copies) * 1000 : 0
+        let ms = { (time: CFTimeInterval?) in time.map { "\(Int((($0 - watch.at) * 1000).rounded())) ms" } ?? "none" }
+        let check = String(format: "%.1f", checks > 0 ? checkTime / Double(checks) * 1000 : 0)
+        let result = "ready \(ms(watch.ready)), frame \(ms(watch.frame)), last change \(watch.change == nil ? "no layer change" : ms(watch.change))"
         // Public: the device log hides text by default.
-        logger.log("\(watch.name, privacy: .public): \(result, privacy: .public), longest gap \(self.ms(watch.gap)) ms, copy \(String(format: "%.1f", copyAverage), privacy: .public) ms")
-        copyTime = 0; copies = 0
+        logger.log("\(watch.name, privacy: .public): \(result, privacy: .public), longest gap \(Int(watch.gap * 1000)) ms, check \(check, privacy: .public) ms")
+        checkTime = 0; checks = 0
     }
 
-    /// What's on screen now, every window in order, as a small bitmap.
-    private func copy() -> [UInt8] {
+    /// A fingerprint of every window's layers: where they are, how they look, what they hold.
+    private func layers() -> Int {
         let started = CACurrentMediaTime()
-        defer { copyTime += CACurrentMediaTime() - started; copies += 1 }
-        let windows = (scene?.windows ?? []).filter { !$0.isHidden }.sorted { $0.windowLevel < $1.windowLevel }
-        guard let size = windows.first?.bounds.size else { return [] }
-        let width = Int(size.width * Self.scale), height = Int(size.height * Self.scale)
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        pixels.withUnsafeMutableBytes { raw in
-            guard let context = CGContext(data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
-            context.translateBy(x: 0, y: CGFloat(height))
-            context.scaleBy(x: Self.scale, y: -Self.scale)
-            UIGraphicsPushContext(context)
-            for window in windows { window.drawHierarchy(in: window.frame, afterScreenUpdates: false) }
-            UIGraphicsPopContext()
+        defer { checkTime += CACurrentMediaTime() - started; checks += 1 }
+        var hasher = Hasher()
+        func fold(_ layer: CALayer) {
+            hasher.combine(ObjectIdentifier(layer))
+            hasher.combine(layer.position.x); hasher.combine(layer.position.y)
+            hasher.combine(layer.bounds.origin.y); hasher.combine(layer.bounds.width); hasher.combine(layer.bounds.height)
+            hasher.combine(layer.opacity); hasher.combine(layer.isHidden)
+            hasher.combine(layer.backgroundColor.map { CFHash($0) } ?? 0)
+            if let contents = layer.contents { hasher.combine(ObjectIdentifier(contents as AnyObject)) }
+            for sublayer in layer.sublayers ?? [] { fold(sublayer) }
         }
-        return pixels
+        for window in scene?.windows ?? [] where !window.isHidden { fold(window.layer) }
+        return hasher.finalize()
     }
-
-    private func ms(_ seconds: CFTimeInterval) -> Int { Int((seconds * 1000).rounded()) }
 
     func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
 
