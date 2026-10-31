@@ -3,19 +3,11 @@ import QuartzCore
 import SwiftUI
 import os
 
-/// Bench-only switches, for finding what makes a touch slow on the phone (~/.pmd3/bench/stress.py). -no-<part> leaves
-/// a suspect out; -probe samples the main thread's stack every millisecond while TouchLog watches a touch and logs where
-/// its busy time went. Without the arguments nothing here runs.
+/// Bench-only, for finding what makes a touch slow on the phone (~/.pmd3/bench/stress.py): -probe samples the main
+/// thread's stack every millisecond while TouchLog watches a touch and logs where its busy time went. Without the
+/// argument nothing here runs.
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
-    static func off(_ part: String) -> Bool { args.contains("-no-\(part)") }
-}
-
-extension View {
-    /// The modifier applied, unless -no-<part> leaves it out.
-    @ViewBuilder func probe<V: View>(_ part: String, _ apply: (Self) -> V) -> some View {
-        if Probe.off(part) { self } else { apply(self) }
-    }
 }
 
 final class Sampler: Thread, @unchecked Sendable {

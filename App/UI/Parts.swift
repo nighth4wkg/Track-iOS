@@ -171,7 +171,8 @@ struct Field: View {
         .type(.t16).fontWeight(.regular)
         .foregroundStyle(Palette.text)
         .keyboardType(keyboard)
-        .autocorrectionDisabled(Probe.off("predict"))
+        // No suggestion bar: building it cost each keyboard ~100 ms before it showed (measured on the phone).
+        .autocorrectionDisabled()
         .focused($focused)
         .submitLabel(.done)
         .onSubmit { submit?() }

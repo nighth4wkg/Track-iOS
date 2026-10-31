@@ -250,7 +250,7 @@ struct ToastLayer: View {
                 .floatingBottom(top ? 0 : above)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in if !Probe.off("kbstate") { keyboard = true } }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
     }
 }

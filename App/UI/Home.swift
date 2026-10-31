@@ -89,7 +89,7 @@ private struct UpNextCard: View {
                     if let active = training.active {
                         Badge(text: "In progress").padding(.bottom, Space.s1)
                         Text(active.name).type(.t20)
-                        TimelineView(.periodic(from: .now, by: Probe.off("timer") ? 3600 : 1)) { context in
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(elapsed(active.startedAt, context.date)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                         }
                         Text("\(active.exercises.doneCount) of \(count(active.exercises.plannedCount, "set")) done")

@@ -60,6 +60,7 @@ struct SessionScreen: View {
             }
             .type(.t14)
             TextField("", text: $note, prompt: Text("How did it go?").foregroundStyle(Palette.placeholder), axis: .vertical)
+                .autocorrectionDisabled() // as every field (Field): no suggestion bar to build
                 .type(.t14).foregroundStyle(Palette.text).lineLimit(2...6)
                 .focused($typing)
                 .onChange(of: note) { _, value in if value.count > Limits.notes { note = String(value.prefix(Limits.notes)) } }
