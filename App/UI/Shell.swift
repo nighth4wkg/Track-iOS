@@ -21,11 +21,11 @@ struct Shell: View {
         ZStack {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 let shown = !covered && model.tab == tab
-                page(tab)
+                if shown || !Probe.off("hidden") { page(tab)
                     .environment(\.shown, shown)
                     .opacity(shown ? 1 : 0)
                     .allowsHitTesting(shown)
-                    .accessibilityHidden(!shown || behind)
+                    .accessibilityHidden(!shown || behind) }
             }
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
@@ -107,7 +107,7 @@ struct TabPage<Content: View>: View {
         }
         .scrollPosition($position)
         .scrollDismissesKeyboard(.interactively)
-        .onChange(of: shown) { if shown { position.scrollTo(edge: .top) } }
+        .probe("scrolltop") { $0.onChange(of: shown) { if shown { position.scrollTo(edge: .top) } } }
         .background(Backdrop())
     }
 }
@@ -161,7 +161,7 @@ struct NavPill: View {
         .frame(height: Size.nav)
         .raised(.nav, .pill)
         .padding(.horizontal, Space.s4)
-        .sensoryFeedback(.selection, trigger: model.tab)
+        .probe("haptic") { $0.sensoryFeedback(.selection, trigger: model.tab) }
     }
 }
 
@@ -185,8 +185,8 @@ private struct StatusFade: View {
 extension View {
     /// A swipe right from anywhere goes back (the PWA's swipe back), at once when let go far or fast enough. Not while
     /// a row is armed (its swipe right disarms it) or a grip is held.
-    func swipeBack(_ on: Bool, back: @escaping () -> Void) -> some View {
-        gesture(BackPan(on: on, onEnd: { x, velocity in if x > BackPan.distance || velocity > BackPan.flick { back() } }))
+    @ViewBuilder func swipeBack(_ on: Bool, back: @escaping () -> Void) -> some View {
+        if Probe.off("backpan") { self } else { gesture(BackPan(on: on, onEnd: { x, velocity in if x > BackPan.distance || velocity > BackPan.flick { back() } })) }
     }
 }
 

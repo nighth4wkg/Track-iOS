@@ -8,7 +8,8 @@ import os
 /// at each idle, so a response that comes later (after an async step) is timed too, and a touch that changed no layer
 /// says so (SwiftUI can redraw inside one layer, so "no layer change" is a hint to check, not proof of a dead tap).
 /// Each goes to the device log ("Track touch"), numbered so a script can match it to its step:
-/// "touch 12 up at 196,801: ready 3 ms, frame 8 ms, last change 3 ms, longest gap 8 ms, check 0.4 ms".
+/// "touch 12 up at 196,801: ready 3 ms, frame 8 ms, first change 3 ms, last change 3 ms, changed [CALayer x2], longest
+/// gap 8 ms, check 0.4 ms". "changed" names the views whose own layer changed (what keeps redrawing).
 /// Without the argument nothing here runs. (A copy of the screen per refresh cost 50–90 ms: it was the delay itself.)
 @MainActor final class TouchLog: NSObject, UIGestureRecognizerDelegate {
     private static var shared: TouchLog?
@@ -16,10 +17,14 @@ import os
     private weak var scene: UIWindowScene?
     private struct Watch {
         let name: String, at: CFTimeInterval, before: Int
-        var ready: CFTimeInterval?, frame: CFTimeInterval?, change: CFTimeInterval?, lastTick: CFTimeInterval, gap: CFTimeInterval = 0
+        var ready: CFTimeInterval?, frame: CFTimeInterval?, first: CFTimeInterval?, change: CFTimeInterval?, lastTick: CFTimeInterval, gap: CFTimeInterval = 0
+        /// The views whose own layer changed while it was watched, and how many times: what keeps redrawing.
+        var changed: [String: Int] = [:]
     }
     private var watching: Watch?
     private var count = 0, checkTime: CFTimeInterval = 0, checks = 0
+    /// Each layer's own look at the last check, to name the ones that changed.
+    private var own: [ObjectIdentifier: Int] = [:], diff: [String: Int] = [:]
     /// How long a touch is watched for a later change.
     private static let window: CFTimeInterval = 0.6
 
@@ -60,14 +65,16 @@ import os
         guard var watch = watching else { return }
         let now = CACurrentMediaTime()
         if watch.ready == nil { watch.ready = now }
-        if layers() != watch.before { watch.change = now }
+        if layers() != watch.before { watch.change = now; if watch.first == nil { watch.first = now } }
+        watch.changed.merge(diff, uniquingKeysWith: +)
         watching = watch
     }
 
     private func start(_ name: String, _ at: CFTimeInterval) {
         if watching != nil { finish() }
         count += 1
-        watching = Watch(name: "touch \(count) \(name)", at: at, before: layers(), ready: nil, frame: nil, change: nil, lastTick: CACurrentMediaTime())
+        watching = Watch(name: "touch \(count) \(name)", at: at, before: layers(), ready: nil, frame: nil, first: nil, change: nil, lastTick: CACurrentMediaTime())
+        Sampler.begin(watching!.name, for: Self.window)
     }
 
     private func finish() {
@@ -75,7 +82,8 @@ import os
         watching = nil
         let ms = { (time: CFTimeInterval?) in time.map { "\(Int((($0 - watch.at) * 1000).rounded())) ms" } ?? "none" }
         let check = String(format: "%.1f", checks > 0 ? checkTime / Double(checks) * 1000 : 0)
-        let result = "ready \(ms(watch.ready)), frame \(ms(watch.frame)), last change \(watch.change == nil ? "no layer change" : ms(watch.change))"
+        let changes = watch.changed.sorted { $0.value > $1.value }.prefix(3).map { "\($0.key) x\($0.value)" }.joined(separator: " ")
+        let result = "ready \(ms(watch.ready)), frame \(ms(watch.frame)), first change \(ms(watch.first)), last change \(watch.change == nil ? "no layer change" : ms(watch.change)), changed [\(changes)]"
         // Public: the device log hides text by default.
         logger.log("\(watch.name, privacy: .public): \(result, privacy: .public), longest gap \(Int(watch.gap * 1000)) ms, check \(check, privacy: .public) ms")
         checkTime = 0; checks = 0
@@ -85,17 +93,23 @@ import os
     private func layers() -> Int {
         let started = CACurrentMediaTime()
         defer { checkTime += CACurrentMediaTime() - started; checks += 1 }
-        var hasher = Hasher()
+        var hasher = Hasher(), now: [ObjectIdentifier: Int] = [:]
+        diff = [:]
         func fold(_ layer: CALayer) {
-            hasher.combine(ObjectIdentifier(layer))
-            hasher.combine(layer.position.x); hasher.combine(layer.position.y)
-            hasher.combine(layer.bounds.origin.y); hasher.combine(layer.bounds.width); hasher.combine(layer.bounds.height)
-            hasher.combine(layer.opacity); hasher.combine(layer.isHidden)
-            hasher.combine(layer.backgroundColor.map { CFHash($0) } ?? 0)
-            if let contents = layer.contents { hasher.combine(ObjectIdentifier(contents as AnyObject)) }
+            var mine = Hasher()
+            mine.combine(layer.position.x); mine.combine(layer.position.y)
+            mine.combine(layer.bounds.origin.y); mine.combine(layer.bounds.width); mine.combine(layer.bounds.height)
+            mine.combine(layer.opacity); mine.combine(layer.isHidden)
+            mine.combine(layer.backgroundColor.map { CFHash($0) } ?? 0)
+            if let contents = layer.contents { mine.combine(ObjectIdentifier(contents as AnyObject)) }
+            let id = ObjectIdentifier(layer), look = mine.finalize()
+            now[id] = look
+            if let was = own[id], was != look { diff[layer.delegate.map { String(describing: type(of: $0)) } ?? String(describing: type(of: layer)), default: 0] += 1 }
+            hasher.combine(id); hasher.combine(look)
             for sublayer in layer.sublayers ?? [] { fold(sublayer) }
         }
         for window in scene?.windows ?? [] where !window.isHidden { fold(window.layer) }
+        own = now
         return hasher.finalize()
     }
 
