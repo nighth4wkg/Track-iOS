@@ -21,7 +21,7 @@ struct Shell: View {
         if AB.navProbe { AnyView(NavProbe()) } else { AnyView(main) }
     }
 
-    private var main: some View {
+    @ViewBuilder private var main: some View {
         @Bindable var model = model
         let stops = model.stops
         let covered = !stops.isEmpty || model.finished != nil
