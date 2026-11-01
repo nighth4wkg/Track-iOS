@@ -6,10 +6,6 @@ import os
 /// Bench-only, for finding what makes a touch slow on the phone (~/.pmd3/bench/stress.py): -probe samples the main
 /// thread's stack every millisecond while TouchLog watches a touch and logs where its busy time went. Without the
 /// argument nothing here runs.
-enum Probe {
-    static let args = ProcessInfo.processInfo.arguments
-}
-
 final class Sampler: Thread, @unchecked Sendable {
     static var shared: Sampler?
     private let target: thread_act_t
@@ -26,7 +22,7 @@ final class Sampler: Thread, @unchecked Sendable {
 
     /// From the main thread.
     static func install() {
-        guard Probe.args.contains("-probe"), shared == nil else { return }
+        guard shared == nil, ProcessInfo.processInfo.arguments.contains("-probe") else { return }
         let sampler = Sampler(target: pthread_mach_thread_np(pthread_self()))
         sampler.qualityOfService = .userInteractive
         sampler.start()

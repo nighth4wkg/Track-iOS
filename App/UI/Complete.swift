@@ -12,7 +12,7 @@ struct CompleteScreen: View {
         let sessions = model.training.sessions
         let unit = model.training.settings.unit
         if let session = sessions.first(where: { $0.id == finished.id }), let at = session.finishedAt {
-            let level = Experience.progress(of: sessions)
+            let level = model.derived("xp") { Experience.progress(of: $0) }
             let before = Dictionary(sessions.filter { $0.id != session.id }.personalRecords.map { ($0.name, $0.kg) }, uniquingKeysWith: max)
             let bests = session.exercises.compactMap { exercise -> (name: String, set: TrainingSet, fresh: Bool)? in
                 guard let set = exercise.sets.filter(\.isValid).top else { return nil }
@@ -25,9 +25,9 @@ struct CompleteScreen: View {
                     .type(.t14).foregroundStyle(Palette.muted)
                 xpCard(level).padding(.top, Space.s4)
                 HStack(spacing: Space.s3) {
-                    tile("Duration", "\(session.minutes)", "min")
-                    tile("Volume", weight(session.volume, unit), unit.rawValue)
-                    tile("Streak", "\(sessions.weeklyStreak(at: at))", "wk")
+                    StatTile(label: "Duration", value: "\(session.minutes)", unit: "min")
+                    StatTile(label: "Volume", value: weight(session.volume, unit), unit: unit.rawValue)
+                    StatTile(label: "Streak", value: "\(sessions.weeklyStreak(at: at))", unit: "wk")
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s3)
@@ -89,20 +89,6 @@ struct CompleteScreen: View {
         }
         .pad()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .raised()
-    }
-
-    private func tile(_ label: String, _ value: String, _ unit: String) -> some View {
-        VStack(alignment: .leading, spacing: Space.s2) {
-            Text(label).type(.t14).foregroundStyle(Palette.muted)
-            HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
-                Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
-                Text(unit).type(.t14).foregroundStyle(Palette.muted)
-            }
-            .lineLimit(1).minimumScaleFactor(Shrink.figure)
-        }
-        .padding(Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .raised()
     }
 }

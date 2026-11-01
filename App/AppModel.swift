@@ -84,12 +84,8 @@ final class AppModel {
     }
     func open(_ route: Route) { pages.append(route) }
     func back() { if !pages.isEmpty { pages.removeLast() } }
-    /// Shows a sheet; returns its id for closing it.
-    @discardableResult func present(_ view: some View, tall: Bool = false) -> UUID {
-        let sheet = Presented(view: AnyView(view), tall: tall)
-        sheets.append(sheet)
-        return sheet.id
-    }
+    /// Shows a sheet (it closes itself through closeSheet).
+    func present(_ view: some View, tall: Bool = false) { sheets.append(Presented(view: AnyView(view), tall: tall)) }
     func dismiss(_ id: UUID) { if let index = sheets.firstIndex(where: { $0.id == id }) { sheets.remove(at: index) } }
 
     private let file: TrainingFile?
@@ -150,7 +146,7 @@ final class AppModel {
         training = next
         guard canSave, !Self.dryRun, let saver else { return }
         saver.save(next) { [weak self] _ in
-            DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone. Free up some space and try again.") }
+            DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone.") }
         }
     }
 

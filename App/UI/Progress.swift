@@ -19,12 +19,12 @@ struct ProgressScreen: View {
             Seg(label: "Measure", options: Tally.allCases.map { (value: $0, text: $0.rawValue) }, value: $tally).padding(.top, Space.s4)
             chart(training, now: now).padding(.top, Space.s3)
             HStack(spacing: Space.s3) {
-                tile("Streak", "\(model.derived("streak", of: training.sessions, at: dayKey(now)) { $0.weeklyStreak(at: now) })", unit: "wk")
+                StatTile(label: "Streak", value: "\(model.derived("streak", of: training.sessions, at: dayKey(now)) { $0.weeklyStreak(at: now) })", unit: "wk")
                 let level = model.derived("xp", of: training.sessions) { Experience.progress(of: $0) }.level
-                Button { model.present(XpHelp()) } label: { tile("Level", "\(level)") }
+                Button { model.present(XpHelp()) } label: { StatTile(label: "Level", value: "\(level)") }
                     .buttonStyle(CardStyle()).accessibilityLabel("Level \(level). How XP works")
                 let earned = model.derived("award count", of: training.sessions) { $0.questAwards.count }
-                Button { model.present(QuestList(), tall: true) } label: { tile("Badges", "\(earned)", unit: "/\(Quest.all.count)", tight: true) }
+                Button { model.present(QuestList(), tall: true) } label: { StatTile(label: "Badges", value: "\(earned)", unit: "/\(Quest.all.count)", tight: true) }
                     .buttonStyle(CardStyle()).accessibilityLabel("Badges: \(earned) of \(Quest.all.count). Show all")
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -107,20 +107,6 @@ struct ProgressScreen: View {
             RoundedRectangle(cornerRadius: Radius.key).fill(color).frame(width: Space.s2, height: Space.s2)
             Text(text).type(.t12).foregroundStyle(Palette.muted)
         }
-    }
-
-    private func tile(_ label: String, _ value: String, unit: String? = nil, tight: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: Space.s2) {
-            Text(label).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
-            HStack(alignment: .firstTextBaseline, spacing: tight ? 0 : Space.s1) {
-                Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
-                if let unit { Text(unit).type(.t14).foregroundStyle(Palette.muted) }
-            }
-            .lineLimit(1)
-        }
-        .padding(Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .raised()
     }
 }
 

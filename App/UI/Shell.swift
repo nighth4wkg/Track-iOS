@@ -8,7 +8,7 @@ import UIKit
 struct Shell: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var phase
-    /// The keyboard is up: the nav pill steps aside rather than riding up on it.
+    /// The keyboard is up: the nav pill steps aside rather than riding up on it, and the toast goes to the top.
     @State private var keyboard = false
     /// The bar floating at the bottom of the covering screen (rest timer, docked button): the pill sits above it.
     @State private var bar: CGFloat = 0
@@ -45,7 +45,7 @@ struct Shell: View {
             }
             SheetLayer()
             AskLayer()
-            ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3)
+            ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3, keyboard: keyboard)
         }
         .onPreferenceChange(FloatingBar.self) { bar = $0 }
         .background(Backdrop())

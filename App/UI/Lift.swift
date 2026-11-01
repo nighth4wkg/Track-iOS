@@ -23,8 +23,8 @@ struct LiftScreen: View {
                 let points = model.derived("lift points \(name)", at: period) { $0.oneRepMaxes(of: name, per: period) }
                 trend(points, unit: unit).padding(.top, Space.s4)
                 HStack(spacing: Space.s3) {
-                    tile("Best set", entries.flatMap(\.sets).top.map { setText($0, unit) } ?? "–")
-                    tile("Last session", weight(entries[0].sets.reduce(0) { $0 + ($1.kg ?? 0) * Double($1.reps ?? 0) }, unit), unit: unit.rawValue)
+                    StatTile(label: "Best set", value: entries.flatMap(\.sets).top.map { setText($0, unit) } ?? "–", padding: Space.s4)
+                    StatTile(label: "Last session", value: weight(entries[0].sets.reduce(0) { $0 + ($1.kg ?? 0) * Double($1.reps ?? 0) }, unit), unit: unit.rawValue, padding: Space.s4)
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s3)
@@ -75,20 +75,6 @@ struct LiftScreen: View {
         }
         .pad()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .raised()
-    }
-
-    private func tile(_ label: String, _ value: String, unit: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: Space.s2) {
-            Text(label).type(.t14).foregroundStyle(Palette.muted)
-            HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
-                Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
-                if let unit { Text(unit).type(.t14).foregroundStyle(Palette.muted) }
-            }
-            .lineLimit(1).minimumScaleFactor(Shrink.figure)
-        }
-        .pad()
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .raised()
     }
 }

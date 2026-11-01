@@ -203,12 +203,12 @@ struct AskLayer: View {
 
 /// The pill at the bottom (model.toast): a tick when something worked, Undo when there's something to bring back.
 /// Gone after a few seconds, on ✕, or on a swipe down. It sits `above` the floating bar under it (the nav pill, the rest
-/// timer, a docked button); while
-/// typing, or when it appears over a sheet, it sits at the top, off the fields and the sheet's buttons.
+/// timer, a docked button); while typing (`keyboard`, Shell's), or when it appears over a sheet, it sits at the top,
+/// off the fields and the sheet's buttons.
 struct ToastLayer: View {
     @Environment(AppModel.self) private var model
     let above: CGFloat
-    @State private var keyboard = false
+    let keyboard: Bool
     /// Whether the showing toast appeared over a sheet: chosen as it appears and kept, so one fired as a sheet closes
     /// doesn't start at the top and then drop.
     @State private var placed: (id: UUID, overSheet: Bool)?
@@ -252,7 +252,5 @@ struct ToastLayer: View {
                 .floatingBottom(top ? 0 : above)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
     }
 }

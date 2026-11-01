@@ -20,9 +20,9 @@ struct SessionScreen: View {
             DeepPage {
                 TitleBar(title: current.name, subtitle: day.formatted(.gregorian.weekday(.wide).month(.abbreviated).day()) + dot + "\(current.minutes) min")
                 HStack(spacing: Space.s3) {
-                    tile("Volume", weight(current.volume, unit), unit.rawValue)
-                    tile("Sets", "\(current.loggedCount)")
-                    tile("Avg RIR", rir.formatted(.number.precision(.fractionLength(1))))
+                    StatTile(label: "Volume", value: weight(current.volume, unit), unit: unit.rawValue)
+                    StatTile(label: "Sets", value: "\(current.loggedCount)")
+                    StatTile(label: "Avg RIR", value: rir.formatted(.number.precision(.fractionLength(1))))
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s4)
@@ -109,20 +109,6 @@ struct SessionScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipShape(Corner.card.shape)
-        .raised()
-    }
-
-    private func tile(_ label: String, _ value: String, _ unit: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: Space.s2) {
-            Text(label).type(.t14).foregroundStyle(Palette.muted)
-            HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
-                Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
-                if let unit { Text(unit).type(.t14).foregroundStyle(Palette.muted) }
-            }
-            .lineLimit(1).minimumScaleFactor(Shrink.figure)
-        }
-        .padding(Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .raised()
     }
 

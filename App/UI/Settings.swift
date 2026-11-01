@@ -27,7 +27,7 @@ struct SettingsScreen: View {
                 Button("Done") { model.back() }.buttonStyle(SecondaryStyle(hug: true))
             }
             .frame(minHeight: Size.control)
-            section("Training") {
+            section("Training", top: Space.s4) {
                 Row(title: "Weight unit") {
                     Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
                         value: Binding(get: { settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)
@@ -69,7 +69,6 @@ struct SettingsScreen: View {
                 }
                 .pad()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .raised()
             }
             RowCard {
                 Button {
@@ -92,13 +91,13 @@ struct SettingsScreen: View {
         .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }
     }
 
-    /// A section's label over its card. The About card is a plain card, not rows.
-    private func section<Rows: View>(_ title: String, @ViewBuilder rows: () -> Rows) -> some View {
+    /// A section's label over its card, a section's gap under what's above (`top`: the first, a title's).
+    private func section<Rows: View>(_ title: String, top: CGFloat = Space.s6, @ViewBuilder rows: () -> Rows) -> some View {
         VStack(alignment: .leading, spacing: Space.s2) {
             Text(title).type(.t14).foregroundStyle(Palette.muted).accessibilityAddTraits(.isHeader)
-            if title == "About" { rows() } else { RowCard(content: rows) }
+            RowCard(content: rows)
         }
-        .padding(.top, title == "Training" ? Space.s4 : Space.s6)
+        .padding(.top, top)
     }
 
     /// Weekly goal: the days a week, one fewer or one more.

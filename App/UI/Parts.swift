@@ -478,3 +478,27 @@ extension View {
             .padding(.horizontal, Space.s4)
     }
 }
+
+/// A figure's tile (a workout's Volume, a lift's Best set, the Streak): its label over the value and unit, shrunk
+/// rather than cut on a narrow phone. `tight`: the unit runs on from the value ("4/30").
+struct StatTile: View {
+    let label: String
+    let value: String
+    var unit: String? = nil
+    var tight = false
+    var padding = Space.s3
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s2) {
+            Text(label).type(.t14).foregroundStyle(Palette.muted).lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: tight ? 0 : Space.s1) {
+                Text(value).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
+                if let unit { Text(unit).type(.t14).foregroundStyle(Palette.muted) }
+            }
+            .lineLimit(1).minimumScaleFactor(Shrink.figure)
+        }
+        .padding(padding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .raised()
+    }
+}

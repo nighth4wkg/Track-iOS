@@ -27,7 +27,8 @@ struct WorkoutOptions: View {
     }
 }
 
-/// Renaming the workout renames its split as well.
+/// Renaming the workout renames its split as well, so it can't take another split's name (its message shows under
+/// the field, as on every split name).
 struct RenameWorkout: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
@@ -35,8 +36,9 @@ struct RenameWorkout: View {
 
     var body: some View {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
+        let problem = trimmed.isEmpty ? nil : model.splitNameTaken(trimmed, except: model.training.active?.splitId)
         let save = {
-            guard !trimmed.isEmpty else { return }
+            guard !trimmed.isEmpty, problem == nil else { return }
             model.update { training in
                 training.active?.name = trimmed
                 if let id = training.active?.splitId { training.edit(id) { $0.name = trimmed } }
@@ -46,8 +48,9 @@ struct RenameWorkout: View {
         SheetFrame(title: "Rename workout", closeLabel: "Cancel") {
             VStack(alignment: .leading, spacing: Space.s2) {
                 Field(placeholder: "Workout name", text: $name, label: "Workout name", submit: save)
+                if let problem { Text(problem).type(.t14).foregroundStyle(Palette.danger) }
                 Text("Your split is renamed too.").type(.t14).foregroundStyle(Palette.muted)
-                Button("Save", action: save).buttonStyle(PrimaryStyle()).disabled(trimmed.isEmpty).padding(.top, Space.s2)
+                Button("Save", action: save).buttonStyle(PrimaryStyle()).disabled(trimmed.isEmpty || problem != nil).padding(.top, Space.s2)
             }
             .padding(.top, Space.s3)
         }

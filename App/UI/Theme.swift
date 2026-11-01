@@ -368,7 +368,7 @@ enum Icon: String {
          next = "chevron.right", down = "chevron.down", up = "chevron.up", arrange = "arrow.up.arrow.down",
          grip = "line.3.horizontal", plus = "plus", check = "checkmark", close = "xmark", alert = "exclamationmark.circle",
          play = "play.fill", search = "magnifyingglass", filter = "line.3.horizontal.decrease", more = "ellipsis",
-         trash = "trash", settings = "gearshape", eye = "eye", minus = "minus", warning = "exclamationmark.triangle",
+         trash = "trash", settings = "gearshape", minus = "minus", warning = "exclamationmark.triangle",
          badge = "rosette"
 
     func image(_ size: CGFloat = IconSize.regular, bold: Bool = false) -> some View {

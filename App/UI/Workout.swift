@@ -99,7 +99,7 @@ struct WorkoutScreen: View {
                     .foregroundStyle(Palette.text).frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
-                    Text(ExerciseCard.detail(exercise, previous, unit)).type(.t14).foregroundStyle(Palette.muted)
+                    Text(ExerciseCard.detail(exercise, last: previous?.match(exercise), unit)).type(.t14).foregroundStyle(Palette.muted)
                 }
             }
         }
@@ -220,7 +220,7 @@ struct ExerciseCard: View, Equatable {
                     .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
-                    Text(Self.detail(exercise, nil, unit, last: last)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
+                    Text(Self.detail(exercise, last: last, unit)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Icon.down.image(IconSize.medium).foregroundStyle(Palette.muted)
@@ -286,8 +286,7 @@ struct ExerciseCard: View, Equatable {
     }
 
     /// "1 of 3 sets · last 60×8": done of the sets as counted, and last time's first set.
-    static func detail(_ exercise: Exercise, _ previous: Session?, _ unit: TrackCore.Settings.Unit, last: Exercise? = nil) -> String {
-        let last = last ?? previous?.match(exercise)
+    static func detail(_ exercise: Exercise, last: Exercise?, _ unit: TrackCore.Settings.Unit) -> String {
         return "\(exercise.doneCount) of \(count(exercise.setCount, "set"))" + dot + "last \(lastText(last?.sets.first, unit))"
     }
 
