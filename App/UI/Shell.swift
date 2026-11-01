@@ -55,8 +55,10 @@ struct Shell: View {
                 if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
                 StatusFade()
                 // Over the navigation, not in it: in its root, no page or the workout ever pushed (found on the phone).
-                if !covered && !keyboard {
-                    NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
+                if !covered && !keyboard && !AB.pillNone {
+                    if AB.pillBox { Color.red.frame(height: Size.nav).frame(maxHeight: .infinity, alignment: .bottom).floatingBottom() }
+                    else if AB.pillNoPad { NavPill() }
+                    else { NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom() }
                 }
                 SheetLayer()
                 AskLayer()
@@ -77,6 +79,17 @@ struct Shell: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
         // A new day draws the pages again: their dates and "today" are worked out as they draw.
         .id(model.day)
+        .task(id: model.stops) {
+            guard ProcessInfo.processInfo.arguments.contains("-nav-dump") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            func walk(_ vc: UIViewController, _ depth: Int) {
+                let nav = (vc as? UINavigationController).map { " stack=\($0.viewControllers.count)" } ?? ""
+                NSLog("NAVDUMP %@%@%@ presented=%@", String(repeating: "  ", count: depth), String(describing: type(of: vc)), nav, vc.presentedViewController.map { String(describing: type(of: $0)) } ?? "-")
+                vc.children.forEach { walk($0, depth + 1) }
+            }
+            NSLog("NAVDUMP stops=%@", String(describing: model.stops))
+            if let root = keyWindow?.rootViewController { walk(root, 0) }
+        }
     }
 
     /// What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each
@@ -195,6 +208,7 @@ struct NavPill: View {
         HStack(spacing: Space.s1) {
             ForEach(Self.tabs, id: \.tab) { item in
                 let on = model.tab == item.tab
+                if AB.pillNoButtons { Text(item.label).frame(maxWidth: .infinity) } else {
                 Button { model.go(item.tab) } label: {
                     VStack(spacing: Gap.tab) {
                         item.icon.image(IconSize.logo, bold: on)
@@ -208,6 +222,7 @@ struct NavPill: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(item.label)
                 .accessibilityAddTraits(on ? [.isSelected] : [])
+                }
             }
         }
         .padding(Space.s1)
@@ -215,7 +230,7 @@ struct NavPill: View {
         .frame(height: Size.nav)
         .raised(.nav, .pill)
         .padding(.horizontal, Space.s4)
-        .sensoryFeedback(.selection, trigger: model.tab)
+        .sensoryFeedback(.selection, trigger: AB.pillNoHaptic ? .home : model.tab)
     }
 }
 
