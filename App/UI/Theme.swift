@@ -124,10 +124,10 @@ enum IconSize {
 enum Motion {
     /// --motion-fast (s): a dragged thing let go short of its goal slides back this long.
     static let fast = 0.16
-    /// A sheet, a pill or a screen's content coming or going: SwiftUI's default `.smooth` length.
-    static let normal = 0.5
+    /// A sheet, a pill or a screen's content coming or going: 90% there in 0.2 s (SwiftUI's default 0.5 read as slow).
+    static let normal = 0.3
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s curve put half the way into 3 frames at 60 Hz (up to
-    /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This moves at most ~46 pt a frame.
+    /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This moves at most ~76 pt a frame.
     static let move = Animation.smooth(duration: normal)
 }
 
