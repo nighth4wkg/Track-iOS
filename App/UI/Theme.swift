@@ -134,27 +134,24 @@ enum Motion {
 
 extension AnyTransition {
     /// A sheet or the question: up from below the screen's edge (its own height takes it there), back down as it goes.
-    static func sheet(_ on: Bool) -> AnyTransition { on ? .move(edge: .bottom).animation(Motion.move).combined(with: .gone) : .identity }
+    static func sheet(_ on: Bool) -> AnyTransition { on ? .move(edge: .bottom).animation(Motion.move) : .identity }
     /// The dim behind a sheet.
-    static func dim(_ on: Bool) -> AnyTransition { on ? .opacity.animation(Motion.fade).combined(with: .gone) : .identity }
+    static func dim(_ on: Bool) -> AnyTransition { on ? .opacity.animation(Motion.fade) : .identity }
     /// A pill (the toast, the rest timer): `y` from where it sits (past the screen's edge) and faded, back as it goes.
     static func rise(_ y: CGFloat, _ on: Bool) -> AnyTransition {
-        on ? .offset(y: y).animation(Motion.move).combined(with: .opacity.animation(Motion.fade)).combined(with: .gone) : .identity
+        on ? .offset(y: y).animation(Motion.move).combined(with: .opacity.animation(Motion.fade)) : .identity
     }
-    /// What's on its way out takes no tap, as when it went at once: a quick tap where a closing question's Delete
-    /// was deleted (measured on the iPhone, 0.19.4).
-    private static var gone: AnyTransition { .modifier(active: Untouchable(gone: true), identity: Untouchable(gone: false)) }
-}
-
-private struct Untouchable: ViewModifier {
-    let gone: Bool
-    func body(content: Content) -> some View { content.allowsHitTesting(!gone) }
 }
 
 extension View {
     /// Animates this layer's parts coming and going, only in the update where `value` changes: the app stays
     /// instant otherwise (Shell turns animations off), so nothing else on screen moves with them.
     func motion(on value: some Equatable, _ on: Bool) -> some View { transaction(value: value) { if on { $0.animation = Motion.move } } }
+
+    /// What's on its way out takes no tap, as when it went at once (a quick tap where a closing question's Delete was
+    /// deleted, 0.19.4). On the layer, which stays live: a leaving view keeps its last state, a no-tap transition on
+    /// it did nothing (0.19.5).
+    func taps(_ showing: Bool) -> some View { allowsHitTesting(showing) }
 }
 
 enum Radius {

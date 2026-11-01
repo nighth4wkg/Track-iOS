@@ -47,6 +47,7 @@ struct RestTimer: View {
                 .transition(.rise(Size.nav + Space.s4, moving))
             }
         }
+        .taps(resting)
         .motion(on: resting, moving)
         .sensoryFeedback(.warning, trigger: ended)
     }

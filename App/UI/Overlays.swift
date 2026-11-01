@@ -30,6 +30,7 @@ struct SheetLayer: View {
         // The layer reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
         // keyboard still lifts it.
         .ignoresSafeArea(.container, edges: .bottom)
+        .taps(!model.sheets.isEmpty)
         .motion(on: model.sheets.map(\.id), moving)
     }
 
@@ -184,7 +185,8 @@ struct AskLayer: View {
                     Text(confirm.message).type(.t14).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
                         .padding(.top, Space.s2)
                     VStack(spacing: Space.s3) {
-                        Button(confirm.label) { model.confirm = nil; confirm.action() }
+                        // Only the question showing: one on its way out mustn't act again.
+                        Button(confirm.label) { guard model.confirm?.id == confirm.id else { return }; model.confirm = nil; confirm.action() }
                             .buttonStyle(AnswerStyle(destructive: confirm.destructive))
                         Button("Cancel", action: cancel).buttonStyle(SecondaryStyle())
                     }
@@ -204,6 +206,7 @@ struct AskLayer: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .taps(model.confirm != nil)
         .motion(on: model.confirm?.id, moving)
     }
 
@@ -237,7 +240,8 @@ struct ToastLayer: View {
         // A ZStack: one going and the next coming share the spot rather than stacking.
         ZStack {
             if let toast {
-                let dismiss = { model.toast = nil }
+                // Only its own: one on its way out (the next one coming) mustn't close the next.
+                let dismiss = { if model.toast?.id == toast.id { model.toast = nil } }
                 HStack(spacing: Space.s3) {
                     if toast.problem {
                         Icon.alert.image(IconSize.medium, bold: true).foregroundStyle(Palette.danger).accessibilityHidden(true)
@@ -246,7 +250,7 @@ struct ToastLayer: View {
                     }
                     Text(toast.text).type(.t14).fontWeight(.semibold).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
                     if let undo = toast.undo {
-                        Button("Undo") { undo(); dismiss() }.buttonStyle(SecondaryStyle(height: Size.tile, hug: true)).foregroundStyle(Palette.accent)
+                        Button("Undo") { guard model.toast?.id == toast.id else { return }; undo(); dismiss() }.buttonStyle(SecondaryStyle(height: Size.tile, hug: true)).foregroundStyle(Palette.accent)
                     }
                     Button(action: dismiss) {
                         Icon.close.image(IconSize.medium).foregroundStyle(Palette.muted)
@@ -262,7 +266,7 @@ struct ToastLayer: View {
                 .gesture(DragGesture(minimumDistance: Space.s2).onEnded { if $0.translation.height > Space.s4 { dismiss() } })
                 .task(id: toast.id) {
                     try? await Task.sleep(for: .seconds(toast.undo != nil ? Self.seconds.undo : toast.problem ? Self.seconds.problem : Self.seconds.done))
-                    if model.toast?.id == toast.id { dismiss() }
+                    dismiss()
                 }
                 .onChange(of: toast.id, initial: true) { placed = (toast.id, !model.sheets.isEmpty) }
                 // Its own: a new one comes in as the last goes, rather than taking over its pill.
@@ -274,6 +278,7 @@ struct ToastLayer: View {
         .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
         .padding(.top, top ? Space.s2 : 0)
         .floatingBottom(top ? 0 : above)
+        .taps(toast != nil)
         .motion(on: toast?.id, moving)
     }
 }
