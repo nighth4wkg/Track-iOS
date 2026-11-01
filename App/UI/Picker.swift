@@ -38,6 +38,8 @@ struct ExercisePicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     @State private var query = ""
+    /// The search the list shows (-search-pause: the typing, once it pauses).
+    @State private var searched = ""
     @State private var group = "All"
     @State private var shown = Self.page
     @State private var added: [String] = []
@@ -57,25 +59,27 @@ struct ExercisePicker: View {
                 .filter { seen.insert($0).inserted }.prefix(3).map { $0 }
         }
         let choices = model.training.settings.lifts ?? [:]
-        let matches = Catalog.search(query, usage: usage)
-        let results = group == "All" ? matches : matches.filter { groups.of($0, choices).contains(group) }
-        let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
-        let custom = !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
+        let search = Probe.searchPause ? searched : query
+        let (results, typed, custom) = found(search, usage, choices)
         // The count rides on Done: a line appearing under the title pushed the whole list down.
         SheetFrame(title: replacing == nil ? "Add exercise" : "Swap exercise", subtitle: replacing,
                    closeLabel: added.isEmpty ? "Done" : "Done · \(added.count)", pinned: AnyView(VStack(spacing: Space.s3) {
             Field(placeholder: "Search exercises", text: $query, label: "Search exercises", icon: .search,
-                  submit: { if custom { pick(typed) } else if let first = results.first { pick(first) } })
+                  submit: {
+                      // Return picks from what's typed, even while the list still shows the search before it (-search-pause).
+                      let (now, name, own) = search == query ? (results, typed, custom) : found(query, usage, choices)
+                      if own { pick(name) } else if let first = now.first { pick(first) }
+                  })
             Seg(label: "Muscle", options: (["All"] + LiftTable.groups).map { (value: $0, text: $0) }, value: $group, columns: 3)
         }.padding(.top, Space.s3))) {
             if custom {
                 RowCard { row(typed, choices) }.padding(.top, Space.s4)
             }
-            if query.isEmpty, group == "All", !recent.isEmpty {
+            if search.isEmpty, group == "All", !recent.isEmpty {
                 Text("Recent").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
                 RowCard { ForEach(recent, id: \.self) { row($0, choices) } }.padding(.top, Space.s2)
             }
-            Text(query.isEmpty ? "All exercises" : count(results.count, "result")).type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
+            Text(search.isEmpty ? "All exercises" : count(results.count, "result")).type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
             if !results.isEmpty {
                 // Built as they scroll in (RowCard builds every row): a filter tap costs a screenful, not the list.
                 LazyVStack(spacing: 0) {
@@ -92,6 +96,12 @@ struct ExercisePicker: View {
             }
         }
         .onChange(of: query) { shown = Self.page }
+        .task(id: query) {
+            guard Probe.searchPause else { return }
+            // Cleared at once: only typing waits.
+            if !query.isEmpty { try? await Task.sleep(for: Probe.searchWait) }
+            if !Task.isCancelled { searched = query }
+        }
         .onChange(of: group) { shown = Self.page }
         .onAppear { if self.usage == nil { self.usage = usage } }
         // Filled once the sheet is up, so neither the opening nor the first filter tap waits for it.
@@ -127,6 +137,14 @@ struct ExercisePicker: View {
         }
         .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
         .frame(minHeight: Size.row)
+    }
+
+    /// The names a search finds under the muscle filter, what's typed (trimmed), and whether it's a name of its own.
+    private func found(_ query: String, _ usage: [String: Int], _ choices: [String: String]) -> ([String], String, Bool) {
+        let matches = Catalog.search(query, usage: usage)
+        let results = group == "All" ? matches : matches.filter { groups.of($0, choices).contains(group) }
+        let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
+        return (results, typed, !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame })
     }
 
     private func pick(_ name: String) {

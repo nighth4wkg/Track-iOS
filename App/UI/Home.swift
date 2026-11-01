@@ -60,7 +60,7 @@ struct HomeScreen: View {
             } else {
                 VStack(spacing: Space.s3) {
                     ForEach(training.splits) { split in
-                        SplitCard(split: split, next: training.active == nil && next == split.id)
+                        SplitCard(split: split, next: training.active == nil && next == split.id).equatableIf(Probe.eqRows)
                     }
                 }
             }
@@ -235,7 +235,7 @@ struct SplitLine: View {
 
 /// One split on its own card: tap it for its page; swipe it left (or hold it) and its end becomes a red trash, which
 /// asks first. The one up next says so.
-private struct SplitCard: View {
+private struct SplitCard: View, Equatable {
     @Environment(AppModel.self) private var model
     let split: Split
     let next: Bool
@@ -263,6 +263,8 @@ private struct SplitCard: View {
         .raised()
         .swipeToArm($armed)
     }
+
+    static func == (a: SplitCard, b: SplitCard) -> Bool { a.split == b.split && a.next == b.next }
 }
 
 /// New split: a name and Create, or one of the starter templates. Made, it opens its page.
@@ -286,6 +288,17 @@ struct NewSplitSheet: View {
             }
             .padding(.top, Space.s3)
             Text("Or start from a template").type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s6)
+            if Probe.localTyping {
+                Unchanged(key: 0) { templates }.equatable().padding(.top, Space.s2)
+            } else {
+                templates.padding(.top, Space.s2)
+            }
+            if let templateProblem { Text(templateProblem).type(.t14).foregroundStyle(Palette.danger).padding(.top, Space.s2) }
+        }
+    }
+
+    /// The starter templates, a tap each.
+    private var templates: some View {
             RowCard {
                 ForEach(SplitTemplate.all) { template in
                     Button { create(template.makeSplit()) } label: {
@@ -304,9 +317,6 @@ struct NewSplitSheet: View {
                     .buttonStyle(RowStyle())
                 }
             }
-            .padding(.top, Space.s2)
-            if let templateProblem { Text(templateProblem).type(.t14).foregroundStyle(Palette.danger).padding(.top, Space.s2) }
-        }
     }
 
     private func create(_ split: Split) {
