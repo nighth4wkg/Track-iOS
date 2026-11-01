@@ -35,6 +35,17 @@ struct SetRow: View {
     private static let typingPause = Duration.milliseconds(400)
     @State private var replacing: String? // the field just tapped: its first keystroke replaces it (key)
 
+    init(exercise: Exercise, set: TrainingSet, label: String, next: Bool, unit: TrackCore.Settings.Unit, autoLog: Bool,
+         bests: RecordBests, last: TrainingSet?, focus: Binding<String?>, focused: String?) {
+        (self.exercise, self.set, self.label, self.next, self.unit, self.autoLog) = (exercise, set, label, next, unit, autoLog)
+        (self.bests, self.last, self.focus, self.focused) = (bests, last, focus, focused)
+        // The numbers from the first frame: filled in on appear, they came a frame after the row and sat still while
+        // the rest of it slid in (a field filled on appear anywhere does that, so none is).
+        _weight = State(initialValue: TrainingSet.display(kg: set.kg, unit: unit))
+        _reps = State(initialValue: set.reps.map(String.init) ?? "")
+        _rir = State(initialValue: set.rir.map(String.init) ?? "")
+    }
+
     var body: some View {
         let shown = typed
         let error = TrainingSet.inputError(weight: weight, reps: reps, rir: rir, unit: unit)

@@ -124,6 +124,5 @@ enum AB {
     private static let args = ProcessInfo.processInfo.arguments
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
-    static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
     static let stillRest = args.contains("-still-rest")
 }

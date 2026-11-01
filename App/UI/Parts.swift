@@ -310,8 +310,6 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     @ViewBuilder let row: (Item) -> Content
     @ViewBuilder var end: (Item) -> End
     @State private var held: Item.ID?
-    /// A grip under the finger; reset by SwiftUI even when the drag is cancelled, so swipe back can't stay off.
-    @GestureState private var gripping = false
     @State private var finger = Finger()
     /// Places the held row has crossed: the only part of the drag that redraws the list.
     @State private var steps = 0
@@ -328,7 +326,6 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                         .frame(width: Size.control, height: Size.control).raised(.control, .pill)
                         .contentShape(Circle())
                         .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .global)
-                            .updating($gripping) { _, state, _ in state = true }
                             .onChanged {
                                 finger.y = $0.translation.height
                                 let crossed = max(-index, min(items.count - 1 - index, Int((finger.y / step).rounded())))
@@ -356,7 +353,6 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
             }
         }
         .sensoryFeedback(.selection, trigger: steps)
-        .onChange(of: gripping) { _, now in BackPan.holding = now }
     }
 
     /// Those between the held row's place and where it would go stand one place its way.
@@ -418,7 +414,7 @@ private struct Follow: ViewModifier {
 struct SidewaysPan: UIGestureRecognizerRepresentable {
     /// A release this fast (pt/s) decides by its direction, however short.
     static let flick: CGFloat = 300
-    /// Whether a swipe right is its own (an armed row's disarms); otherwise it's the page's swipe back (BackPan).
+    /// Whether a swipe right is its own (an armed row's disarms); otherwise it's left to the swipe back.
     var right = true
     var onEnd: (_ translation: CGFloat, _ velocity: CGFloat) -> Void
 

@@ -16,7 +16,7 @@ struct RankScreen: View {
                 if let bodyweight {
                     let text = "\(TrainingSet.display(kg: bodyweight, unit: unit)) \(unit.rawValue)"
                     Button(text) {
-                        model.present(SheetFrame(title: "Bodyweight", closeLabel: "Cancel") { BodyweightForm(closes: true).padding(.top, Space.s3) })
+                        model.present(SheetFrame(title: "Bodyweight", closeLabel: "Cancel") { BodyweightForm(closes: true, settings: model.training.settings).padding(.top, Space.s3) })
                     }
                     .buttonStyle(SecondaryStyle(hug: true)).monospacedDigit()
                     .accessibilityLabel("Bodyweight \(text), edit")
@@ -46,7 +46,7 @@ struct RankScreen: View {
                         .frame(width: Size.tile, height: Size.tile).raised(.control, .inner).accessibilityHidden(true)
                     Text("Unlock your ranks").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s3)
                     Text("Ranks compare your best lifts with your bodyweight.").type(.t14).foregroundStyle(Palette.muted)
-                    BodyweightForm(closes: false).padding(.top, Space.s4)
+                    BodyweightForm(closes: false, settings: model.training.settings).padding(.top, Space.s4)
                 }
                 .pad()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -267,7 +267,12 @@ struct BodyweightForm: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     let closes: Bool
-    @State private var text = ""
+    /// Filled from the first frame (SetRow's init says why).
+    @State private var text: String
+    init(closes: Bool, settings: TrackCore.Settings) {
+        self.closes = closes
+        _text = State(initialValue: settings.bodyweight.map { TrainingSet.display(kg: $0, unit: settings.unit) } ?? "")
+    }
 
     var body: some View {
         let unit = model.training.settings.unit
@@ -284,7 +289,6 @@ struct BodyweightForm: View {
             }
             Button("Save", action: save).buttonStyle(PrimaryStyle()).disabled(kg == nil)
         }
-        .onAppear { text = model.training.settings.bodyweight.map { TrainingSet.display(kg: $0, unit: unit) } ?? "" }
     }
 }
 

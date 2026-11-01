@@ -12,9 +12,12 @@ struct WorkoutScreen: View {
     @State private var arranging = false
     /// The set field being typed in ("<set id>.kg", ".reps" or ".rir"), on the workout's one keyboard (SetKeyboard).
     @State private var focus: String?
+    /// The workout last drawn: discarded or finished, the screen goes back with it rather than blank. Not observed.
+    @State private var kept = Kept()
+    private final class Kept { var active: Session? }
 
     var body: some View {
-        if let active = model.training.active {
+        if let active = drawn() {
             let fields: [String] = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
             // Once every set is done none opens by itself: the page goes up to Finish instead.
             let expanded: String? = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
@@ -22,7 +25,7 @@ struct WorkoutScreen: View {
             let splitId = active.splitId
             let previous: Session? = model.derived("previous \(splitId)") { _ in model.training.latestSession(of: splitId) }
             ScrollViewReader { proxy in
-                ScrollView { content(active, expanded: expanded, previous: previous).arrives(forward: true) }
+                ScrollView { content(active, expanded: expanded, previous: previous) }
                     .scrollDismissesKeyboard(.interactively)
                     .setKeyboard($focus)
                     .background(Backdrop())
@@ -31,7 +34,6 @@ struct WorkoutScreen: View {
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         if focus != nil { keyboardBar(fields) } else { RestTimer().floatingBottom() }
                     }
-                    .swipeBack(true) { model.workoutOpen = false }
                     // The keyboard's Next reaching a closed card opens it.
                     .onChange(of: focus) { _, id in
                         guard let id, let exercise = active.exercises.first(where: { ex in ex.sets.contains { id.hasPrefix($0.id) } }), exercise.id != expanded else { return }
@@ -54,6 +56,11 @@ struct WorkoutScreen: View {
             }
             .onDisappear { focus = nil }
         }
+    }
+
+    private func drawn() -> Session? {
+        if let active = model.training.active { kept.active = active }
+        return kept.active
     }
 
     /// The page's top, where Finish is.

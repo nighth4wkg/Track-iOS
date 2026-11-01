@@ -90,7 +90,14 @@ final class AppModel {
     func back() { if !pages.isEmpty { pages.removeLast() } }
     /// Shows a sheet (it closes itself through closeSheet).
     func present(_ view: some View, tall: Bool = false) { sheets.append(Presented(view: AnyView(view), tall: tall)) }
-    func dismiss(_ id: UUID) { if let index = sheets.firstIndex(where: { $0.id == id }) { sheets.remove(at: index) } }
+    func dismiss(_ id: UUID) {
+        guard let index = sheets.firstIndex(where: { $0.id == id }) else { return }
+        sheets.remove(at: index)
+        sheetClosedAt = ProcessInfo.processInfo.systemUptime
+    }
+    /// When a sheet last closed: a question coming up while its dim still fades out takes over that dim (AskLayer).
+    @ObservationIgnored private var sheetClosedAt: TimeInterval = 0
+    var sheetClosing: Bool { ProcessInfo.processInfo.systemUptime - sheetClosedAt < Motion.normal }
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true

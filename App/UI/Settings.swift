@@ -198,9 +198,10 @@ private struct RestList: View {
 private struct CustomRest: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
-    let seconds: Int
-    @State private var minutes = ""
-    @State private var secs = ""
+    /// Filled from the first frame (SetRow's init says why).
+    @State private var minutes: String
+    @State private var secs: String
+    init(seconds: Int) { (_minutes, _secs) = (State(initialValue: String(seconds / 60)), State(initialValue: String(seconds % 60))) }
     /// Two digits each, as the PWA's maxlength.
     private static let digits = 2
 
@@ -226,7 +227,6 @@ private struct CustomRest: View {
             }
             .padding(.top, Space.s3)
         }
-        .onAppear { minutes = String(seconds / 60); secs = String(seconds % 60) }
     }
 
     private func field(_ label: String, _ text: Binding<String>, _ save: @escaping () -> Void) -> some View {

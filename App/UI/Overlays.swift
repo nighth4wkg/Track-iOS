@@ -207,8 +207,11 @@ struct AskLayer: View {
         ZStack(alignment: .bottom) {
             if let confirm = model.confirm {
                 let cancel = { model.confirm = nil }
+                let over = model.sheetClosing
+                // Over a sheet's dim still fading out (Discard workout from its options), at full at once: the two
+                // crossing let the screen behind brighten and darken again.
                 Palette.scrim.ignoresSafeArea().onTapGesture(perform: cancel)
-                    .transition(.dim(moving))
+                    .transition(.asymmetric(insertion: .dim(moving && !over), removal: .dim(moving)))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(confirm.title).type(.t20).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
                     Text(confirm.message).type(.t14).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)

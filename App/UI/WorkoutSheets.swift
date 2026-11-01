@@ -13,7 +13,7 @@ struct WorkoutOptions: View {
             RowCard {
                 Button { close(); arrange() } label: { Row(title: "Arrange exercises", value: "", chevron: true) }
                     .buttonStyle(RowStyle()).disabled((active?.exercises.count ?? 0) < 2)
-                Button { close(); model.present(RenameWorkout()) } label: { Row(title: "Rename workout", value: "", chevron: true) }
+                Button { close(); model.present(RenameWorkout(name: model.training.active?.name ?? "")) } label: { Row(title: "Rename workout", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
                 Row(title: "Weight unit") {
                     Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
@@ -32,7 +32,9 @@ struct WorkoutOptions: View {
 struct RenameWorkout: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
-    @State private var name = ""
+    /// Filled from the first frame (SetRow's init says why).
+    @State private var name: String
+    init(name: String) { _name = State(initialValue: name) }
 
     var body: some View {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
@@ -54,7 +56,6 @@ struct RenameWorkout: View {
             }
             .padding(.top, Space.s3)
         }
-        .onAppear { name = model.training.active?.name ?? "" }
     }
 }
 
