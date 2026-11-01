@@ -17,7 +17,8 @@ struct Shell: View {
         let covered = !model.pages.isEmpty || model.workoutOpen || model.finished != nil
         // What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each
         // page's own flag: an outer accessibilityHidden(false) un-hid the hidden tabs (the UI tour tapped invisible ones).
-        let behind = !model.sheets.isEmpty || model.confirm != nil
+        // -ab-a11y: not read at all, so a sheet opening or closing doesn't redraw the Shell.
+        let behind = !AB.a11y && (!model.sheets.isEmpty || model.confirm != nil)
         ZStack {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 let shown = !covered && model.tab == tab

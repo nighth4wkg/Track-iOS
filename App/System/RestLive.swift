@@ -9,6 +9,7 @@ enum RestLive {
     nonisolated(unsafe) private(set) static var pending: Task<Void, Never>?
 
     static func show(until: Int, seconds: Int, workout: String) {
+        if AB.live { return after { await showOffMain(until: until, seconds: seconds, workout: workout) } }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let end = Date(timeIntervalSince1970: Double(until) / 1000)
         let state = RestAttributes.ContentState(until: end, seconds: seconds)
@@ -23,6 +24,7 @@ enum RestLive {
 
     /// Between rests: the same activity, now "Ready for your next set" (nothing to start if there's none).
     static func idle() {
+        if AB.live { return after { for activity in live { await activity.update(ready) } } }
         let current = live
         guard !current.isEmpty else { return }
         let content = ActivityContent(state: RestAttributes.ContentState(until: .now, seconds: 1, resting: false), staleDate: nil)
@@ -50,7 +52,37 @@ enum RestLive {
     }
 
     static func end() {
+        if AB.live { return after { for activity in Activity<RestAttributes>.activities { await activity.end(nil, dismissalPolicy: .immediate) } } }
         let activities = Activity<RestAttributes>.activities
         pending = Task { for activity in activities { await activity.end(nil, dismissalPolicy: .immediate) } }
+    }
+
+    // MARK: -ab-live: iOS asked off the main thread
+
+    /// "Ready for your next set".
+    private static var ready: ActivityContent<RestAttributes.ContentState> {
+        ActivityContent(state: RestAttributes.ContentState(until: .now, seconds: 1, resting: false), staleDate: nil)
+    }
+
+    /// Runs `work` off the main thread once the change before it is done, so changes land in order. Called on the main
+    /// thread only: `pending` is set here, at once, so a Live Activity button waiting on it waits for this too.
+    private static func after(_ work: @escaping @Sendable () async -> Void) {
+        let previous = pending
+        pending = Task.detached(priority: .userInitiated) {
+            await previous?.value
+            await work()
+        }
+    }
+
+    private static func showOffMain(until: Int, seconds: Int, workout: String) async {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let end = Date(timeIntervalSince1970: Double(until) / 1000)
+        let content = ActivityContent(state: RestAttributes.ContentState(until: end, seconds: seconds), staleDate: end)
+        let current = live
+        if current.isEmpty {
+            _ = try? Activity.request(attributes: RestAttributes(workout: workout), content: content)
+        } else {
+            for activity in current { await activity.update(content) }
+        }
     }
 }
