@@ -125,10 +125,4 @@ enum AB {
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillRest = args.contains("-still-rest")
-    // DIAG (remove): what in the nav pill stops the navigation pushing.
-    static let pillNone = args.contains("-pill-none")
-    static let pillBox = args.contains("-pill-box")         // a plain box in its place
-    static let pillNoHaptic = args.contains("-pill-nohaptic")
-    static let pillNoButtons = args.contains("-pill-nobuttons")
-    static let pillNoPad = args.contains("-pill-nopad")     // no floatingBottom / full-height frame
 }
