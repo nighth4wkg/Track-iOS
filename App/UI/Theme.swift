@@ -118,28 +118,27 @@ enum IconSize {
     static let round: CGFloat = 19
 }
 
-/// The PWA's motion standard (styles.css MOTION): what the app moves takes `normal` on `move`, a fade `normal` on
-/// `fade`; what finishes a finger's move settles at `fast`. Only transform and opacity animate, so a moving part
-/// never lays anything out again; with Reduce Motion nothing moves (the PWA's prefers-reduced-motion).
+/// How the app moves: what comes or goes takes iOS's own curve (`move`); what finishes a finger's move settles at
+/// `fast`. Only transform and opacity animate, so a moving part never lays anything out again; with Reduce Motion
+/// nothing moves (the PWA's prefers-reduced-motion).
 enum Motion {
     /// --motion-fast (s): a dragged thing let go short of its goal slides back this long.
     static let fast = 0.16
-    /// --motion (s): a sheet, a pill or a screen's content coming or going.
-    static let normal = 0.24
-    /// --ease, its iOS curve.
-    static let move = Animation.timingCurve(0.3, 0.45, 0.1, 1, duration: normal)
-    /// --ease-fade: on move's quick start a fade is over in a frame or two and reads as a snap.
-    static let fade = Animation.easeInOut(duration: normal)
+    /// A sheet, a pill or a screen's content coming or going: SwiftUI's default `.smooth` length.
+    static let normal = 0.5
+    /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s curve put half the way into 3 frames at 60 Hz (up to
+    /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This moves at most ~46 pt a frame.
+    static let move = Animation.smooth(duration: normal)
 }
 
 extension AnyTransition {
     /// A sheet or the question: up from below the screen's edge (its own height takes it there), back down as it goes.
     static func sheet(_ on: Bool) -> AnyTransition { on ? .move(edge: .bottom).animation(Motion.move) : .identity }
     /// The dim behind a sheet.
-    static func dim(_ on: Bool) -> AnyTransition { on ? .opacity.animation(Motion.fade) : .identity }
+    static func dim(_ on: Bool) -> AnyTransition { on ? .opacity.animation(Motion.move) : .identity }
     /// A pill (the toast, the rest timer): `y` from where it sits (past the screen's edge) and faded, back as it goes.
     static func rise(_ y: CGFloat, _ on: Bool) -> AnyTransition {
-        on ? .offset(y: y).animation(Motion.move).combined(with: .opacity.animation(Motion.fade)) : .identity
+        on ? .offset(y: y).animation(Motion.move).combined(with: .opacity.animation(Motion.move)) : .identity
     }
 }
 

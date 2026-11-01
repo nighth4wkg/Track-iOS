@@ -14,33 +14,52 @@ extension EnvironmentValues {
 struct SheetLayer: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var still
-    /// Sheets on their way down.
-    @State private var closing = 0
+    /// The sheets drawn: the model's, and the ones closed but still going down (`leaving`).
+    @State private var shown: [Presented] = []
+    @State private var leaving: [UUID] = []
+    /// How far down takes a sheet off the screen.
+    @State private var drop: CGFloat = 0
 
     var body: some View {
         let moving = !still && !AB.stillSheets
         ZStack(alignment: .bottom) {
             // Dim and sheet side by side (not one group), so each comes and goes its own way.
-            ForEach(model.sheets) { sheet in
+            ForEach(shown) { sheet in
+                // A closed sheet goes down as a live view that takes no taps: removed at once (a removal
+                // transition), it still took them as it went, whatever was put on it or over it.
+                let gone = leaving.contains(sheet.id)
                 Palette.scrim.ignoresSafeArea().onTapGesture { close(sheet) }
+                    .opacity(gone ? 0 : 1)
+                    .allowsHitTesting(!gone)
                     .transition(.dim(moving))
                 SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
                     .environment(\.closeSheet, { close(sheet) })
+                    .offset(y: gone ? drop : 0)
+                    .allowsHitTesting(!gone)
+                    .accessibilityHidden(gone)
                     .transition(.sheet(moving))
             }
-            if closing > 0 { Color.clear.contentShape(.rect).onTapGesture {}.ignoresSafeArea().accessibilityHidden(true) }
         }
         // The layer reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
         // keyboard still lifts it.
         .ignoresSafeArea(.container, edges: .bottom)
-        .motion(on: model.sheets.map(\.id), moving)
-        // A sheet going down still takes taps (the dim, then a quick tap where a template was, made a split), and no
-        // allowsHitTesting on it or on this layer, nor the window's touches off, stopped that on the iPhone: a live
-        // shield over it takes them while it goes, as UIKit's own transitions do.
-        .onChange(of: model.sheets.count) { old, new in
-            guard moving, new < old else { return }
-            closing += 1
-            Task { try? await Task.sleep(for: .seconds(Motion.normal)); closing -= 1 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { drop = $0 }
+        .motion(on: [shown.map(\.id), leaving], moving)
+        .onChange(of: model.sheets.map(\.id), initial: true) { follow(moving) }
+    }
+
+    /// New sheets come up; closed ones go down, then leave.
+    private func follow(_ moving: Bool) {
+        let open = Set(model.sheets.map(\.id))
+        let closed = shown.map(\.id).filter { !open.contains($0) && !leaving.contains($0) }
+        shown += model.sheets.filter { sheet in !shown.contains { $0.id == sheet.id } }
+        guard !closed.isEmpty else { return }
+        guard moving else { shown.removeAll { closed.contains($0.id) }; return }
+        leaving += closed
+        Task {
+            try? await Task.sleep(for: .seconds(Motion.normal))
+            shown.removeAll { closed.contains($0.id) }
+            leaving.removeAll { closed.contains($0) }
         }
     }
 

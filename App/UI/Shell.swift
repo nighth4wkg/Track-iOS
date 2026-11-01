@@ -194,11 +194,9 @@ private struct Arrive: ViewModifier {
             }
     }
 
-    /// Each on its own curve, as the PWA's shift and fade.
     private func settle() {
         guard x != 0 || opacity != 1 else { return }
-        withAnimation(Motion.move) { x = 0 }
-        withAnimation(Motion.fade) { opacity = 1 }
+        withAnimation(Motion.move) { x = 0; opacity = 1 }
     }
 }
 

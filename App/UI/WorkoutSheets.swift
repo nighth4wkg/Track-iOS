@@ -64,9 +64,17 @@ struct ExerciseOptions: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     let exerciseId: String
+    /// The exercise as last shown: removed here, the sheet keeps it as it goes down.
+    @State private var shown: Exercise?
 
     var body: some View {
-        if let exercise = model.training.active?.exercises.first(where: { $0.id == exerciseId }) {
+        let current = model.training.active?.exercises.first(where: { $0.id == exerciseId })
+        Group { content(current ?? shown) }
+            .onChange(of: current, initial: true) { _, now in if let now { shown = now } }
+    }
+
+    @ViewBuilder private func content(_ exercise: Exercise?) -> some View {
+        if let exercise {
             let sides = switch exercise.startingSide { case nil: "Both"; case .left?: "Left first"; case .right?: "Right first" }
             SheetFrame(title: exercise.name) {
                 RowCard {
