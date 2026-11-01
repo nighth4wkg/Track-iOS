@@ -2,7 +2,7 @@ import SwiftUI
 import TrackCore
 
 // What shows over the screen, as the PWA's: sheets (ui/parts.tsx Sheet), the question before something that can't be
-// taken back (AskSheet) and the pill at the bottom (Toasts). They show and go at once.
+// taken back (AskSheet) and the pill at the bottom (Toasts). They come and go on Motion's curves (Theme).
 
 extension EnvironmentValues {
     /// Closes the sheet this view is in.

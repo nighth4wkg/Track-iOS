@@ -155,8 +155,9 @@ struct DeepPage<Content: View>: View {
 extension View {
     /// A screen's content as it shows (the PWA's shift): from Space.s6 to the right and faded as it opens (`forward`:
     /// a page, the workout), from the left as it's come back to. A tab swapped to just shows; so does all of it with
-    /// Reduce Motion. Its fixed parts (a docked button, the nav pill) sit outside it and stay put.
-    func arrives(forward: Bool) -> some View { modifier(Arrive(forward: forward)) }
+    /// Reduce Motion. A page's docked button fades in with it but doesn't shift (`shifts` false): alone at full
+    /// strength over a page still fading in, it popped in. The nav pill is the app's, not the page's, and stays put.
+    func arrives(forward: Bool, shifts: Bool = true) -> some View { modifier(Arrive(forward: forward, shifts: shifts)) }
 }
 
 private struct Arrive: ViewModifier {
@@ -165,8 +166,10 @@ private struct Arrive: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var still
     @State private var x: CGFloat
     @State private var opacity: Double
+    let shifts: Bool
 
-    init(forward: Bool) {
+    init(forward: Bool, shifts: Bool) {
+        self.shifts = shifts
         _x = State(initialValue: forward ? Space.s6 : 0)
         _opacity = State(initialValue: forward ? 0 : 1)
     }
@@ -174,7 +177,7 @@ private struct Arrive: ViewModifier {
     func body(content: Content) -> some View {
         let moving = !still && !AB.stillPages
         content
-            .offset(x: moving ? x : 0)
+            .offset(x: moving && shifts ? x : 0)
             .opacity(moving ? opacity : 1)
             .onAppear { settle() }
             .onChange(of: shown) { _, now in

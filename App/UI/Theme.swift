@@ -134,13 +134,21 @@ enum Motion {
 
 extension AnyTransition {
     /// A sheet or the question: up from below the screen's edge (its own height takes it there), back down as it goes.
-    static func sheet(_ on: Bool) -> AnyTransition { on ? .move(edge: .bottom).animation(Motion.move) : .identity }
+    static func sheet(_ on: Bool) -> AnyTransition { on ? .move(edge: .bottom).animation(Motion.move).combined(with: .gone) : .identity }
     /// The dim behind a sheet.
-    static func dim(_ on: Bool) -> AnyTransition { on ? .opacity.animation(Motion.fade) : .identity }
+    static func dim(_ on: Bool) -> AnyTransition { on ? .opacity.animation(Motion.fade).combined(with: .gone) : .identity }
     /// A pill (the toast, the rest timer): `y` from where it sits (past the screen's edge) and faded, back as it goes.
     static func rise(_ y: CGFloat, _ on: Bool) -> AnyTransition {
-        on ? .offset(y: y).animation(Motion.move).combined(with: .opacity.animation(Motion.fade)) : .identity
+        on ? .offset(y: y).animation(Motion.move).combined(with: .opacity.animation(Motion.fade)).combined(with: .gone) : .identity
     }
+    /// What's on its way out takes no tap, as when it went at once: a quick tap where a closing question's Delete
+    /// was deleted (measured on the iPhone, 0.19.4).
+    private static var gone: AnyTransition { .modifier(active: Untouchable(gone: true), identity: Untouchable(gone: false)) }
+}
+
+private struct Untouchable: ViewModifier {
+    let gone: Bool
+    func body(content: Content) -> some View { content.allowsHitTesting(!gone) }
 }
 
 extension View {
