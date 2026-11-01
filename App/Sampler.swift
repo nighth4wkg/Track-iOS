@@ -125,4 +125,8 @@ enum AB {
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillRest = args.contains("-still-rest")
+    // DIAG (remove): why the navigation doesn't push.
+    static let navProbe = args.contains("-nav-probe")   // a bare NavigationStack instead of the app
+    static let navPlain = args.contains("-nav-plain")   // no transaction modifiers, the bar shown
+    static let navState = args.contains("-nav-state")   // the path in @State, mirrored to the model
 }

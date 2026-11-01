@@ -15,14 +15,20 @@ struct Shell: View {
     /// screen: a pushed screen's preferences don't reach past the navigation.
     @State private var bars: [Stop: CGFloat] = [:]
 
+    @State private var path: [Stop] = []
+
     var body: some View {
+        if AB.navProbe { AnyView(NavProbe()) } else { AnyView(main) }
+    }
+
+    private var main: some View {
         @Bindable var model = model
         let stops = model.stops
         let covered = !stops.isEmpty || model.finished != nil
         let behind = Self.behind(model)
         let bar = stops.last.flatMap { bars[$0] } ?? 0
         ZStack {
-            NavigationStack(path: $model.stops) {
+            NavigationStack(path: AB.navState ? $path : $model.stops) {
                 ZStack {
                     ForEach(AppTab.allCases, id: \.self) { tab in
                         // Under a page the tab stays drawn (the swipe back uncovers it), just not the one shown.
@@ -38,8 +44,8 @@ struct Shell: View {
                     }
                 }
                 .background(Backdrop())
-                .toolbar(.hidden, for: .navigationBar)
-                .transaction { $0.disablesAnimations = true }
+                .toolbar(AB.navPlain ? .visible : .hidden, for: .navigationBar)
+                .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
                 .navigationDestination(for: Stop.self) { stop in
                     Pushed(stop: stop) {
                         switch stop {
@@ -49,8 +55,8 @@ struct Shell: View {
                     }
                     .background(Backdrop())
                     .onPreferenceChange(FloatingBar.self) { bars[stop] = $0 }
-                    .toolbar(.hidden, for: .navigationBar)
-                    .transaction { $0.disablesAnimations = true }
+                    .toolbar(AB.navPlain ? .visible : .hidden, for: .navigationBar)
+                    .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
                 }
             }
             // Only the push and the swipe back move (under a no-animation the stack's push doesn't); the rest shows at once.
@@ -61,9 +67,11 @@ struct Shell: View {
                 AskLayer()
                 ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3, keyboard: keyboard)
             }
-            .transaction { $0.disablesAnimations = true }
+            .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
         }
         .background(Backdrop())
+        .onChange(of: model.stops) { if AB.navState, path != $1 { path = $1 } }
+        .onChange(of: path) { if AB.navState, model.stops != $1 { model.stops = $1 } }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
         .onChange(of: phase) { _, now in
@@ -97,6 +105,17 @@ struct Shell: View {
         case .lift(let name): LiftScreen(name: name)
         case .session(let id): SessionScreen(sessionId: id)
         case .settings: SettingsScreen()
+        }
+    }
+}
+
+// DIAG (remove)
+private struct NavProbe: View {
+    @State private var path: [Int] = []
+    var body: some View {
+        NavigationStack(path: $path) {
+            Button("Probe push") { path.append(path.count + 1) }
+                .navigationDestination(for: Int.self) { Text("Probe page \($0)") }
         }
     }
 }
