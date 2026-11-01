@@ -19,13 +19,15 @@ struct Shell: View {
         // page's own flag: an outer accessibilityHidden(false) un-hid the hidden tabs (the UI tour tapped invisible ones).
         let behind = !model.sheets.isEmpty || model.confirm != nil
         ZStack {
-            ForEach(AppTab.allCases, id: \.self) { tab in
-                let shown = !covered && model.tab == tab
-                page(tab)
-                    .environment(\.shown, shown)
-                    .opacity(shown ? 1 : 0)
-                    .allowsHitTesting(shown)
-                    .accessibilityHidden(!shown || behind)
+            if !(Probe.dropTabs && covered) {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    let shown = !covered && model.tab == tab
+                    TabData(shown: shown, live: model.training) { page(tab) }
+                        .environment(\.shown, shown)
+                        .opacity(shown ? 1 : 0)
+                        .allowsHitTesting(shown)
+                        .accessibilityHidden(!shown || behind)
+                }
             }
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
@@ -86,6 +88,24 @@ struct Shell: View {
 extension EnvironmentValues {
     /// This tab is the one on screen (all four stay built).
     @Entry var shown = true
+    /// The training a tab draws (TabData).
+    @Entry var tabTraining = Training()
+}
+
+/// A tab's training: the live one while it's on screen, the one it last showed while hidden, so a change made
+/// elsewhere (a set typed, a split made) doesn't redraw tabs nobody sees. Shown again, it draws the live one.
+private struct TabData<Content: View>: View {
+    let shown: Bool
+    let live: Training
+    @ViewBuilder let content: Content
+    /// Not observed: keeping the copy mustn't draw anything.
+    @State private var kept = Kept()
+    private final class Kept { var training: Training? }
+
+    var body: some View {
+        if shown || kept.training == nil || Probe.noFreeze { kept.training = live }
+        return content.environment(\.tabTraining, kept.training ?? live)
+    }
 }
 
 /// A tab's page (the PWA's .page): one scrolling column, 16 from the edges, its last card two page edges clear of

@@ -5,6 +5,7 @@ import TrackCore
 /// it), then the workouts newest first, twenty at a time. Tap one for the workout.
 struct HistoryScreen: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.tabTraining) private var training
     @State private var query = ""
     @State private var from = ""
     @State private var to = ""
@@ -14,10 +15,9 @@ struct HistoryScreen: View {
     private static let page = 20
 
     var body: some View {
-        let training = model.training
         // Kept until the workouts or the search change: History stays alive behind the other tabs, and every set
         // logged would otherwise sort the whole history again.
-        let results = model.derived("history", at: [query, from, to]) { $0.filtered(query: query, from: from, to: to) }
+        let results = model.derived("history", of: training.sessions, at: [query, from, to]) { $0.filtered(query: query, from: from, to: to) }
         let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || !from.isEmpty || !to.isEmpty
         TabPage {
             TabHead(title: "History") {
@@ -34,7 +34,7 @@ struct HistoryScreen: View {
             }
             // While a search is typed, its results take the calendar's place: under it they sat behind the keyboard.
             if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days") { Set($0.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) })
+                HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days", of: training.sessions) { Set($0.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) })
                     .padding(.top, Space.s3)
             }
             list(results, filtering: filtering, unit: training.settings.unit).padding(.top, Space.s6)
@@ -54,7 +54,7 @@ struct HistoryScreen: View {
             }
             .frame(minHeight: Size.control)
             if results.isEmpty {
-                Text(model.derived("any finished") { $0.finished.isEmpty } ? "Finish a workout and it shows up here." : "No workouts match. Try another name or date.")
+                Text(model.derived("any finished", of: training.sessions) { $0.finished.isEmpty } ? "Finish a workout and it shows up here." : "No workouts match. Try another name or date.")
                     .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
             } else {
                 LazyVStack(spacing: Space.s3) {

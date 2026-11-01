@@ -167,12 +167,18 @@ final class AppModel {
     /// `stamp` is what else it depends on that changes over time (the day, the minute, a search): a new one replaces
     /// the figure kept under `key` rather than adding another, so the store stays one figure per key.
     func derived<T>(_ key: String, at stamp: AnyHashable = 0, _ make: ([Session]) -> T) -> T {
-        if memoSessions != training.sessions {
+        derived(key, of: training.sessions, at: stamp, make)
+    }
+
+    /// The same from the workouts a tab was handed (Shell's TabData: its kept copy while hidden), so working it out
+    /// doesn't tie the tab to every change.
+    func derived<T>(_ key: String, of sessions: [Session], at stamp: AnyHashable = 0, _ make: ([Session]) -> T) -> T {
+        if memoSessions != sessions {
             memo = [:]
-            memoSessions = training.sessions
+            memoSessions = sessions
         }
         if let stored = memo[key], stored.stamp == stamp, let value = stored.value as? T { return value }
-        let value = make(training.sessions)
+        let value = make(sessions)
         memo[key] = (stamp, value)
         return value
     }

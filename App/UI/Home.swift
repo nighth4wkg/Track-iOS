@@ -6,10 +6,10 @@ import TrackCore
 /// next achievement.
 struct HomeScreen: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.tabTraining) private var training
     @State private var arranging = false
 
     var body: some View {
-        let training = model.training
         let now = nowMillis()
         // Worked out once: it reads every past workout.
         let next = training.nextSplit
@@ -37,7 +37,7 @@ struct HomeScreen: View {
             if !training.splits.isEmpty { splits(training, next: next?.split.id).padding(.top, Space.s6) }
             HomeTiles(training: training, now: now).padding(.top, Space.s3)
         }
-        .sensoryFeedback(.selection, trigger: training.splits.map(\.id))
+        .background(SplitsTick())
         .onChange(of: training.splits.count) { _, count in if count < 2 { arranging = false } }
     }
 
@@ -82,7 +82,7 @@ private struct UpNextCard: View {
         VStack(spacing: Space.s4) {
             HStack(spacing: Space.s4) {
                 VStack(spacing: Space.s1) {
-                    WeekRing(done: model.derived("days", at: dayKey(now)) { $0.trainingDays(inWeekOf: now).count }, goal: training.settings.weeklyGoal)
+                    WeekRing(done: model.derived("days", of: training.sessions, at: dayKey(now)) { $0.trainingDays(inWeekOf: now).count }, goal: training.settings.weeklyGoal)
                     Text("This week").type(.t12).foregroundStyle(Palette.muted).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 0) {
@@ -135,6 +135,16 @@ private struct UpNextCard: View {
     }
 }
 
+/// The tick as a split comes, goes or moves: from the live training, not Home's kept copy, so it comes as it happens
+/// (a split made from its sheet) rather than on coming back to Home.
+private struct SplitsTick: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Color.clear.sensoryFeedback(.selection, trigger: model.training.splits.map(\.id)).accessibilityHidden(true)
+    }
+}
+
 /// Swipe to arm, only while there's something to arm (the workout in progress).
 private struct ArmIf: ViewModifier {
     let on: Bool
@@ -176,7 +186,7 @@ private struct HomeTiles: View {
     }
 
     private var volume: some View {
-        let week = model.derived("volume W", at: minuteStamp(now)) { $0.change(of: .volume, per: .week, at: now) }
+        let week = model.derived("volume W", of: training.sessions, at: minuteStamp(now)) { $0.change(of: .volume, per: .week, at: now) }
         return VStack(alignment: .leading, spacing: 0) {
             Text("Volume this week").type(.t14).foregroundStyle(Palette.muted)
             HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
@@ -195,7 +205,7 @@ private struct HomeTiles: View {
     private var achievement: some View {
         VStack(alignment: .leading, spacing: Space.s2) {
             Text("Next achievement").type(.t14).foregroundStyle(Palette.muted)
-            if let next = model.derived("nearest quest", { $0.nearestQuest() }) {
+            if let next = model.derived("nearest quest", of: training.sessions, { $0.nearestQuest() }) {
                 let ratio = Double(next.value) / Double(max(1, next.quest.threshold))
                 Text(next.quest.title).type(.t16).foregroundStyle(Palette.text)
                 Bar(value: ratio).accessibilityLabel("\(next.quest.title): \(Int((ratio * 100).rounded()))%")

@@ -5,13 +5,13 @@ import TrackCore
 /// by bar, then streak, level and badges, and your heaviest lifts (tap one for its page).
 struct ProgressScreen: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.tabTraining) private var training
     @AppStorage("track.volumePeriod") private var period = Period.week
     @AppStorage("track.measure") private var tally = Tally.volume
 
     var body: some View {
-        let training = model.training
         let now = nowMillis()
-        let records = model.derived("records") { Array($0.personalRecords.prefix(3)) }
+        let records = model.derived("records", of: training.sessions) { Array($0.personalRecords.prefix(3)) }
         TabPage {
             TabHead(title: "Progress") {
                 Seg(label: "Period", options: Period.allCases.map { (value: $0, text: $0.name) }, value: $period, short: true)
@@ -19,11 +19,11 @@ struct ProgressScreen: View {
             Seg(label: "Measure", options: Tally.allCases.map { (value: $0, text: $0.rawValue) }, value: $tally).padding(.top, Space.s4)
             chart(training, now: now).padding(.top, Space.s3)
             HStack(spacing: Space.s3) {
-                tile("Streak", "\(model.derived("streak", at: dayKey(now)) { $0.weeklyStreak(at: now) })", unit: "wk")
-                let level = model.derived("xp") { Experience.progress(of: $0) }.level
+                tile("Streak", "\(model.derived("streak", of: training.sessions, at: dayKey(now)) { $0.weeklyStreak(at: now) })", unit: "wk")
+                let level = model.derived("xp", of: training.sessions) { Experience.progress(of: $0) }.level
                 Button { model.present(XpHelp()) } label: { tile("Level", "\(level)") }
                     .buttonStyle(CardStyle()).accessibilityLabel("Level \(level). How XP works")
-                let earned = model.derived("award count") { $0.questAwards.count }
+                let earned = model.derived("award count", of: training.sessions) { $0.questAwards.count }
                 Button { model.present(QuestList(), tall: true) } label: { tile("Badges", "\(earned)", unit: "/\(Quest.all.count)", tight: true) }
                     .buttonStyle(CardStyle()).accessibilityLabel("Badges: \(earned) of \(Quest.all.count). Show all")
             }
@@ -51,8 +51,8 @@ struct ProgressScreen: View {
 
     private func chart(_ training: Training, now: Int) -> some View {
         let unit = training.settings.unit
-        let result = model.derived("tally", at: "\(tally) \(period) \(minuteStamp(now))") { $0.change(of: tally, per: period, at: now) }
-        let bars = model.derived("bars", at: "\(tally) \(period) \(minuteStamp(now))") { $0.bars(of: tally, per: period, at: now) }
+        let result = model.derived("tally", of: training.sessions, at: "\(tally) \(period) \(minuteStamp(now))") { $0.change(of: tally, per: period, at: now) }
+        let bars = model.derived("bars", of: training.sessions, at: "\(tally) \(period) \(minuteStamp(now))") { $0.bars(of: tally, per: period, at: now) }
         let top = max(1, bars.flatMap { [$0.now, $0.last] }.max() ?? 1)
         let note = result.value == 0 ? "Nothing logged \(period.now) yet" : result.change.map { "\($0 >= 0 ? "+" : "")\($0)% vs \(period.last)" } ?? "Nothing \(period.last) to compare"
         let tint = result.value == 0 ? Palette.muted : result.change.map { $0 >= 0 ? Palette.accent : Palette.danger } ?? Palette.muted

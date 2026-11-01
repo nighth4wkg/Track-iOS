@@ -5,10 +5,10 @@ import TrackCore
 /// on the ladder) and the closest win. Asks for bodyweight first; the bodyweight button changes it.
 struct RankScreen: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.tabTraining) private var training
     @State private var opened: Muscle?
 
     var body: some View {
-        let training = model.training
         let unit = training.settings.unit
         let bodyweight = training.settings.bodyweight
         TabPage {
@@ -25,8 +25,8 @@ struct RankScreen: View {
             if let bodyweight {
                 let choices = training.settings.lifts ?? [:]
                 let signature = choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")
-                let ranks = model.derived("ranks", at: "\(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
-                let counted = model.derived("counted", at: signature) { $0.countedNames(choices: choices) }
+                let ranks = model.derived("ranks", of: training.sessions, at: "\(bodyweight) \(signature)") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
+                let counted = model.derived("counted", of: training.sessions, at: signature) { $0.countedNames(choices: choices) }
                 // Apart only when it needs you: names Track doesn't know, and ones you chose not to count.
                 let uncounted = counted.filter { $0.groups.isEmpty && (!$0.known || $0.chosen) }
                 OverallCard(ranks: ranks, unit: unit).padding(.top, Space.s4)

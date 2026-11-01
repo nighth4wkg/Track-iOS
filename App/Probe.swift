@@ -8,6 +8,13 @@ import os
 /// argument nothing here runs.
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
+    // A/B switches for the responsiveness fixes, measured on the phone without a reinstall; removed once decided.
+    /// Hidden tabs follow every change again (Shell's TabData), as before the fix.
+    static let noFreeze = args.contains("-no-freeze")
+    /// The four tabs aren't kept while a page or the workout covers them.
+    static let dropTabs = args.contains("-drop-tabs")
+    /// A sheet closing with the keyboard up lets the keyboard go first, in the same pass.
+    static let closeAtOnce = args.contains("-close-at-once")
 }
 
 final class Sampler: Thread, @unchecked Sendable {

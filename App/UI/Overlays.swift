@@ -29,6 +29,7 @@ struct SheetLayer: View {
     }
 
     private func close(_ sheet: Presented) {
+        if Probe.closeAtOnce { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
         if let onClose = sheet.onClose { onClose() } else { model.dismiss(sheet.id) }
     }
 }
