@@ -7,8 +7,6 @@ struct HistoryScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(\.tabTraining) private var training
     @State private var query = ""
-    /// The search the results show (-search-pause: the typing, once it pauses).
-    @State private var searched = ""
     @State private var from = ""
     @State private var to = ""
     @State private var datesOpen = false
@@ -19,9 +17,8 @@ struct HistoryScreen: View {
     var body: some View {
         // Kept until the workouts or the search change: History stays alive behind the other tabs, and every set
         // logged would otherwise sort the whole history again.
-        let search = Probe.searchPause ? searched : query
-        let results = model.derived("history", of: training.sessions, at: [search, from, to]) { $0.filtered(query: search, from: from, to: to) }
-        let filtering = !search.trimmingCharacters(in: .whitespaces).isEmpty || !from.isEmpty || !to.isEmpty
+        let results = model.derived("history", of: training.sessions, at: [query, from, to]) { $0.filtered(query: query, from: from, to: to) }
+        let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || !from.isEmpty || !to.isEmpty
         TabPage {
             TabHead(title: "History") {
                 RoundButton(icon: .filter, label: datesOpen ? "Hide date range" : "Filter by date") { datesOpen.toggle() }
@@ -44,12 +41,6 @@ struct HistoryScreen: View {
         }
         .sensoryFeedback(.selection, trigger: from + to)
         .onChange(of: query + from + to) { shown = Self.page }
-        .task(id: query) {
-            guard Probe.searchPause else { return }
-            // Cleared at once (Clear, a deleted last letter): only typing waits.
-            if !query.isEmpty { try? await Task.sleep(for: Probe.searchWait) }
-            if !Task.isCancelled { searched = query }
-        }
     }
 
     private func list(_ results: [Session], filtering: Bool, unit: TrackCore.Settings.Unit) -> some View {
@@ -68,7 +59,7 @@ struct HistoryScreen: View {
             } else {
                 LazyVStack(spacing: Space.s3) {
                     ForEach(results.prefix(shown)) { session in
-                        Button { model.open(.session(session.id)) } label: { HistoryRow(session: session, unit: unit).equatableIf(Probe.eqRows) }.buttonStyle(CardStyle())
+                        Button { model.open(.session(session.id)) } label: { HistoryRow(session: session, unit: unit) }.buttonStyle(CardStyle())
                     }
                 }
                 .padding(.top, Space.s2)
@@ -129,7 +120,7 @@ private struct DateSheet: View {
 }
 
 /// A workout in the list: its date tile (month over the day, so rows a month apart differ), its name over time · sets · volume.
-private struct HistoryRow: View, Equatable {
+private struct HistoryRow: View {
     let session: Session
     let unit: TrackCore.Settings.Unit
 

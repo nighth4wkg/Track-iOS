@@ -22,8 +22,6 @@ struct Presented: Identifiable {
     let view: AnyView
     /// As tall as the screen whatever it holds (the picker, whose list grows and shrinks as you search).
     let tall: Bool
-    /// What a tap outside it or a drag down does (usually just closing it).
-    let onClose: (() -> Void)?
 }
 
 /// A question before something that can't be taken back, shown in Track's own dialog (as the website's).
@@ -87,17 +85,12 @@ final class AppModel {
     func open(_ route: Route) { pages.append(route) }
     func back() { if !pages.isEmpty { pages.removeLast() } }
     /// Shows a sheet; returns its id for closing it.
-    @discardableResult func present(_ view: some View, tall: Bool = false, onClose: (() -> Void)? = nil) -> UUID {
-        let sheet = Presented(view: AnyView(view), tall: tall, onClose: onClose)
+    @discardableResult func present(_ view: some View, tall: Bool = false) -> UUID {
+        let sheet = Presented(view: AnyView(view), tall: tall)
         sheets.append(sheet)
         return sheet.id
     }
     func dismiss(_ id: UUID) { if let index = sheets.firstIndex(where: { $0.id == id }) { sheets.remove(at: index) } }
-    /// The top sheet closes as a tap outside or a drag down closes it.
-    func closeTop() {
-        guard let top = sheets.last else { return }
-        if let close = top.onClose { close() } else { dismiss(top.id) }
-    }
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true

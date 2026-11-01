@@ -168,16 +168,6 @@ struct SetRow: View {
     }
 }
 
-extension SetRow: Equatable {
-    /// Everything the row shows (-eq-rows); the focus binding is followed through `focused`, the exercise only by its
-    /// id and name (all the row uses of it).
-    static func == (a: SetRow, b: SetRow) -> Bool {
-        a.set == b.set && a.label == b.label && a.next == b.next && a.unit == b.unit && a.autoLog == b.autoLog
-            && a.bests.id == b.bests.id && a.last == b.last && a.focused == b.focused
-            && a.exercise.id == b.exercise.id && a.exercise.name == b.exercise.name
-    }
-}
-
 extension View {
     /// The workout's set numbers typed on one keyboard: an unseen input (KeyInput) stays first responder while any
     /// set is typed in, so Next only moves the highlight. A field taking the keyboard made iOS rebuild it, most of

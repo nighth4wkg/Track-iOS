@@ -19,15 +19,13 @@ struct Shell: View {
         // page's own flag: an outer accessibilityHidden(false) un-hid the hidden tabs (the UI tour tapped invisible ones).
         let behind = !model.sheets.isEmpty || model.confirm != nil
         ZStack {
-            if !(Probe.dropTabs && covered) {
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    let shown = !covered && model.tab == tab
-                    TabData(shown: shown, live: model.training) { page(tab) }
-                        .environment(\.shown, shown)
-                        .opacity(shown ? 1 : 0)
-                        .allowsHitTesting(shown)
-                        .accessibilityHidden(!shown || behind)
-                }
+            ForEach(AppTab.allCases, id: \.self) { tab in
+                let shown = !covered && model.tab == tab
+                TabData(shown: shown, live: model.training) { page(tab) }
+                    .environment(\.shown, shown)
+                    .opacity(shown ? 1 : 0)
+                    .allowsHitTesting(shown)
+                    .accessibilityHidden(!shown || behind)
             }
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
@@ -103,7 +101,7 @@ private struct TabData<Content: View>: View {
     private final class Kept { var training: Training? }
 
     var body: some View {
-        if shown || kept.training == nil || Probe.noFreeze { kept.training = live }
+        if shown || kept.training == nil { kept.training = live }
         return content.environment(\.tabTraining, kept.training ?? live)
     }
 }

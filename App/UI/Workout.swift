@@ -264,7 +264,6 @@ struct ExerciseCard: View, Equatable {
                            last: last.flatMap { $0.sets.indices.contains(index) ? $0.sets[index] : nil },
                            focus: focus,
                            focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil })
-                        .equatableIf(Probe.eqRows)
                         .id(set.id) // what the keyboard scrolls to (SetKeyboard)
                 }
             }

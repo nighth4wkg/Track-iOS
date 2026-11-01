@@ -8,34 +8,6 @@ import os
 /// argument nothing here runs.
 enum Probe {
     static let args = ProcessInfo.processInfo.arguments
-    // A/B switches for the responsiveness fixes, measured on the phone without a reinstall; removed once decided.
-    /// Hidden tabs follow every change again (Shell's TabData), as before the fix.
-    static let noFreeze = args.contains("-no-freeze")
-    /// The four tabs aren't kept while a page or the workout covers them.
-    static let dropTabs = args.contains("-drop-tabs")
-    /// A sheet closing with the keyboard up lets the keyboard go first, in the same pass.
-    static let closeAtOnce = args.contains("-close-at-once")
-    /// Rows whose inputs didn't change aren't drawn again (set rows, history rows, split cards).
-    static let eqRows = args.contains("-eq-rows")
-    /// A key typed in the new split's name redraws only the name part, not the templates under it.
-    static let localTyping = args.contains("-local-typing")
-    /// Searches (History, the picker) show their results once typing pauses, not on every key.
-    static let searchPause = args.contains("-search-pause")
-    /// How long a search waits for the next key (-search-pause).
-    static let searchWait = Duration.milliseconds(200)
-}
-
-extension View where Self: Equatable {
-    /// -eq-rows: skipped while its inputs are unchanged.
-    @ViewBuilder func equatableIf(_ on: Bool) -> some View { if on { equatable() } else { self } }
-}
-
-/// Its content drawn again only when `key` changes (-local-typing): for a part that ignores what's being typed.
-struct Unchanged<Key: Equatable, Content: View>: View, Equatable {
-    let key: Key
-    @ViewBuilder let content: Content
-    static func == (a: Self, b: Self) -> Bool { a.key == b.key }
-    var body: some View { content }
 }
 
 final class Sampler: Thread, @unchecked Sendable {
