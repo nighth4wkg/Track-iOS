@@ -2,10 +2,10 @@ import SwiftUI
 import TrackCore
 import UIKit
 
-/// The app after the first screen, as the PWA's routes: the four tabs (each built once and kept, shown one at a time)
-/// with the nav pill, pages pushed over them (a split, a lift, a past workout, Settings) and the workout last, on
+/// The app after the first screen, as the PWA's routes: the four tabs (each built once and kept, shown one at a time),
+/// pages pushed over them (a split, a lift, a past workout, Settings) and the workout last, on
 /// iOS's own navigation (its push, and its swipe back that follows the finger); the recap after a workout, then
-/// sheets, the question and the toast on top. Everything else shows at once.
+/// the nav pill, sheets, the question and the toast on top. Everything else shows at once.
 struct Shell: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var phase
@@ -15,49 +15,29 @@ struct Shell: View {
     /// screen: a pushed screen's preferences don't reach past the navigation.
     @State private var bars: [Stop: CGFloat] = [:]
 
-    @State private var path: [Stop] = []
-
     var body: some View {
-        if AB.navProbe { AnyView(NavProbe()) } else if AB.navBare { AnyView(bare) } else { AnyView(main) }
-    }
-
-    private var bare: some View {
-        @Bindable var model = model
-        return NavigationStack(path: $model.stops) {
-            Button("Bare push") { model.open(.settings) }
-                .navigationDestination(for: Stop.self) { _ in Text("Bare page") }
-        }
-    }
-
-    @ViewBuilder private var main: some View {
         @Bindable var model = model
         let stops = model.stops
         let covered = !stops.isEmpty || model.finished != nil
         let behind = Self.behind(model)
         let bar = stops.last.flatMap { bars[$0] } ?? 0
         ZStack {
-            NavigationStack(path: AB.navState ? $path : $model.stops) {
+            NavigationStack(path: $model.stops) {
                 ZStack {
-                    if AB.navNoTabs { Button("Bare push") { model.open(.settings) } } else if AB.navHome { HomeScreen() } else {
                     ForEach(AppTab.allCases, id: \.self) { tab in
                         // Under a page the tab stays drawn (the swipe back uncovers it), just not the one shown.
-                        let current = model.tab == tab, shown = current && (AB.navStatic || !covered)
+                        let current = model.tab == tab, shown = current && !covered
                         TabData(shown: shown, live: model.training) { page(tab) }
                             .environment(\.shown, shown)
                             .opacity(current ? 1 : 0)
                             .allowsHitTesting(current)
-                            .accessibilityHidden(AB.navStatic ? false : (!shown || behind))
-                    }
-                    if !keyboard && !AB.navNoPill {
-                        NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
-                    }
+                            .accessibilityHidden(!shown || behind)
                     }
                 }
                 .background(Backdrop())
-                .toolbar(AB.navPlain ? .visible : .hidden, for: .navigationBar)
-                .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
+                .toolbar(.hidden, for: .navigationBar)
+                .transaction { $0.disablesAnimations = true }
                 .navigationDestination(for: Stop.self) { stop in
-                    if AB.navDest { Text("Bare page") } else {
                     Pushed(stop: stop) {
                         switch stop {
                         case .page(let route): deeper(route)
@@ -66,26 +46,25 @@ struct Shell: View {
                     }
                     .background(Backdrop())
                     .onPreferenceChange(FloatingBar.self) { bars[stop] = $0 }
-                    .toolbar(AB.navPlain ? .visible : .hidden, for: .navigationBar)
-                    .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
-                    }
+                    .toolbar(.hidden, for: .navigationBar)
+                    .transaction { $0.disablesAnimations = true }
                 }
             }
             // Only the push and the swipe back move (under a no-animation the stack's push doesn't); the rest shows at once.
-            if !AB.navSolo {
             Group {
                 if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
                 StatusFade()
+                // Over the navigation, not in it: in its root, no page or the workout ever pushed (found on the phone).
+                if !covered && !keyboard {
+                    NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
+                }
                 SheetLayer()
                 AskLayer()
                 ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3, keyboard: keyboard)
             }
-            .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
-            }
+            .transaction { $0.disablesAnimations = true }
         }
         .background(Backdrop())
-        .onChange(of: model.stops) { if AB.navState, path != $1 { path = $1 } }
-        .onChange(of: path) { if AB.navState, model.stops != $1 { model.stops = $1 } }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
         .onChange(of: phase) { _, now in
@@ -97,7 +76,7 @@ struct Shell: View {
         .task(id: model.training.restUntil) { await RestLive.readyWhenOver(model.training.restUntil) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
         // A new day draws the pages again: their dates and "today" are worked out as they draw.
-        .id(AB.navNoId ? "" : model.day)
+        .id(model.day)
     }
 
     /// What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each
@@ -119,17 +98,6 @@ struct Shell: View {
         case .lift(let name): LiftScreen(name: name)
         case .session(let id): SessionScreen(sessionId: id)
         case .settings: SettingsScreen()
-        }
-    }
-}
-
-// DIAG (remove)
-private struct NavProbe: View {
-    @State private var path: [Int] = []
-    var body: some View {
-        NavigationStack(path: $path) {
-            Button("Probe push") { path.append(path.count + 1) }
-                .navigationDestination(for: Int.self) { Text("Probe page \($0)") }
         }
     }
 }
