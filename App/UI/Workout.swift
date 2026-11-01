@@ -105,34 +105,28 @@ struct WorkoutScreen: View {
         }
     }
 
-    @ViewBuilder private func cards(_ active: Session, expanded: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
-        if AB.lazy {
-            LazyVStack(spacing: Space.s3) { cardList(active, expanded: expanded, previous: previous, unit: unit) }
-        } else {
-            VStack(spacing: Space.s3) { cardList(active, expanded: expanded, previous: previous, unit: unit) }
-        }
-    }
-
-    @ViewBuilder private func cardList(_ active: Session, expanded: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
+    private func cards(_ active: Session, expanded: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
         let settings = model.training.settings
         let bests = model.bests
-        ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
-            let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
-            let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
-            ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
-                         autoLog: settings.logSets != .manual, bests: bests,
-                         last: previous?.match(exercise),
-                         restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
-                         onOpen: { opened = exercise.id },
-                         onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) })
-                .equatable()
-                .id(exercise.id)
+        return VStack(spacing: Space.s3) {
+            ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
+                let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
+                let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
+                ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
+                             autoLog: settings.logSets != .manual, bests: bests,
+                             last: previous?.match(exercise),
+                             restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
+                             onOpen: { opened = exercise.id },
+                             onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) })
+                    .equatable()
+                    .id(exercise.id)
+            }
+            Button {
+                focus = nil
+                model.present(ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }, tall: true)
+            } label: { Label { Text("Add exercise") } icon: { Icon.plus.image(IconSize.medium) } }
+            .buttonStyle(SecondaryStyle())
         }
-        Button {
-            focus = nil
-            model.present(ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }, tall: true)
-        } label: { Label { Text("Add exercise") } icon: { Icon.plus.image(IconSize.medium) } }
-        .buttonStyle(SecondaryStyle())
     }
 
     /// ⌄, the name over the time and sets (it opens the options), Finish (Done while arranging).

@@ -117,16 +117,3 @@ final class Sampler: Thread, @unchecked Sendable {
         for (k, v) in top(ours, 15) { log.log("probe \(action, privacy: .public) ours \(v) \(String(k.prefix(200)), privacy: .public)") }
     }
 }
-
-/// Bench-only A/B switches (~/.pmd3/bench/ab.py launches with each): off, Track behaves as without them.
-enum AB {
-    private static let args = ProcessInfo.processInfo.arguments
-    /// The Live Activity's requests and updates go off the main thread, in order (a tap that starts or ends a rest
-    /// waited ~8 ms for iOS's answer).
-    static let live = args.contains("-ab-live")
-    /// Closing a sheet leaves what's behind it as it was for VoiceOver (finds whether re-hiding the pages costs the
-    /// close its frame).
-    static let a11y = args.contains("-ab-a11y")
-    /// The workout's cards are built as they scroll into view (finds whether building every card costs the open).
-    static let lazy = args.contains("-ab-lazy")
-}
