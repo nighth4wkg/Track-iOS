@@ -19,11 +19,9 @@ struct Shell: View {
     enum Stop: Hashable { case page(Route), workout }
 
     var body: some View {
-        let stops = model.pages.map(Stop.page) + (model.workoutOpen && model.training.active != nil ? [Stop.workout] : [])
+        let stops = Self.stops(model)
         let covered = !stops.isEmpty || model.finished != nil
-        // What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each
-        // page's own flag: an outer accessibilityHidden(false) un-hid the hidden tabs (the UI tour tapped invisible ones).
-        let behind = !model.sheets.isEmpty || model.confirm != nil
+        let behind = Self.behind(model)
         let bar = stops.last.flatMap { bars[$0] } ?? 0
         ZStack {
             NavigationStack(path: Binding(get: { stops }, set: follow)) {
@@ -45,15 +43,12 @@ struct Shell: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .transaction { $0.disablesAnimations = true }
                 .navigationDestination(for: Stop.self) { stop in
-                    let shown = stop == stops.last && model.finished == nil
-                    Group {
+                    Pushed(stop: stop) {
                         switch stop {
                         case .page(let route): deeper(route)
                         case .workout: WorkoutScreen()
                         }
                     }
-                    .environment(\.shown, shown)
-                    .accessibilityHidden(!shown || behind)
                     .background(Backdrop())
                     .onPreferenceChange(FloatingBar.self) { bars[stop] = $0 }
                     .toolbar(.hidden, for: .navigationBar)
@@ -85,6 +80,14 @@ struct Shell: View {
         .id(model.day)
     }
 
+    static func stops(_ model: AppModel) -> [Stop] {
+        model.pages.map(Stop.page) + (model.workoutOpen && model.training.active != nil ? [Stop.workout] : [])
+    }
+
+    /// What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each
+    /// page's own flag: an outer accessibilityHidden(false) un-hid the hidden tabs (the UI tour tapped invisible ones).
+    static func behind(_ model: AppModel) -> Bool { !model.sheets.isEmpty || model.confirm != nil }
+
     /// The navigation went back (the swipe back): the model follows, written only when it changes.
     private func follow(_ stops: [Stop]) {
         let pages = stops.compactMap { stop -> Route? in if case .page(let route) = stop { route } else { nil } }
@@ -109,6 +112,21 @@ struct Shell: View {
         case .session(let id): SessionScreen(sessionId: id)
         case .settings: SettingsScreen()
         }
+    }
+}
+
+/// A pushed screen, on top or not. It reads the model itself: the stack keeps the screen its closure built, with the
+/// path as it was then (read there, the workout never counted as on top and was hidden from VoiceOver).
+private struct Pushed<Content: View>: View {
+    @Environment(AppModel.self) private var model
+    let stop: Shell.Stop
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        let shown = stop == Shell.stops(model).last && model.finished == nil
+        content
+            .environment(\.shown, shown)
+            .accessibilityHidden(!shown || Shell.behind(model))
     }
 }
 
