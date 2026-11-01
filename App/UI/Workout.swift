@@ -22,7 +22,7 @@ struct WorkoutScreen: View {
             let splitId = active.splitId
             let previous: Session? = model.derived("previous \(splitId)") { _ in model.training.latestSession(of: splitId) }
             ScrollViewReader { proxy in
-                ScrollView { content(active, expanded: expanded, previous: previous) }
+                ScrollView { content(active, expanded: expanded, previous: previous).arrives(forward: true) }
                     .scrollDismissesKeyboard(.interactively)
                     .setKeyboard($focus)
                     .background(Backdrop())

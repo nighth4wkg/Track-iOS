@@ -9,23 +9,28 @@ extension EnvironmentValues {
     @Entry var closeSheet: () -> Void = {}
 }
 
-/// The open sheets, newest on top, over a dim; a tap on the dim closes the top one.
+/// The open sheets, newest on top, each over its own dim; a tap on the dim closes the top one. A sheet comes up from
+/// below the screen's edge as its dim fades in, and goes back down the same way.
 struct SheetLayer: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var still
 
     var body: some View {
-        ZStack {
+        let moving = !still && !AB.stillSheets
+        ZStack(alignment: .bottom) {
+            // Dim and sheet side by side (not one group), so each comes and goes its own way.
             ForEach(model.sheets) { sheet in
-                ZStack(alignment: .bottom) {
-                    Palette.scrim.ignoresSafeArea().onTapGesture { close(sheet) }
-                    SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
-                        .environment(\.closeSheet, { close(sheet) })
-                }
-                // The layer reaches the screen's bottom edge (not the home indicator's), so the sheet sits 8 above
-                // it; the keyboard still lifts it.
-                .ignoresSafeArea(.container, edges: .bottom)
+                Palette.scrim.ignoresSafeArea().onTapGesture { close(sheet) }
+                    .transition(.dim(moving))
+                SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
+                    .environment(\.closeSheet, { close(sheet) })
+                    .transition(.sheet(moving))
             }
         }
+        // The layer reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
+        // keyboard still lifts it.
+        .ignoresSafeArea(.container, edges: .bottom)
+        .motion(on: model.sheets.map(\.id), moving)
     }
 
     private func close(_ sheet: Presented) {
@@ -83,8 +88,12 @@ private struct SheetBox<Content: View>: View {
             .onEnded { value in
                 let down = max(0, value.translation.height)
                 finger.speed = value.velocity.height
-                pulling = false
-                if down > height * Self.closeShare || value.predictedEndTranslation.height - value.translation.height > height * Self.closeShare { close() }
+                // Closing, it stays where the finger left it and goes down from there; let go short, it slides back.
+                if down > height * Self.closeShare || value.predictedEndTranslation.height - value.translation.height > height * Self.closeShare {
+                    close()
+                } else {
+                    pulling = false
+                }
             })
     }
 }
@@ -161,12 +170,15 @@ extension SheetFrame where Action == EmptyView {
 /// be taken back) over Cancel.
 struct AskLayer: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var still
 
     var body: some View {
-        if let confirm = model.confirm {
-            let cancel = { model.confirm = nil }
-            ZStack(alignment: .bottom) {
+        let moving = !still && !AB.stillSheets
+        ZStack(alignment: .bottom) {
+            if let confirm = model.confirm {
+                let cancel = { model.confirm = nil }
                 Palette.scrim.ignoresSafeArea().onTapGesture(perform: cancel)
+                    .transition(.dim(moving))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(confirm.title).type(.t20).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
                     Text(confirm.message).type(.t14).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
@@ -188,9 +200,11 @@ struct AskLayer: View {
                 .accessibilityAddTraits(.isModal)
                 .accessibilityAction(.escape, cancel)
                 .sensoryFeedback(confirm.destructive ? .warning : .impact(weight: .light), trigger: confirm.id)
+                .transition(.sheet(moving))
             }
-            .ignoresSafeArea(.container, edges: .bottom)
         }
+        .ignoresSafeArea(.container, edges: .bottom)
+        .motion(on: model.confirm?.id, moving)
     }
 
     private struct AnswerStyle: ButtonStyle {
@@ -214,11 +228,15 @@ struct ToastLayer: View {
     @State private var placed: (id: UUID, overSheet: Bool)?
     /// How long a pill stays, as the PWA's PILL_MS: a problem a little longer to read, Undo longer to reach it.
     private static let seconds = (done: 3.0, problem: 4.0, undo: 6.0)
+    @Environment(\.accessibilityReduceMotion) private var still
 
     var body: some View {
-        VStack {
-            if let toast = model.toast {
-                let top = keyboard || (placed?.id == toast.id ? placed!.overSheet : !model.sheets.isEmpty)
+        let toast = model.toast
+        let top = toast.map { toast in keyboard || (placed?.id == toast.id ? placed!.overSheet : !model.sheets.isEmpty) } ?? false
+        let moving = !still && !AB.stillToast
+        // A ZStack: one going and the next coming share the spot rather than stacking.
+        ZStack {
+            if let toast {
                 let dismiss = { model.toast = nil }
                 HStack(spacing: Space.s3) {
                     if toast.problem {
@@ -247,10 +265,15 @@ struct ToastLayer: View {
                     if model.toast?.id == toast.id { dismiss() }
                 }
                 .onChange(of: toast.id, initial: true) { placed = (toast.id, !model.sheets.isEmpty) }
-                .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
-                .padding(.top, top ? Space.s2 : 0)
-                .floatingBottom(top ? 0 : above)
+                // Its own: a new one comes in as the last goes, rather than taking over its pill.
+                .id(toast.id)
+                // From past the screen's edge it sits nearest: its height and the gap to that edge.
+                .transition(.rise(top ? -(Size.row + Space.s2 + statusBarHeight) : Size.row + Space.s4 + above, moving))
             }
         }
+        .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
+        .padding(.top, top ? Space.s2 : 0)
+        .floatingBottom(top ? 0 : above)
+        .motion(on: toast?.id, moving)
     }
 }

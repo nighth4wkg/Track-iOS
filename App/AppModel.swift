@@ -78,10 +78,14 @@ final class AppModel {
     /// A tab, from the nav pill: whatever was open over the last one closes.
     // Written only when they change: any write wakes every view that reads them (a tap on the chosen tab redrew all).
     func go(_ next: AppTab) {
+        swapAt = ProcessInfo.processInfo.systemUptime
         if tab != next { tab = next }
         if !pages.isEmpty { pages = [] }
         if !sheets.isEmpty { sheets = [] }
     }
+    /// When go() last ran: a screen shown just after was swapped to (it just shows), not come back to (it shifts in).
+    @ObservationIgnored private var swapAt: TimeInterval = 0
+    var swapping: Bool { ProcessInfo.processInfo.systemUptime - swapAt < Motion.fast }
     func open(_ route: Route) { pages.append(route) }
     func back() { if !pages.isEmpty { pages.removeLast() } }
     /// Shows a sheet (it closes itself through closeSheet).

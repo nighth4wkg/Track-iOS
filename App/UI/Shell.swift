@@ -30,6 +30,7 @@ struct Shell: View {
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
                 deeper(route)
+                    .environment(\.shown, shown)
                     .id(route)
                     .opacity(shown ? 1 : 0)
                     .allowsHitTesting(shown)
@@ -84,7 +85,7 @@ struct Shell: View {
 }
 
 extension EnvironmentValues {
-    /// This tab is the one on screen (all four stay built).
+    /// This tab or page is the one on screen (all four tabs stay built, and pages under the top one stay too).
     @Entry var shown = true
     /// The training a tab draws (TabData).
     @Entry var tabTraining = Training()
@@ -122,6 +123,7 @@ struct TabPage<Content: View>: View {
                 .padding(.bottom, Size.nav + Space.s4 * 3 - homeIndicator)
                 .frame(maxWidth: Size.column)
                 .frame(maxWidth: .infinity)
+                .arrives(forward: false)
         }
         .scrollPosition($position)
         .scrollDismissesKeyboard(.interactively)
@@ -143,9 +145,57 @@ struct DeepPage<Content: View>: View {
                 .padding(.bottom, Space.s6)
                 .frame(maxWidth: Size.column)
                 .frame(maxWidth: .infinity)
+                .arrives(forward: true)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Backdrop())
+    }
+}
+
+extension View {
+    /// A screen's content as it shows (the PWA's shift): from Space.s6 to the right and faded as it opens (`forward`:
+    /// a page, the workout), from the left as it's come back to. A tab swapped to just shows; so does all of it with
+    /// Reduce Motion. Its fixed parts (a docked button, the nav pill) sit outside it and stay put.
+    func arrives(forward: Bool) -> some View { modifier(Arrive(forward: forward)) }
+}
+
+private struct Arrive: ViewModifier {
+    @Environment(AppModel.self) private var model
+    @Environment(\.shown) private var shown
+    @Environment(\.accessibilityReduceMotion) private var still
+    @State private var x: CGFloat
+    @State private var opacity: Double
+
+    init(forward: Bool) {
+        _x = State(initialValue: forward ? Space.s6 : 0)
+        _opacity = State(initialValue: forward ? 0 : 1)
+    }
+
+    func body(content: Content) -> some View {
+        let moving = !still && !AB.stillPages
+        content
+            .offset(x: moving ? x : 0)
+            .opacity(moving ? opacity : 1)
+            .onAppear { settle() }
+            .onChange(of: shown) { _, now in
+                if !now {
+                    // Out of sight: ready to come back from the left.
+                    x = -Space.s6
+                    opacity = 0
+                } else if model.swapping {
+                    x = 0
+                    opacity = 1
+                } else {
+                    settle()
+                }
+            }
+    }
+
+    /// Each on its own curve, as the PWA's shift and fade.
+    private func settle() {
+        guard x != 0 || opacity != 1 else { return }
+        withAnimation(Motion.move) { x = 0 }
+        withAnimation(Motion.fade) { opacity = 1 }
     }
 }
 

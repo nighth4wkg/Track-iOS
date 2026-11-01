@@ -12,11 +12,16 @@ struct RestTimer: View {
     @State private var ended = 0
     /// The rest that ran out: its clock stops redrawing until the next one starts.
     @State private var over: Int?
+    @Environment(\.accessibilityReduceMotion) private var still
 
     var body: some View {
         let until = model.training.restUntil
-        Group {
-            if let until, until != over {
+        let resting = until != nil && until != over
+        // Up from below the screen's edge as a rest starts, back down as it ends or is skipped (the PWA's .rest); the
+        // one in the keyboard's bar just shows.
+        let moving = !compact && !still && !AB.stillRest
+        ZStack {
+            if let until, resting {
                 TimelineView(.periodic(from: .now, by: Self.tick)) { context in
                     let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
                     let total = Double(max(1, model.training.settings.restSeconds))
@@ -38,8 +43,11 @@ struct RestTimer: View {
                     ended += 1
                     over = until
                 }
+                // Here, outside the clock's .id (it turns over with each ±, and those just show).
+                .transition(.rise(Size.nav + Space.s4, moving))
             }
         }
+        .motion(on: resting, moving)
         .sensoryFeedback(.warning, trigger: ended)
     }
 

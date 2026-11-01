@@ -117,3 +117,13 @@ final class Sampler: Thread, @unchecked Sendable {
         for (k, v) in top(ours, 15) { log.log("probe \(action, privacy: .public) ours \(v) \(String(k.prefix(200)), privacy: .public)") }
     }
 }
+
+/// Bench-only A/B switches: each turns one kind of motion off (as Reduce Motion does), so a part that drops frames can
+/// be checked against its still self on one install.
+enum AB {
+    private static let args = ProcessInfo.processInfo.arguments
+    static let stillSheets = args.contains("-still-sheets")   // sheets and the question
+    static let stillToast = args.contains("-still-toast")
+    static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
+    static let stillRest = args.contains("-still-rest")
+}
