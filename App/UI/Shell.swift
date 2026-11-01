@@ -84,7 +84,7 @@ struct Shell: View {
             try? await Task.sleep(for: .seconds(1))
             func walk(_ vc: UIViewController, _ depth: Int) {
                 let nav = (vc as? UINavigationController).map { " stack=\($0.viewControllers.count)" } ?? ""
-                NSLog("NAVDUMP %@%@%@ presented=%@", String(repeating: "  ", count: depth), String(describing: type(of: vc)), nav, vc.presentedViewController.map { String(describing: type(of: $0)) } ?? "-")
+                NSLog("NAVDUMP %@%@%@ presented=%@", String(repeating: "  ", count: depth), String(describing: Swift.type(of: vc)), nav, vc.presentedViewController.map { String(describing: Swift.type(of: $0)) } ?? "-")
                 vc.children.forEach { walk($0, depth + 1) }
             }
             NSLog("NAVDUMP stops=%@", String(describing: model.stops))
