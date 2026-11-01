@@ -15,16 +15,14 @@ struct Shell: View {
     /// screen: a pushed screen's preferences don't reach past the navigation.
     @State private var bars: [Stop: CGFloat] = [:]
 
-    /// What's pushed: the pages, then the workout while it's open.
-    enum Stop: Hashable { case page(Route), workout }
-
     var body: some View {
-        let stops = Self.stops(model)
+        @Bindable var model = model
+        let stops = model.stops
         let covered = !stops.isEmpty || model.finished != nil
         let behind = Self.behind(model)
         let bar = stops.last.flatMap { bars[$0] } ?? 0
         ZStack {
-            NavigationStack(path: Binding(get: { stops }, set: follow)) {
+            NavigationStack(path: $model.stops) {
                 ZStack {
                     ForEach(AppTab.allCases, id: \.self) { tab in
                         // Under a page the tab stays drawn (the swipe back uncovers it), just not the one shown.
@@ -80,21 +78,9 @@ struct Shell: View {
         .id(model.day)
     }
 
-    static func stops(_ model: AppModel) -> [Stop] {
-        model.pages.map(Stop.page) + (model.workoutOpen && model.training.active != nil ? [Stop.workout] : [])
-    }
-
     /// What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each
     /// page's own flag: an outer accessibilityHidden(false) un-hid the hidden tabs (the UI tour tapped invisible ones).
     static func behind(_ model: AppModel) -> Bool { !model.sheets.isEmpty || model.confirm != nil }
-
-    /// The navigation went back (the swipe back): the model follows, written only when it changes.
-    private func follow(_ stops: [Stop]) {
-        let pages = stops.compactMap { stop -> Route? in if case .page(let route) = stop { route } else { nil } }
-        if model.pages != pages { model.pages = pages }
-        let open = stops.contains(.workout)
-        if model.workoutOpen != open { model.workoutOpen = open }
-    }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {
         switch tab {
@@ -119,11 +105,11 @@ struct Shell: View {
 /// path as it was then (read there, the workout never counted as on top and was hidden from VoiceOver).
 private struct Pushed<Content: View>: View {
     @Environment(AppModel.self) private var model
-    let stop: Shell.Stop
+    let stop: Stop
     @ViewBuilder let content: Content
 
     var body: some View {
-        let shown = stop == Shell.stops(model).last && model.finished == nil
+        let shown = stop == model.stops.last && model.finished == nil
         content
             .environment(\.shown, shown)
             .accessibilityHidden(!shown || Shell.behind(model))

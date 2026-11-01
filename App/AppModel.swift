@@ -16,6 +16,9 @@ enum Route: Hashable {
     case split(String), lift(String), session(String), settings
 }
 
+/// What's pushed on the navigation: a page, or the workout (always last).
+enum Stop: Hashable { case page(Route), workout }
+
 /// Something shown in a sheet over the screen (UI/Overlays.swift draws them, newest on top).
 struct Presented: Identifiable {
     let id = UUID()
@@ -71,6 +74,17 @@ final class AppModel {
     /// Sheets open, last on top.
     var sheets: [Presented] = []
     var workoutOpen = false
+    /// The navigation's path: the pages, then the workout while it's open. Set by the swipe back, written only where
+    /// it changes. Read through the model itself: a path built from a copy taken as the screen drew never pushed.
+    var stops: [Stop] {
+        get { pages.map(Stop.page) + (workoutOpen && training.active != nil ? [Stop.workout] : []) }
+        set {
+            let pages = newValue.compactMap { stop -> Route? in if case .page(let route) = stop { route } else { nil } }
+            if self.pages != pages { self.pages = pages }
+            let open = newValue.contains(.workout)
+            if workoutOpen != open { workoutOpen = open }
+        }
+    }
     /// Today, refreshed when Track comes back on a new day, so Home's date, "Done today" and the week move on.
     private(set) var day = dayKey(nowMillis())
     var finished: Finished?
