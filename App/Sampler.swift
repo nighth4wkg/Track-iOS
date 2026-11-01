@@ -134,4 +134,7 @@ enum AB {
     static let navSolo = args.contains("-nav-solo")     // no sheets, question, toast, recap or fade over it
     static let navNoTabs = args.contains("-nav-notabs") // a button in place of the tabs and the pill
     static let navNoId = args.contains("-nav-noid")     // no .id(day)
+    static let navNoPill = args.contains("-nav-nopill")   // the tabs without the pill
+    static let navHome = args.contains("-nav-home")       // Home alone in place of the tabs and the pill
+    static let navStatic = args.contains("-nav-static")   // the tabs not told they're covered
 }

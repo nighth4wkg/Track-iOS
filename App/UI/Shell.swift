@@ -38,17 +38,17 @@ struct Shell: View {
         ZStack {
             NavigationStack(path: AB.navState ? $path : $model.stops) {
                 ZStack {
-                    if AB.navNoTabs { Button("Bare push") { model.open(.settings) } } else {
+                    if AB.navNoTabs { Button("Bare push") { model.open(.settings) } } else if AB.navHome { HomeScreen() } else {
                     ForEach(AppTab.allCases, id: \.self) { tab in
                         // Under a page the tab stays drawn (the swipe back uncovers it), just not the one shown.
-                        let current = model.tab == tab, shown = current && !covered
+                        let current = model.tab == tab, shown = current && (AB.navStatic || !covered)
                         TabData(shown: shown, live: model.training) { page(tab) }
                             .environment(\.shown, shown)
                             .opacity(current ? 1 : 0)
                             .allowsHitTesting(current)
-                            .accessibilityHidden(!shown || behind)
+                            .accessibilityHidden(AB.navStatic ? false : (!shown || behind))
                     }
-                    if !keyboard {
+                    if !keyboard && !AB.navNoPill {
                         NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
                     }
                     }
