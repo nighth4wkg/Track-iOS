@@ -14,6 +14,8 @@ extension EnvironmentValues {
 struct SheetLayer: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var still
+    /// Sheets on their way down.
+    @State private var closing = 0
 
     var body: some View {
         let moving = !still && !AB.stillSheets
@@ -26,36 +28,26 @@ struct SheetLayer: View {
                     .environment(\.closeSheet, { close(sheet) })
                     .transition(.sheet(moving))
             }
+            if closing > 0 { Color.clear.contentShape(.rect).onTapGesture {}.ignoresSafeArea().accessibilityHidden(true) }
         }
         // The layer reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
         // keyboard still lifts it.
         .ignoresSafeArea(.container, edges: .bottom)
         .motion(on: model.sheets.map(\.id), moving)
-        // A sheet going down still takes taps (Cancel, then a quick tap where a template was, made a split), and no
-        // allowsHitTesting on it or on this layer stopped that on the iPhone: touches are off while it goes, as UIKit's
-        // own transitions do.
-        .onChange(of: model.sheets.count) { old, new in if moving, new < old { Hold.touches(for: Motion.normal) } }
+        // A sheet going down still takes taps (the dim, then a quick tap where a template was, made a split), and no
+        // allowsHitTesting on it or on this layer, nor the window's touches off, stopped that on the iPhone: a live
+        // shield over it takes them while it goes, as UIKit's own transitions do.
+        .onChange(of: model.sheets.count) { old, new in
+            guard moving, new < old else { return }
+            closing += 1
+            Task { try? await Task.sleep(for: .seconds(Motion.normal)); closing -= 1 }
+        }
     }
 
     private func close(_ sheet: Presented) {
         // The keyboard goes in the same pass as the sheet, not first and then the sheet (measured: ~20-40 ms sooner).
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         model.dismiss(sheet.id)
-    }
-}
-
-/// Touches off on the whole window for a while, kept off until the last hold ends.
-@MainActor private enum Hold {
-    private static var holds = 0
-
-    static func touches(for seconds: Double) {
-        let window = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first
-        holds += 1
-        window?.isUserInteractionEnabled = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
-            holds -= 1
-            if holds == 0 { window?.isUserInteractionEnabled = true }
-        }
     }
 }
 
