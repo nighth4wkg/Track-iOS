@@ -30,14 +30,32 @@ struct SheetLayer: View {
         // The layer reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
         // keyboard still lifts it.
         .ignoresSafeArea(.container, edges: .bottom)
-        .taps(!model.sheets.isEmpty)
         .motion(on: model.sheets.map(\.id), moving)
+        // A sheet going down still takes taps (Cancel, then a quick tap where a template was, made a split), and no
+        // allowsHitTesting on it or on this layer stopped that on the iPhone: touches are off while it goes, as UIKit's
+        // own transitions do.
+        .onChange(of: model.sheets.count) { old, new in if moving, new < old { Hold.touches(for: Motion.normal) } }
     }
 
     private func close(_ sheet: Presented) {
         // The keyboard goes in the same pass as the sheet, not first and then the sheet (measured: ~20-40 ms sooner).
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         model.dismiss(sheet.id)
+    }
+}
+
+/// Touches off on the whole window for a while, kept off until the last hold ends.
+@MainActor private enum Hold {
+    private static var holds = 0
+
+    static func touches(for seconds: Double) {
+        let window = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first
+        holds += 1
+        window?.isUserInteractionEnabled = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            holds -= 1
+            if holds == 0 { window?.isUserInteractionEnabled = true }
+        }
     }
 }
 
@@ -206,7 +224,6 @@ struct AskLayer: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .taps(model.confirm != nil)
         .motion(on: model.confirm?.id, moving)
     }
 
@@ -278,7 +295,6 @@ struct ToastLayer: View {
         .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)
         .padding(.top, top ? Space.s2 : 0)
         .floatingBottom(top ? 0 : above)
-        .taps(toast != nil)
         .motion(on: toast?.id, moving)
     }
 }

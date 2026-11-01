@@ -147,11 +147,6 @@ extension View {
     /// Animates this layer's parts coming and going, only in the update where `value` changes: the app stays
     /// instant otherwise (Shell turns animations off), so nothing else on screen moves with them.
     func motion(on value: some Equatable, _ on: Bool) -> some View { transaction(value: value) { if on { $0.animation = Motion.move } } }
-
-    /// What's on its way out takes no tap, as when it went at once (a quick tap where a closing question's Delete was
-    /// deleted, 0.19.4). On the layer, which stays live: a leaving view keeps its last state, a no-tap transition on
-    /// it did nothing (0.19.5).
-    func taps(_ showing: Bool) -> some View { allowsHitTesting(showing) }
 }
 
 enum Radius {

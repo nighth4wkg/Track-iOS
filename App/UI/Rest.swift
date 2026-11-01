@@ -47,7 +47,6 @@ struct RestTimer: View {
                 .transition(.rise(Size.nav + Space.s4, moving))
             }
         }
-        .taps(resting)
         .motion(on: resting, moving)
         .sensoryFeedback(.warning, trigger: ended)
     }
@@ -56,8 +55,8 @@ struct RestTimer: View {
         HStack(spacing: Space.s2) {
             ring(left, total).accessibilityLabel("\(time(left)) of rest left")
             Spacer(minLength: 0)
-            shift("−\(RestIntent.step)s", "\(RestIntent.step) seconds less") { model.shiftRest(by: -RestIntent.step) }
-            shift("+\(RestIntent.step)s", "\(RestIntent.step) seconds more") { model.shiftRest(by: RestIntent.step) }
+            shift("−\(RestIntent.step)s", "\(RestIntent.step) seconds less") { shiftRest(by: -RestIntent.step) }
+            shift("+\(RestIntent.step)s", "\(RestIntent.step) seconds more") { shiftRest(by: RestIntent.step) }
             Button("Skip") { model.skipRest() }.buttonStyle(PrimaryStyle(compact: true))
         }
         .padding(.horizontal, Space.s2)
@@ -80,6 +79,12 @@ struct RestTimer: View {
     }
 
     private func time(_ left: Double) -> String { clock(Int(left.rounded(.up))) }
+
+    /// Only while a rest runs: the timer on its way out still takes taps, and +15s there would start a new rest.
+    private func shiftRest(by seconds: Int) {
+        guard (model.training.restUntil ?? 0) > nowMillis() else { return }
+        model.shiftRest(by: seconds)
+    }
 
     private func shift(_ title: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
