@@ -18,7 +18,15 @@ struct Shell: View {
     @State private var path: [Stop] = []
 
     var body: some View {
-        if AB.navProbe { AnyView(NavProbe()) } else { AnyView(main) }
+        if AB.navProbe { AnyView(NavProbe()) } else if AB.navBare { AnyView(bare) } else { AnyView(main) }
+    }
+
+    private var bare: some View {
+        @Bindable var model = model
+        return NavigationStack(path: $model.stops) {
+            Button("Bare push") { model.open(.settings) }
+                .navigationDestination(for: Stop.self) { _ in Text("Bare page") }
+        }
     }
 
     @ViewBuilder private var main: some View {
@@ -30,6 +38,7 @@ struct Shell: View {
         ZStack {
             NavigationStack(path: AB.navState ? $path : $model.stops) {
                 ZStack {
+                    if AB.navNoTabs { Button("Bare push") { model.open(.settings) } } else {
                     ForEach(AppTab.allCases, id: \.self) { tab in
                         // Under a page the tab stays drawn (the swipe back uncovers it), just not the one shown.
                         let current = model.tab == tab, shown = current && !covered
@@ -42,11 +51,13 @@ struct Shell: View {
                     if !keyboard {
                         NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
                     }
+                    }
                 }
                 .background(Backdrop())
                 .toolbar(AB.navPlain ? .visible : .hidden, for: .navigationBar)
                 .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
                 .navigationDestination(for: Stop.self) { stop in
+                    if AB.navDest { Text("Bare page") } else {
                     Pushed(stop: stop) {
                         switch stop {
                         case .page(let route): deeper(route)
@@ -57,9 +68,11 @@ struct Shell: View {
                     .onPreferenceChange(FloatingBar.self) { bars[stop] = $0 }
                     .toolbar(AB.navPlain ? .visible : .hidden, for: .navigationBar)
                     .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
+                    }
                 }
             }
             // Only the push and the swipe back move (under a no-animation the stack's push doesn't); the rest shows at once.
+            if !AB.navSolo {
             Group {
                 if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
                 StatusFade()
@@ -68,6 +81,7 @@ struct Shell: View {
                 ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3, keyboard: keyboard)
             }
             .transaction { if !AB.navPlain { $0.disablesAnimations = true } }
+            }
         }
         .background(Backdrop())
         .onChange(of: model.stops) { if AB.navState, path != $1 { path = $1 } }
@@ -83,7 +97,7 @@ struct Shell: View {
         .task(id: model.training.restUntil) { await RestLive.readyWhenOver(model.training.restUntil) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
         // A new day draws the pages again: their dates and "today" are worked out as they draw.
-        .id(model.day)
+        .id(AB.navNoId ? "" : model.day)
     }
 
     /// What a sheet or the question covers is out of VoiceOver's reach, as it is out of the finger's. Folded into each

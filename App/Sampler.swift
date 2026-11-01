@@ -129,4 +129,9 @@ enum AB {
     static let navProbe = args.contains("-nav-probe")   // a bare NavigationStack instead of the app
     static let navPlain = args.contains("-nav-plain")   // no transaction modifiers, the bar shown
     static let navState = args.contains("-nav-state")   // the path in @State, mirrored to the model
+    static let navBare = args.contains("-nav-bare")     // a bare stack on the model's path
+    static let navDest = args.contains("-nav-dest")     // pushed screens as plain text
+    static let navSolo = args.contains("-nav-solo")     // no sheets, question, toast, recap or fade over it
+    static let navNoTabs = args.contains("-nav-notabs") // a button in place of the tabs and the pill
+    static let navNoId = args.contains("-nav-noid")     // no .id(day)
 }
