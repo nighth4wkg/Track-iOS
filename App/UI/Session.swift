@@ -27,7 +27,7 @@ struct SessionScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s4)
                 Text("Exercises").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6).accessibilityAddTraits(.isHeader)
-                LazyVStack(spacing: Space.s3) {
+                VStack(spacing: Space.s3) {
                     ForEach(current.exercises) { exercise in card(exercise, unit: unit) }
                 }
                 .padding(.top, Space.s2)
@@ -77,7 +77,7 @@ struct SessionScreen: View {
         let open = opened == exercise.id
         let labels = exercise.setLabels
         return VStack(alignment: .leading, spacing: 0) {
-            Button { opened = open ? nil : exercise.id } label: {
+            Button { Motion.tap { opened = open ? nil : exercise.id } } label: {
                 HStack(spacing: Space.s3) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
@@ -122,7 +122,7 @@ struct SessionScreen: View {
         let notes: String? = text.isEmpty ? nil : text
         guard model.training.sessions.contains(where: { $0.id == current.id }),
               notes != (model.training.sessions.first { $0.id == current.id }?.notes) else { return }
-        model.update { training in
+        model.update(moving: false) { training in
             guard let index = training.sessions.firstIndex(where: { $0.id == current.id }) else { return }
             training.sessions[index].notes = notes
         }

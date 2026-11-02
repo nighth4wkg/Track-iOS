@@ -5,7 +5,8 @@ import TrackCore
 import UniformTypeIdentifiers
 import UserNotifications
 
-/// Settings on one page (the PWA's): "Settings" with Done, then Training, Data, Account and About, each a card of rows.
+/// Settings (the PWA's): "Settings" with Done, then a bar of its sections (Training, Data, Account, About) drawn as
+/// the nav pill, and the chosen one's cards.
 struct SettingsScreen: View {
     @Environment(AppModel.self) private var model
     /// Notifications turned off for Track: the rest timer can't alert with the phone locked.
@@ -13,6 +14,7 @@ struct SettingsScreen: View {
     @State private var importing = false
     @State private var restored = 0
     @State private var copied = false
+    @State private var part = Part.training
     private static let contact = "n1ghthawq"
     /// How long "Copied" shows before the row reads as before (the PWA's COPIED_MS).
     private static let copiedFor = Duration.seconds(2)
@@ -27,77 +29,119 @@ struct SettingsScreen: View {
                 Button("Done") { model.back() }.buttonStyle(SecondaryStyle(hug: true))
             }
             .frame(minHeight: Size.control)
-            section("Training", top: Space.s4) {
-                Row(title: "Weight unit") {
-                    Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
-                        value: Binding(get: { settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)
-                }
-                Button { model.present(RestList()) } label: { Row(title: "Rest timer", value: "\(clock(settings.restSeconds)) min", chevron: true) }
-                    .buttonStyle(RowStyle())
-                Row(title: "Log sets") {
-                    Seg(label: "Log sets", options: [(value: TrackCore.Settings.LogSets.auto, text: "Auto"), (value: .manual, text: "Tap")],
-                        value: Binding(get: { settings.logSets ?? .auto }, set: { mode in model.update { $0.settings.logSets = mode } }), compact: true)
-                }
-                goal(settings.weeklyGoal)
-                if alertsOff, let url = URL(string: UIApplication.openSettingsURLString) {
-                    Link(destination: url) { Row(title: "Rest alerts are off", value: "Allow", chevron: true) }.buttonStyle(RowStyle())
+            PillTabs(label: "Settings sections", items: Self.parts, chosen: part) { part = $0 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, Space.s4)
+            Group {
+                switch part {
+                case .training: training(settings)
+                case .data: data
+                case .account: account
+                case .about: about
                 }
             }
-            section("Data") {
-                Row(title: "Cloud sync", value: "On this device only")
-                // While the saved copy can't be read, the export is that file as it is (the website's recovery
-                // export), not the empty app.
-                if let unreadable = model.unreadableFile {
-                    ShareLink(item: unreadable) { Row(title: "Export unreadable data", value: "The copy Track couldn’t read") }
-                        .buttonStyle(RowStyle())
-                } else {
-                    ShareLink(item: BackupFile(training: model.training), preview: SharePreview("Track backup")) {
-                        Row(title: "Export backup", value: "JSON file")
-                    }
-                    .buttonStyle(RowStyle())
-                }
-                Button { importing = true } label: { Row(title: "Restore backup", value: "Replaces your data") }.buttonStyle(RowStyle())
-            }
-            section("Account") {
-                Row(title: "Signed in", value: "Local only")
-                Button { model.leaveLocal() } label: { Row(title: "Leave local mode") { EmptyView() } }.buttonStyle(RowStyle())
-            }
-            section("About") {
-                VStack(alignment: .leading, spacing: Space.s2) {
-                    Text("A personal project").type(.t16).foregroundStyle(Palette.text)
-                    Text("Built with AI for my own training. Expect rough edges.").type(.t14).foregroundStyle(Palette.muted)
-                }
-                .pad()
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            RowCard {
-                Button {
-                    UIPasteboard.general.string = Self.contact
-                    copied = true
-                } label: { Row(title: "Found a problem?", value: copied ? "Copied" : Self.contact) }
-                    .buttonStyle(RowStyle())
-                    .accessibilityLabel("Found a problem? " + (copied ? "Discord username copied" : "Copy Discord username \(Self.contact)"))
-                    .sensoryFeedback(.success, trigger: copied) { _, now in now }
-                    .task(id: copied) { if copied { try? await Task.sleep(for: Self.copiedFor); copied = false } }
-                // Inside Track, as iOS apps show a web page, rather than switching to Safari.
-                Button { if let url = Self.privacy { showWebPage(url) } } label: { Row(title: "Privacy", value: "", chevron: true) }
-                    .buttonStyle(RowStyle())
-                Row(title: "Version", value: Self.version)
-            }
-            .padding(.top, Space.s3)
+            .padding(.top, Space.s6)
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in restore(result) }
         .sensoryFeedback(.success, trigger: restored)
         .task { alertsOff = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied }
     }
 
-    /// A section's label over its card, a section's gap under what's above (`top`: the first, a title's).
-    private func section<Rows: View>(_ title: String, top: CGFloat = Space.s6, @ViewBuilder rows: () -> Rows) -> some View {
-        VStack(alignment: .leading, spacing: Space.s2) {
-            Text(title).type(.t14).foregroundStyle(Palette.muted).accessibilityAddTraits(.isHeader)
-            RowCard(content: rows)
+    private func training(_ settings: TrackCore.Settings) -> some View {
+        RowCard {
+            Row(title: "Weight unit") {
+                Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
+                    value: Binding(get: { settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)
+            }
+            Button { model.present(RestList()) } label: { Row(title: "Rest timer", value: "\(clock(settings.restSeconds)) min", chevron: true) }
+                .buttonStyle(RowStyle())
+            Row(title: "Log sets") {
+                Seg(label: "Log sets", options: [(value: TrackCore.Settings.LogSets.auto, text: "Auto"), (value: .manual, text: "Tap")],
+                    value: Binding(get: { settings.logSets ?? .auto }, set: { mode in model.update { $0.settings.logSets = mode } }), compact: true)
+            }
+            goal(settings.weeklyGoal)
+            if alertsOff, let url = URL(string: UIApplication.openSettingsURLString) {
+                Link(destination: url) { Row(title: "Rest alerts are off", value: "Allow", chevron: true) }.buttonStyle(RowStyle())
+            }
         }
-        .padding(.top, top)
+    }
+
+    private var data: some View {
+        RowCard {
+            Row(title: "Cloud sync", value: "On this device only")
+            // While the saved copy can't be read, the export is that file as it is (the website's recovery
+            // export), not the empty app.
+            if let unreadable = model.unreadableFile {
+                ShareLink(item: unreadable) { Row(title: "Export unreadable data", value: "The copy Track couldn’t read") }
+                    .buttonStyle(RowStyle())
+            } else {
+                ShareLink(item: BackupFile(training: model.training), preview: SharePreview("Track backup")) {
+                    Row(title: "Export backup", value: "JSON file")
+                }
+                .buttonStyle(RowStyle())
+            }
+            Button { importing = true } label: { Row(title: "Restore backup", value: "Replaces your data") }.buttonStyle(RowStyle())
+        }
+    }
+
+    private var account: some View {
+        RowCard {
+            Row(title: "Signed in", value: "Local only")
+            // Asks first, in red, as every way out does (the PWA's leave()).
+            Button {
+                model.confirm = Confirm(title: "Leave local mode?", message: "Workouts stay on this device for when you come back.",
+                                        label: "Leave local mode", destructive: true) { model.leaveLocal() }
+            } label: { Row(title: "Leave local mode") { EmptyView() } }
+                .buttonStyle(RowStyle())
+        }
+    }
+
+    private var about: some View {
+        VStack(alignment: .leading, spacing: Space.s3) {
+            VStack(alignment: .leading, spacing: Space.s2) {
+                Text("A personal project").type(.t16).foregroundStyle(Palette.text)
+                Text("Built with AI for my own training. Expect rough edges.").type(.t14).foregroundStyle(Palette.muted)
+            }
+            .pad()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .raised()
+            RowCard {
+                Button {
+                    UIPasteboard.general.string = Self.contact
+                    copied = true
+                } label: {
+                    // Where to write, not only a name (owner: say it's Discord).
+                    HStack(spacing: Space.s3) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Found a problem?").type(.t16).foregroundStyle(Palette.text)
+                            Text("Message \(Self.contact) on Discord").type(.t14).foregroundStyle(Palette.muted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        RowValue(text: copied ? "Copied" : "Copy")
+                    }
+                    .padding(Space.s4)
+                    .frame(minHeight: Size.row)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowStyle())
+                .accessibilityLabel("Found a problem? " + (copied ? "Discord username copied" : "Copy Discord username \(Self.contact)"))
+                .sensoryFeedback(.success, trigger: copied) { _, now in now }
+                .task(id: copied) { if copied { try? await Task.sleep(for: Self.copiedFor); copied = false } }
+                // Inside Track, as iOS apps show a web page, rather than switching to Safari.
+                Button { if let url = Self.privacy { showWebPage(url) } } label: { Row(title: "Privacy", value: "", chevron: true) }
+                    .buttonStyle(RowStyle())
+                Row(title: "Version", value: Self.version)
+            }
+        }
+    }
+
+    /// The page's sections, one shown at a time under a bar drawn as the nav pill (the PWA's PARTS).
+    enum Part { case training, data, account, about }
+    private static var parts: [(value: Part, text: String, icon: (Bool) -> AnyView)] {
+        [(value: .training, text: "Training", icon: { (_: Bool) -> AnyView in AnyView(TrackMark(size: IconSize.logo)) }),
+         (value: .data, text: "Data", icon: { (on: Bool) -> AnyView in AnyView(Icon.data.image(IconSize.logo, bold: on)) }),
+         (value: .account, text: "Account", icon: { (on: Bool) -> AnyView in AnyView(Icon.account.image(IconSize.logo, bold: on)) }),
+         (value: .about, text: "About", icon: { (on: Bool) -> AnyView in AnyView(Icon.about.image(IconSize.logo, bold: on)) })]
     }
 
     /// Weekly goal: the days a week, one fewer or one more.

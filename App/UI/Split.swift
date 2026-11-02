@@ -9,6 +9,7 @@ struct SplitScreen: View {
     let splitId: String
     @State private var editingOn = false
     @State private var name = ""
+    @Namespace private var rows
 
     var body: some View {
         if let split = model.training.splits.first(where: { $0.id == splitId }) {
@@ -33,8 +34,8 @@ struct SplitScreen: View {
                     if split.exercises.isEmpty {
                         Text("No exercises yet. Add the first one.").type(.t14).foregroundStyle(Palette.muted)
                     } else if editing {
-                        ArrangeList(items: split.exercises, name: \.name, onMove: { from, to in
-                            model.update { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } }
+                        ArrangeList(items: split.exercises, name: \.name, glides: rows, onMove: { from, to in
+                            model.update(moving: false) { $0.edit(splitId) { $0.exercises = $0.exercises.moved(from, to: to) } }
                         }) { exercise in
                             names(exercise)
                         } end: { exercise in
@@ -51,6 +52,8 @@ struct SplitScreen: View {
                                 }
                                 .pad()
                                 .raised()
+                                .matchedGeometryEffect(id: exercise.id, in: rows)
+                                .transition(.row)
                             }
                         }
                     }
@@ -124,7 +127,7 @@ struct SplitScreen: View {
     /// Done waits while the name is another split's (its message shows under the field).
     private func toggleEditing(_ split: Split) {
         if editingOn { guard nameProblem(split) == nil else { return }; rename(split) } else { name = split.name }
-        editingOn.toggle()
+        Motion.tap { editingOn.toggle() }
     }
 
     /// Another split's name, as the field's message (not saved).
@@ -134,7 +137,7 @@ struct SplitScreen: View {
 
     private func rename(_ split: Split) {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
-        if !trimmed.isEmpty, trimmed != split.name, nameProblem(split) == nil { model.update { $0.edit(splitId) { $0.name = trimmed } } }
+        if !trimmed.isEmpty, trimmed != split.name, nameProblem(split) == nil { model.update(moving: false) { $0.edit(splitId) { $0.name = trimmed } } }
     }
 
     /// Asks first, then offers Undo, as every delete does.

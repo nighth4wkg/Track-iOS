@@ -12,11 +12,14 @@ struct WelcomeScreen: View {
                     VStack(spacing: 0) {
                         TrackMark(size: IconSize.mark).foregroundStyle(Palette.text)
                             .frame(width: Size.emblem, height: Size.emblem).raised(.control, .inner).accessibilityHidden(true)
+                            .popsOnShow()
                         Text("Welcome to Track").type(.t32).foregroundStyle(Palette.text).padding(.top, Space.s4)
                         Text("Your splits, sets and progress.").type(.t14).foregroundStyle(Palette.muted)
                     }
                     .multilineTextAlignment(.center)
                     .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+                    // It comes in a step at a time, as the PWA's sign-in page (.arrive).
+                    .rises(0)
                     VStack(spacing: Space.s3) {
                         Button("Continue locally") { model.choose(.local) }.buttonStyle(PrimaryStyle())
                         Button(action: soon) {
@@ -25,8 +28,10 @@ struct WelcomeScreen: View {
                         .buttonStyle(SecondaryStyle())
                     }
                     .padding(.top, Space.s6)
+                    .rises(1)
                     Text("Local mode keeps everything on this device.").type(.t14).foregroundStyle(Palette.muted)
                         .multilineTextAlignment(.center).padding(.top, Space.s2)
+                        .rises(2)
                 }
                 .pad()
                 .frame(maxWidth: Size.narrow)

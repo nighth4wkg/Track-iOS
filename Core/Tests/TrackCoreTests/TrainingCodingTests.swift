@@ -27,6 +27,11 @@ final class TrainingCodingTests: XCTestCase {
         XCTAssertEqual(written, original, "every key and null comes back exactly as the website wrote it")
     }
 
+    func testRirOverTheLimitReadsAsTheLimit() throws {
+        let json = Data(#"{"id":"a","kg":60,"reps":8,"rir":10,"done":true}"#.utf8)
+        XCTAssertEqual(try JSONDecoder().decode(TrainingSet.self, from: json).rir, Limits.rir)
+    }
+
     func testEmptyFieldsAreNullNotMissing() throws {
         var training = Training()
         training.active = Session(name: "Upper", exercises: [Exercise(name: "Bench Press", sets: [TrainingSet()])], splitId: "s", startedAt: 1)

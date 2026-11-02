@@ -69,10 +69,11 @@ struct SetRow: View {
             if let message = error?.message { Text(message).type(.t12).foregroundStyle(Palette.danger) }
             if let heaviest, best {
                 HStack(spacing: Space.s2) {
-                    Badge(text: "New best")
+                    Badge(text: "New best").popsIn()
                     Text("\(TrainingSet.display(kg: shown.kg ?? 0, unit: unit)) \(unit.rawValue) beats \(TrainingSet.display(kg: heaviest, unit: unit)) \(unit.rawValue)")
                         .type(.t14).foregroundStyle(Palette.muted)
                 }
+                .transition(.pop)
             }
         }
         .swipeToArm($armed)
@@ -101,6 +102,7 @@ struct SetRow: View {
                 .raised(done && !armed ? .green : .control, .inner)
         }
         .buttonStyle(CardStyle())
+        .pops(when: done)
         .accessibilityLabel(armed ? "Delete \(name)" : done ? "\(name) done" : "Mark \(name) done")
         .accessibilityAddTraits(done ? .isSelected : [])
         .accessibilityAction(named: "Delete set") { delete() } // the swipe, for VoiceOver
@@ -124,8 +126,8 @@ struct SetRow: View {
     private func typedInto(_ id: String) {
         if id == "rir" { rirTyped = true }
         pending?.cancel()
-        // A RIR no key can lengthen ("1" may yet be "10") logs the set now: the pause only held up the rest and move-on.
-        if id == "rir", autoLog, let n = Int(rir), n * 10 > Limits.rir { flush(); return }
+        // A RIR no key can lengthen (any digit, 0 too: RIR stops at 9) logs the set now: the pause only held up the rest and move-on.
+        if id == "rir", autoLog, let n = Int(rir), n == 0 || n * 10 > Limits.rir { flush(); return }
         pending = Task { try? await Task.sleep(for: Self.typingPause); if !Task.isCancelled { flush() } }
     }
     /// A key typed into a field here: a digit (or, in the weight, the decimal point), or nil for delete. As the
@@ -172,7 +174,8 @@ struct SetRow: View {
     private func save(_ next: TrainingSet) {
         guard next != set else { return }
         let started = next.done && !set.done
-        model.update { training in
+        // Typed, so it shows at once; a set it logs moves as a tap's ✓ does (its pop, a new best, the move on).
+        model.update(moving: started) { training in
             training.updateActive(exercise: exercise.id) { exercise in
                 if let index = exercise.sets.firstIndex(where: { $0.id == set.id }) { exercise.sets[index] = next }
             }

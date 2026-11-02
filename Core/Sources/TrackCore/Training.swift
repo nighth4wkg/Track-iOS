@@ -19,6 +19,17 @@ public struct TrainingSet: Codable, Equatable, Identifiable, Sendable {
         self.id = id; self.kg = kg; self.reps = reps; self.rir = rir; self.done = done; self.side = side
     }
 
+    /// A RIR over the limit (10, before RIR stopped at 9) reads as the limit, as the website reads it.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        kg = try c.decodeIfPresent(Double.self, forKey: .kg)
+        reps = try c.decodeIfPresent(Int.self, forKey: .reps)
+        rir = try c.decodeIfPresent(Int.self, forKey: .rir).map { min($0, Limits.rir) }
+        done = try c.decode(Bool.self, forKey: .done)
+        side = try c.decodeIfPresent(Side.self, forKey: .side)
+    }
+
     // kg, reps and rir are always written, as null when empty; side only when set.
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)

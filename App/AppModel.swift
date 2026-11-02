@@ -149,13 +149,15 @@ final class AppModel {
         }
     }
 
-    /// Changes the training data and saves it on this device. A change that throws is shown and not applied.
-    func update(_ change: (inout Training) throws -> Void) {
+    /// Changes the training data and saves it on this device. A change that throws is shown and not applied. It shows
+    /// as a tap's change (Motion.tap: rows glide, new ones are uncovered); `moving` false for one that follows a finger
+    /// or the keyboard (an arranged row let go, a set typed), which shows at once as the PWA's do.
+    func update(moving: Bool = true, _ change: (inout Training) throws -> Void) {
         var next = training
         do { try change(&next) } catch { problem(error.localizedDescription); return }
         next.editedAt = nowMillis()
         syncRest(training, next)
-        training = next
+        if moving { Motion.tap { training = next } } else { training = next }
         guard canSave, !Self.dryRun, let saver else { return }
         saver.save(next) { [weak self] _ in
             DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone.") }

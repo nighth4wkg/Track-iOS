@@ -129,9 +129,36 @@ enum Motion {
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s curve put half the way into 3 frames at 60 Hz (up to
     /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This moves at most ~76 pt a frame.
     static let move = Animation.smooth(duration: normal)
+    /// What goes away by fading alone: --motion-fast on an even curve (the PWA's --ease-fade), so it never snaps.
+    static let fade = Animation.easeInOut(duration: fast)
+    /// Reduce Motion is on: everything shows at once.
+    @MainActor static var still: Bool { UIAccessibility.isReduceMotionEnabled }
+
+    /// A tap's change, moving as the PWA's list motion does: the whole app in one move, so a row that moved glides
+    /// there, a new one is uncovered (`.row`), a card grows round what it opens, and whatever sits under them moves in
+    /// step (moved one list at a time, the parts under it jumped). Text changes in place (Shell's contentTransition).
+    /// A finger's own move (an arranged row let go, typing) changes without it.
+    @MainActor static func tap(_ change: () -> Void) {
+        if still { change() } else { withAnimation(move, change) }
+    }
 }
 
 extension AnyTransition {
+    /// A list's row (or what a card opens) coming or going: uncovered from its top down as what's under it makes room,
+    /// wiped away from below as what's under it comes up, by a clip on the row alone (the PWA's lesson: a box moved
+    /// one way and its contents the other ran out of step). Its edge never passes the top of the row gliding by, so
+    /// its text never shows over that row's.
+    static let row = AnyTransition(Uncover())
+    /// Something that comes in because it just happened (a new best's note): its part marked `popsIn()` pops as it
+    /// arrives. Shown with what holds it (a card opened), it shows as it is.
+    static let pop = AnyTransition(PopIn())
+    /// A filtered list's rows (the PWA's swap): what leaves fades out first, then what's new rises in, so no two rows
+    /// ever pass through each other. A row that stays on its spot (the same id) stays as it is.
+    @MainActor static var swap: AnyTransition {
+        Motion.still ? .identity : .asymmetric(
+            insertion: .offset(y: Space.s2).combined(with: .opacity).animation(Motion.move.delay(Motion.fast)),
+            removal: .opacity.animation(Motion.fade))
+    }
     /// A sheet or the question: up from below the screen's edge (its own height takes it there), back down as it goes.
     static func sheet(_ on: Bool) -> AnyTransition { on ? .move(edge: .bottom).animation(Motion.move) : .identity }
     /// The dim behind a sheet.
@@ -146,6 +173,103 @@ extension View {
     /// Animates this layer's parts coming and going, only in the update where `value` changes: the app stays
     /// instant otherwise (Shell turns animations off), so nothing else on screen moves with them.
     func motion(on value: some Equatable, _ on: Bool) -> some View { transaction(value: value) { if on { $0.animation = Motion.move } } }
+
+    /// Something that just happened (a set done, a new best, an exercise picked) swells a little and settles, each time
+    /// `trigger` turns true (the PWA's pop: from --pop-from, over to --pop-over).
+    func pops(when trigger: Bool) -> some View { modifier(Pop(on: trigger)) }
+    /// The part that pops when what holds it comes in by `.pop`.
+    func popsIn() -> some View { modifier(PopsIn()) }
+
+    /// A part of a screen that comes in a step at a time (the recap, the first screen; the PWA's .celebrate and
+    /// .arrive): up from Space.s6 and faded as it shows, `order` half a --motion-fast after the one before.
+    func rises(_ order: Int) -> some View { modifier(Rise(order: order)) }
+    /// A mark on such a screen (a new best, the emblem): hidden, then it pops `after` seconds of it showing.
+    func popsOnShow(after delay: Double = 0) -> some View { modifier(PopOnShow(delay: delay)) }
+}
+
+/// A row's clip for `.row`: open (1) or shut (0) from its top. It reaches past the row's sides, top and (open) bottom
+/// by a card's shadow, so a shown row is never cut; shut, its bottom stays behind the edge of what slides past.
+private struct Uncover: Transition {
+    func body(content: Content, phase: TransitionPhase) -> some View {
+        content.clipShape(Cut(open: phase.isIdentity ? 1 : 0))
+    }
+
+    struct Cut: Shape {
+        var open: CGFloat
+        var animatableData: CGFloat {
+            get { open }
+            set { open = newValue }
+        }
+
+        func path(in rect: CGRect) -> Path {
+            let shadow = Space.s6
+            let height = (rect.height + shadow) * open + (open >= 1 ? shadow : 0)
+            return Path(CGRect(x: rect.minX - shadow, y: rect.minY - shadow, width: rect.width + shadow * 2, height: height))
+        }
+    }
+}
+
+/// `.pop`: tells what it holds when it has just come in (false while it's coming, true once there).
+private struct PopIn: Transition {
+    func body(content: Content, phase: TransitionPhase) -> some View {
+        content.environment(\.arrived, phase.isIdentity)
+    }
+}
+
+private struct PopsIn: ViewModifier {
+    @Environment(\.arrived) private var arrived
+
+    func body(content: Content) -> some View { content.pops(when: arrived) }
+}
+
+extension EnvironmentValues {
+    /// Set by `.pop`; true everywhere else, so nothing pops that didn't just come in.
+    @Entry var arrived = true
+}
+
+private struct Rise: ViewModifier {
+    let order: Int
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        let up = shown || Motion.still
+        content.offset(y: up ? 0 : Space.s6).opacity(up ? 1 : 0)
+            .onAppear { withAnimation(Motion.move.delay(Double(order) * Motion.fast / 2)) { shown = true } }
+    }
+}
+
+private struct PopOnShow: ViewModifier {
+    let delay: Double
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content.modifier(Pop(on: shown, waits: true, delay: delay)).onAppear { shown = true }
+    }
+}
+
+private struct Pop: ViewModifier {
+    let on: Bool
+    /// Hidden until it plays (it pops in rather than swelling from where it was).
+    var waits = false
+    /// Seconds hidden (at --pop-from) before it swells.
+    var delay = 0.0
+    /// The PWA's --pop-from and --pop-over; it swells to its overshoot 60% of the way.
+    private static let from = 0.6, over = 1.15, peak = 0.6
+
+    func body(content: Content) -> some View {
+        // Turning false (or with Reduce Motion) it stays as it is.
+        let plays = on && !Motion.still
+        content.keyframeAnimator(initialValue: waits && !Motion.still ? Self.from : 1, trigger: on) { view, scale in
+            view.scaleEffect(scale).opacity(min(1, (scale - Self.from) / (1 - Self.from)))
+        } keyframes: { _ in
+            KeyframeTrack {
+                MoveKeyframe(plays ? Self.from : 1)
+                LinearKeyframe(plays ? Self.from : 1, duration: plays ? delay : 0)
+                CubicKeyframe(plays ? Self.over : 1, duration: Motion.normal * Self.peak)
+                CubicKeyframe(1, duration: Motion.normal * (1 - Self.peak))
+            }
+        }
+    }
 }
 
 enum Radius {
@@ -280,7 +404,7 @@ extension View {
 /// How a pressed button answers, at once (no motion yet): a little darker. Disabled ones don't answer.
 private struct Pressed: ViewModifier {
     let on: Bool
-    func body(content: Content) -> some View { content.opacity(on ? 0.75 : 1) }
+    func body(content: Content) -> some View { content.opacity(on ? Press.dim : 1) }
 }
 
 /// A disabled control, card or row fades, as the PWA's button:disabled (the main button has its own look).
@@ -393,7 +517,7 @@ enum Icon: String {
          grip = "line.3.horizontal", plus = "plus", check = "checkmark", close = "xmark", alert = "exclamationmark.circle",
          play = "play.fill", search = "magnifyingglass", filter = "line.3.horizontal.decrease", more = "ellipsis",
          trash = "trash", settings = "gearshape", minus = "minus", warning = "exclamationmark.triangle",
-         badge = "rosette"
+         badge = "rosette", data = "cylinder", account = "person", about = "info.circle"
 
     func image(_ size: CGFloat = IconSize.regular, bold: Bool = false) -> some View {
         Image(systemName: rawValue).font(.system(size: size, weight: bold ? .bold : .semibold))

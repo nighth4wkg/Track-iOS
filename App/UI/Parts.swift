@@ -38,9 +38,9 @@ struct Badge: View {
     }
 }
 
-/// A row of choices, one chosen (the PWA's .seg): a sunk track, the chosen choice raised. The raised knob is the chosen
-/// cell's own background, so it is always exactly where its word is, whatever moves. `short` shows each word's first
-/// letter (D W M), still read in full; `columns` wraps it onto rows (the picker's muscles).
+/// A row of choices, one chosen (the PWA's .seg): a sunk track, the chosen choice under the raised knob (KnobRow).
+/// `short` shows each word's first letter (D W M), still read in full; `columns` wraps it onto rows (the picker's
+/// muscles). A choice that should move the page as a tap does (a list it filters) passes `moves`.
 struct Seg<Value: Hashable>: View {
     let label: String
     let options: [(value: Value, text: String)]
@@ -49,14 +49,18 @@ struct Seg<Value: Hashable>: View {
     /// Small, inside a row (kg / lb).
     var compact = false
     var columns: Int?
+    var moves = false
 
     var body: some View {
-        Group {
-            if let columns {
-                Cells(columns: columns, spacing: Space.s1, rowSpacing: Space.s1) { cells }
-            } else {
-                HStack(spacing: Space.s1) { cells }
-            }
+        KnobRow(values: options.map(\.value), chosen: value, columns: columns,
+                choose: { next in if moves { Motion.tap { value = next } } else { value = next } }) { choice, lit in
+            let text = options.first { $0.value == choice }?.text ?? ""
+            Text(short ? String(text.prefix(1)) : text)
+                .type(.t14).fontWeight(.semibold).lineLimit(1)
+                .foregroundStyle(lit ? Palette.text : Palette.muted)
+                .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
+                .frame(minWidth: short || compact ? Size.cell : nil)
+                .accessibilityLabel(text)
         }
         .padding(Space.s1)
         .sunk(columns == nil ? .pill : .wrap)
@@ -65,23 +69,117 @@ struct Seg<Value: Hashable>: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
+}
 
-    private var cells: some View {
-        ForEach(options, id: \.value) { option in
-            let on = option.value == value
-            Button { value = option.value } label: {
-                Text(short ? String(option.text.prefix(1)) : option.text)
-                    .type(.t14).fontWeight(.semibold).lineLimit(1)
-                    .foregroundStyle(on ? Palette.text : Palette.muted)
-                    .frame(maxWidth: .infinity, minHeight: compact ? Size.compact : Size.segment)
-                    .frame(minWidth: short || compact ? Size.cell : nil)
-                    .background { if on { Color.clear.raised(.control, .pill) } }
+/// Choices drawn as the nav pill is, in the page (the PWA's Tabs: Settings' sections): an icon over each name, the
+/// chosen one green under the knob. Its own sections show at once; only the knob moves.
+struct PillTabs<Value: Hashable>: View {
+    let label: String
+    let items: [(value: Value, text: String, icon: (Bool) -> AnyView)]
+    let chosen: Value
+    let choose: (Value) -> Void
+
+    var body: some View {
+        KnobRow(values: items.map(\.value), chosen: chosen, choose: choose) { value, lit in
+            let item = items.first { $0.value == value }
+            VStack(spacing: Gap.tab) {
+                item?.icon(lit)
+                Text(item?.text ?? "").type(.t12)
+            }
+            .foregroundStyle(lit ? Palette.accent : Palette.muted)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(item?.text ?? "")
+        }
+        .padding(Space.s1)
+        .frame(maxWidth: Size.navWidth)
+        .frame(height: Size.nav)
+        .raised(.nav, .pill)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The raised knob under a row's chosen choice, shared by every Seg, PillTabs and the nav pill (the PWA's knob: owner,
+/// every bar works the same). It slides to a new choice; it comes to a pressed one at once (not waiting on the lift);
+/// dragged sideways it goes to the choice nearest the finger (a tick each) and letting go there chooses it. Only the
+/// knob moves: what the choice changes elsewhere shows as its caller decides (`choose`).
+struct KnobRow<Value: Hashable, Cell: View>: View {
+    let values: [Value]
+    let chosen: Value
+    var columns: Int?
+    let choose: (Value) -> Void
+    @ViewBuilder let cell: (_ value: Value, _ lit: Bool) -> Cell
+    @Namespace private var space
+    /// The choice under the finger: pressed, or nearest while dragging. Kept until the choice lands, so the knob never
+    /// shows the old one for a frame between the lift and the change.
+    @State private var held: Value?
+    @State private var dragging = false
+    @State private var ticks = 0
+    /// Each choice's frame, for a drag to find the nearest. Not observed: measuring them mustn't redraw the row.
+    @State private var spots = Spots()
+    private final class Spots { var frames: [Value: CGRect] = [:] }
+    private static var area: String { "knob row" }
+
+    var body: some View {
+        let lit = held ?? chosen
+        Group {
+            if let columns {
+                Cells(columns: columns, spacing: Space.s1, rowSpacing: Space.s1) { cells(lit) }
+            } else {
+                HStack(spacing: Space.s1) { cells(lit) }
+            }
+        }
+        .coordinateSpace(.named(Self.area))
+        .gesture(SidewaysPan(onMove: { x, y in follow(x, y) }) { _, _ in release() })
+        .motion(on: lit, !Motion.still)
+        .sensoryFeedback(.selection, trigger: ticks)
+        .onChange(of: chosen) { held = nil }
+    }
+
+    private func cells(_ lit: Value) -> some View {
+        ForEach(values, id: \.self) { value in
+            Button { choose(value) } label: {
+                cell(value, value == lit)
+                    .background { if value == lit { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: 0, in: space) } }
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(option.text)
-            .accessibilityAddTraits(on ? [.isSelected] : [])
+            .buttonStyle(Press { pressed in press(value, pressed) })
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.area)) } action: { spots.frames[value] = $0 }
+            .accessibilityAddTraits(value == chosen ? [.isSelected] : [])
         }
+    }
+
+    private func press(_ value: Value, _ pressed: Bool) {
+        if pressed { held = value; return }
+        // A press the page's scroll took, or one on the chosen choice, lets the knob go back once its tap had its chance.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.fast) { if !dragging, held == value { held = nil } }
+    }
+
+    private func follow(_ x: CGFloat, _ y: CGFloat) {
+        dragging = true
+        let near = values.min { a, b in distance(spots.frames[a], x, y) < distance(spots.frames[b], x, y) }
+        if let near, near != (held ?? chosen) { held = near; ticks += 1 }
+    }
+
+    private func distance(_ spot: CGRect?, _ x: CGFloat, _ y: CGFloat) -> CGFloat {
+        guard let spot else { return .infinity }
+        return hypot(spot.midX - x, spot.midY - y)
+    }
+
+    private func release() {
+        dragging = false
+        if let held, held != chosen { choose(held) } else { held = nil }
+    }
+}
+
+/// Tells its owner when a button is pressed and let go (a knob row's choice; a card whose edge is outside its button).
+struct Press: ButtonStyle {
+    /// A pressed button's look: a little darker (CardStyle).
+    static let dim = 0.75
+    let changed: (Bool) -> Void
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.onChange(of: configuration.isPressed) { _, now in changed(now) }
     }
 }
 
@@ -307,6 +405,8 @@ extension View {
 struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     let items: [Item]
     let name: (Item) -> String
+    /// Rows that are the same rows elsewhere (closed cards): going in and out of arranging, each glides to the other.
+    var glides: Namespace.ID?
     let onMove: (_ from: Int, _ to: Int) -> Void
     @ViewBuilder let row: (Item) -> Content
     @ViewBuilder var end: (Item) -> End
@@ -355,6 +455,8 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                 .frame(minHeight: Size.controlRow)
                 .raised()
                 .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { step = $0 }
+                .matched(item.id, in: glides)
+                .transition(.row)
                 .offset(y: room(index, from, steps))
                 .follow(finger, while: item.id == held)
                 .zIndex(item.id == held ? 1 : 0)
@@ -375,8 +477,16 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
 }
 
 extension ArrangeList where End == EmptyView {
-    init(items: [Item], name: @escaping (Item) -> String, onMove: @escaping (_ from: Int, _ to: Int) -> Void, @ViewBuilder row: @escaping (Item) -> Content) {
-        self.init(items: items, name: name, onMove: onMove, row: row, end: { _ in EmptyView() })
+    init(items: [Item], name: @escaping (Item) -> String, glides: Namespace.ID? = nil, onMove: @escaping (_ from: Int, _ to: Int) -> Void,
+         @ViewBuilder row: @escaping (Item) -> Content) {
+        self.init(items: items, name: name, glides: glides, onMove: onMove, row: row, end: { _ in EmptyView() })
+    }
+}
+
+extension View {
+    /// The same row as the one with `id` elsewhere in `space` (none: on its own), so swapping one for the other glides.
+    @ViewBuilder func matched(_ id: some Hashable, in space: Namespace.ID?) -> some View {
+        if let space { matchedGeometryEffect(id: id, in: space) } else { self }
     }
 }
 
@@ -494,6 +604,8 @@ struct SidewaysPan: UIGestureRecognizerRepresentable {
     static let flick: CGFloat = 300
     /// Whether a swipe right is its own (an armed row's disarms); otherwise it's the page's swipe back (BackPan).
     var right = true
+    /// Where the finger is as it moves (in this view), for a drag that follows it (KnobRow).
+    var onMove: ((_ x: CGFloat, _ y: CGFloat) -> Void)? = nil
     var onEnd: (_ translation: CGFloat, _ velocity: CGFloat) -> Void
 
     func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
@@ -508,6 +620,10 @@ struct SidewaysPan: UIGestureRecognizerRepresentable {
     func updateUIGestureRecognizer(_ pan: UIPanGestureRecognizer, context: Context) { context.coordinator.right = right }
 
     func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
+        if [.began, .changed].contains(pan.state), let onMove {
+            let at = context.converter.localLocation // always there (only translation and velocity are optional)
+            onMove(at.x, at.y)
+        }
         guard [.ended, .cancelled, .failed].contains(pan.state) else { return }
         onEnd(pan.translation(in: pan.view).x, pan.velocity(in: pan.view).x)
     }
@@ -536,6 +652,8 @@ struct SwipeToArm: ViewModifier {
             .gesture(SidewaysPan(right: armed) { x, velocity in armed = abs(velocity) > SidewaysPan.flick ? velocity < 0 : x < 0 })
             .onLongPressGesture(minimumDuration: Self.hold) { armed = true }
             .sensoryFeedback(.impact(weight: .heavy), trigger: armed) { _, now in now }
+            // Its end's buttons cross-fade in place (the PWA's swapper), as it arms and disarms.
+            .motion(on: armed, !Motion.still)
     }
 }
 
@@ -544,12 +662,14 @@ extension View {
 }
 
 extension View {
-    /// What a card opens to show under its row (the PWA's .more): a hairline over it, inset like the row's text.
+    /// What a card opens to show under its row (the PWA's .more): a hairline over it, inset like the row's text; it
+    /// uncovers from the top when opened under Motion.tap.
     func more() -> some View {
         padding(.vertical, Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .overlay(alignment: .top) { Palette.line.frame(height: Size.hairline) }
             .padding(.horizontal, Space.s4)
+            .transition(.row)
     }
 }
 

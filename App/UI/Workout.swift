@@ -10,6 +10,8 @@ struct WorkoutScreen: View {
     /// The exercise opened by hand; nil follows the workout (the first with a set to do).
     @State private var opened: String?
     @State private var arranging = false
+    /// A card and its arranging row are one row: going in and out of arranging, each glides to where the other is.
+    @Namespace private var rows
     /// The set field being typed in ("<set id>.kg", ".reps" or ".rir"), on the workout's one keyboard (SetKeyboard).
     @State private var focus: String?
 
@@ -35,7 +37,7 @@ struct WorkoutScreen: View {
                     // The keyboard's Next reaching a closed card opens it.
                     .onChange(of: focus) { _, id in
                         guard let id, let exercise = active.exercises.first(where: { ex in ex.sets.contains { id.hasPrefix($0.id) } }), exercise.id != expanded else { return }
-                        opened = exercise.id
+                        Motion.tap { opened = exercise.id }
                     }
                     // As the PWA's moveOn: a set done in a card with more to do shows its next set; the card's last set
                     // hands over to the next card with sets to do (also one opened by hand; the keyboard goes with it)
@@ -47,7 +49,7 @@ struct WorkoutScreen: View {
                             if focus == nil { reveal(proxy, set.id, anchor: nil) } // while typing, the keyboard keeps its set in view
                             return
                         }
-                        if opened == card.id { opened = nil }
+                        if opened == card.id { Motion.tap { opened = nil } } // the next card opens as this one closes
                         focus = nil
                         reveal(proxy, active.exercises.first { $0.doneCount < $0.setCount }?.id ?? Self.top, anchor: .top)
                     }
@@ -59,9 +61,9 @@ struct WorkoutScreen: View {
     /// The page's top, where Finish is.
     private static let top = "top"
 
-    /// Shows it (nil anchor: just enough), once the cards have their new heights.
+    /// Glides the page to it (nil anchor: just enough), once the cards have their new heights.
     private func reveal(_ proxy: ScrollViewProxy, _ id: String, anchor: UnitPoint?) {
-        DispatchQueue.main.async { proxy.scrollTo(id, anchor: anchor) }
+        DispatchQueue.main.async { Motion.tap { proxy.scrollTo(id, anchor: anchor) } }
     }
 
     /// The header, the progress bar, then the cards (or the list being arranged) and Add exercise.
@@ -88,8 +90,9 @@ struct WorkoutScreen: View {
     }
 
     private func arrangeList(_ active: Session, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
-        ArrangeList(items: active.exercises, name: \.name, onMove: { from, to in
-            model.update { training in
+        // The held row settles from the finger itself (ArrangeList), so the move shows at once.
+        ArrangeList(items: active.exercises, name: \.name, glides: rows, onMove: { from, to in
+            model.update(moving: false) { training in
                 guard let moved = training.active?.exercises.moved(from, to: to) else { return }
                 training.active?.exercises = moved
             }
@@ -116,10 +119,13 @@ struct WorkoutScreen: View {
                              autoLog: settings.logSets != .manual, bests: bests,
                              last: previous?.match(exercise),
                              restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
-                             onOpen: { opened = exercise.id },
-                             onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) })
+                             onOpen: { Motion.tap { opened = exercise.id } },
+                             onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) },
+                             onArrange: active.exercises.count < 2 ? nil : { focus = nil; Motion.tap { opened = nil; arranging = true } })
                     .equatable()
                     .id(exercise.id)
+                    .matchedGeometryEffect(id: exercise.id, in: rows)
+                    .transition(.row)
             }
             Button {
                 focus = nil
@@ -137,7 +143,7 @@ struct WorkoutScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button {
                 focus = nil
-                model.present(WorkoutOptions(arrange: { arranging = true }))
+                model.present(WorkoutOptions(arrange: { Motion.tap { arranging = true } }))
             } label: {
                 VStack(spacing: 0) {
                     HStack(spacing: Space.s1) {
@@ -155,7 +161,7 @@ struct WorkoutScreen: View {
             .accessibilityLabel("\(active.name): workout options")
             Group {
                 if arranging {
-                    Button("Done") { arranging = false }.buttonStyle(SecondaryStyle(hug: true))
+                    Button("Done") { Motion.tap { arranging = false } }.buttonStyle(SecondaryStyle(hug: true))
                 } else {
                     Button("Finish") { focus = nil; model.finish() }.buttonStyle(PrimaryStyle(compact: true)).accessibilityLabel("Finish workout")
                 }
@@ -204,17 +210,28 @@ struct ExerciseCard: View, Equatable {
     let focusHere: String?
     let onOpen: () -> Void
     let onOptions: () -> Void
+    /// Holding the closed card arranges the exercises, as an iPhone list's row (nil: only one exercise).
+    let onArrange: (() -> Void)?
     @State private var armed = false
+    /// The hold that just arranged: its lift isn't a tap.
+    @State private var held = false
 
+    /// One card either way (the PWA's resize): opened, its edge grows round what it uncovers; closed, it closes over
+    /// it, and the closed line fades in where the open one was. Only the insides swap, so the card never jumps.
     var body: some View {
         Group {
-            if open { card } else { closed }
+            if open { card.transition(.row) } else { closed.transition(.opacity) }
         }
+        .pad()
+        .raised()
+        .opacity(pressed ? Press.dim : 1)
         .onChange(of: open) { if !open { armed = false } }
     }
 
+    @State private var pressed = false
+
     private var closed: some View {
-        Button(action: onOpen) {
+        Button { if held { held = false } else { onOpen() } } label: {
             HStack(spacing: Space.s3) {
                 Text("\(number)").type(.t16).monospacedDigit().foregroundStyle(Palette.text)
                     .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
@@ -225,12 +242,18 @@ struct ExerciseCard: View, Equatable {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Icon.down.image(IconSize.medium).foregroundStyle(Palette.muted)
             }
-            .pad()
-            .raised()
             .contentShape(Rectangle())
         }
-        .buttonStyle(CardStyle())
+        // The whole card darkens when pressed, as a card button does (CardStyle), though its edge is outside the button.
+        .buttonStyle(Press { pressed = $0 })
+        .simultaneousGesture(LongPressGesture(minimumDuration: SwipeToArm.hold).onEnded { _ in
+            guard let onArrange else { return }
+            held = true
+            onArrange()
+        }, isEnabled: onArrange != nil)
+        .sensoryFeedback(.impact(weight: .medium), trigger: held) { _, now in now }
         .accessibilityValue("Closed")
+        .accessibilityAction(named: "Arrange exercises") { onArrange?() }
     }
 
     private var card: some View {
@@ -265,6 +288,7 @@ struct ExerciseCard: View, Equatable {
                            focus: focus,
                            focused: focusHere.flatMap { $0.hasPrefix("\(set.id).") ? String($0.dropFirst(set.id.count + 1)) : nil })
                         .id(set.id) // what the keyboard scrolls to (SetKeyboard)
+                        .transition(.row)
                 }
             }
             .padding(.top, Space.s2)
@@ -275,14 +299,13 @@ struct ExerciseCard: View, Equatable {
             .disabled(exercise.sets.count >= Limits.sets)
             .padding(.top, Space.s4)
         }
-        .pad()
-        .raised()
     }
 
     /// Saving a set redraws only its card, not every card in the workout (the keyboard focus updates each by itself).
     static func == (a: Self, b: Self) -> Bool {
         a.exercise == b.exercise && a.number == b.number && a.open == b.open && a.unit == b.unit && a.autoLog == b.autoLog
             && a.bests.id == b.bests.id && a.last == b.last && a.restSeconds == b.restSeconds && a.muscle == b.muscle && a.focusHere == b.focusHere
+            && (a.onArrange == nil) == (b.onArrange == nil) // a second exercise lets the first one's hold arrange
     }
 
     /// "1 of 3 sets · last 60×8": done of the sets as counted, and last time's first set.

@@ -64,6 +64,20 @@ public func periods(from start: Int, to end: Int, _ period: Period, calendar: Ca
                             to: date(periodStart(end, period, calendar: calendar))).value(for: period.component) ?? 0
 }
 
+/// An exercise as Progress lists it (Array<Session>.trainedLifts).
+public struct TrainedLift: Equatable, Sendable {
+    public let name: String
+    /// Its heaviest set's weight (0: bodyweight only).
+    public let kg: Double
+    /// When it was last done.
+    public let last: Int
+    /// That last workout set a new heaviest.
+    public let record: Bool
+    /// Its first workout's best estimated 1RM, and how far the latest workout's rose from it.
+    public let first: Double
+    public let gained: Double
+}
+
 extension TrainingSet {
     /// Epley: weight × (1 + reps / 30), the estimate the app has always shown.
     public var estimate: Double { (kg ?? 0) * (1 + Double(reps ?? 0) / 30) }
@@ -141,6 +155,20 @@ extension Array where Element == Session {
             if let kg = set.kg { best[exercise.name] = Swift.max(best[exercise.name] ?? 0, kg) }
         } } }
         return best.map { ($0.key, $0.value) }.sorted { $0.kg == $1.kg ? $0.name < $1.name : $0.kg > $1.kg }
+    }
+
+    /// Every exercise trained (pwa Progress.tsx lifts): its heaviest set, when it was last done, whether that workout
+    /// set a new heaviest, and how far its best estimated 1RM in a workout rose from its first workout to its last.
+    public var trainedLifts: [TrainedLift] {
+        var by: [String: TrainedLift] = [:]
+        for session in finished.sorted(by: { $0.finishedAt! < $1.finishedAt! }) { for exercise in session.exercises {
+            let sets = exercise.sets.filter { $0.done && $0.isValid }
+            guard !sets.isEmpty else { continue }
+            let kg = sets.map { $0.kg ?? 0 }.max()!, top = sets.map(\.estimate).max()!, was = by[exercise.name]
+            by[exercise.name] = TrainedLift(name: exercise.name, kg: Swift.max(kg, was?.kg ?? 0), last: session.finishedAt!,
+                                            record: was.map { kg > $0.kg } ?? false, first: was?.first ?? top, gained: top - (was?.first ?? top))
+        } }
+        return Swift.Array(by.values)
     }
 
     /// One exercise's logged sets in each workout that has any, newest first (pwa Lift.tsx).

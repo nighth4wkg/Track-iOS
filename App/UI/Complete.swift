@@ -19,11 +19,15 @@ struct CompleteScreen: View {
                 return (exercise.name, set, before[exercise.name].map { (set.kg ?? 0) > $0 } ?? false)
             }
             DeepPage {
-                Text("Workout complete").type(.t14).foregroundStyle(Palette.muted)
-                Text("Nice workout!").type(.t32).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
-                Text(session.name + dot + Date(timeIntervalSince1970: Double(at) / 1000).formatted(.gregorian.weekday(.wide).month(.abbreviated).day()))
-                    .type(.t14).foregroundStyle(Palette.muted)
-                xpCard(level).padding(.top, Space.s4)
+                // Its parts rise one after another (the PWA's .celebrate), then new bests and a level up pop.
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Workout complete").type(.t14).foregroundStyle(Palette.muted)
+                    Text("Nice workout!").type(.t32).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
+                    Text(session.name + dot + Date(timeIntervalSince1970: Double(at) / 1000).formatted(.gregorian.weekday(.wide).month(.abbreviated).day()))
+                        .type(.t14).foregroundStyle(Palette.muted)
+                }
+                .rises(0)
+                xpCard(level).padding(.top, Space.s4).rises(1)
                 HStack(spacing: Space.s3) {
                     StatTile(label: "Duration", value: "\(session.minutes)", unit: "min")
                     StatTile(label: "Volume", value: weight(session.volume, unit), unit: unit.rawValue)
@@ -31,18 +35,22 @@ struct CompleteScreen: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s3)
+                .rises(2)
                 if !bests.isEmpty {
-                    Text("Best sets").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6).accessibilityAddTraits(.isHeader)
-                    RowCard {
-                        ForEach(bests, id: \.name) { best in
-                            Row(title: best.name) {
-                                if best.fresh { Badge(text: "New best") }
-                                Text(setText(best.set, unit))
-                                    .type(.t14).monospacedDigit().foregroundStyle(Palette.text)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Best sets").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6).accessibilityAddTraits(.isHeader)
+                        RowCard {
+                            ForEach(bests, id: \.name) { best in
+                                Row(title: best.name) {
+                                    if best.fresh { Badge(text: "New best").popsOnShow(after: Self.badgeDelay) }
+                                    Text(setText(best.set, unit))
+                                        .type(.t14).monospacedDigit().foregroundStyle(Palette.text)
+                                }
                             }
                         }
+                        .padding(.top, Space.s2)
                     }
-                    .padding(.top, Space.s2)
+                    .rises(3)
                 }
                 // Room for the dock, so the last card scrolls clear of it.
                 Color.clear.frame(height: Size.primary + Space.s4 - homeIndicator)
@@ -63,6 +71,9 @@ struct CompleteScreen: View {
         }
     }
 
+    /// The badges pop once their parts have risen (the PWA's --motion + --motion-fast).
+    private static let badgeDelay = Motion.normal + Motion.fast
+
     /// Back to Home, done with the recap.
     private func leave() { model.finished = nil; model.go(.home) }
 
@@ -80,8 +91,8 @@ struct CompleteScreen: View {
                 // The PWA's wrapping row: on a narrow phone "Level up" drops under the XP rather than cutting it short.
                 let xp = Text("+\(finished.xp) XP").type(.t28).monospacedDigit().foregroundStyle(Palette.accent).fixedSize()
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: Space.s2) { xp; if finished.leveledUp { Badge(text: "Level up") } }
-                    VStack(alignment: .leading, spacing: Space.s1) { xp; if finished.leveledUp { Badge(text: "Level up") } }
+                    HStack(spacing: Space.s2) { xp; if finished.leveledUp { Badge(text: "Level up").popsOnShow(after: Self.badgeDelay) } }
+                    VStack(alignment: .leading, spacing: Space.s1) { xp; if finished.leveledUp { Badge(text: "Level up").popsOnShow(after: Self.badgeDelay) } }
                 }
                 Text("\(level.required - level.current) XP to Level \(level.level + 1)").type(.t14).foregroundStyle(Palette.muted)
                 Bar(value: fraction).padding(.top, Space.s2).accessibilityLabel("Level \(level.level + 1) progress")

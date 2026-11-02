@@ -5,7 +5,8 @@ import Foundation
 public enum Limits {
     public static let kg = 5000.0
     public static let reps = 1000
-    public static let rir = 10
+    /// Reps in reserve, 0 to 9: one digit, so any digit typed is the whole number (the website's).
+    public static let rir = 9
     public static let name = 100
     public static let notes = 500
     /// Sets in one exercise.

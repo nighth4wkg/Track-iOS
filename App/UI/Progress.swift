@@ -2,16 +2,22 @@ import SwiftUI
 import TrackCore
 
 /// Progress (the PWA's): pick a period (D W M) and a measure; see it against the same moment of the last period, bar
-/// by bar, then streak, level and badges, and your heaviest lifts (tap one for its page).
+/// by bar, then streak, level and badges, and every exercise trained, sorted Recent, Best or Gained (tap one for its
+/// page).
 struct ProgressScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(\.tabTraining) private var training
     @AppStorage("track.volumePeriod") private var period = Period.week
     @AppStorage("track.measure") private var tally = Tally.volume
+    @State private var order = Order.recent
+    @State private var all = false
+    /// Exercises listed before Show all.
+    private static let shown = 5
+    enum Order: String, CaseIterable { case recent = "Recent", best = "Best", gained = "Gained" }
 
     var body: some View {
         let now = nowMillis()
-        let records = model.derived("records", of: training.sessions) { Array($0.personalRecords.prefix(3)) }
+        let lifts = model.derived("lifts", of: training.sessions) { $0.trainedLifts }
         TabPage {
             TabHead(title: "Progress") {
                 Seg(label: "Period", options: Period.allCases.map { (value: $0, text: $0.name) }, value: $period, short: true)
@@ -29,24 +35,63 @@ struct ProgressScreen: View {
             }
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, Space.s3)
-            if !records.isEmpty {
-                Text("Personal records").type(.t20).foregroundStyle(Palette.text).padding(.top, Space.s6).accessibilityAddTraits(.isHeader)
-                VStack(spacing: Space.s3) {
-                    ForEach(records, id: \.name) { record in
-                        Button { model.open(.lift(record.name)) } label: {
-                            HStack(spacing: Space.s3) {
-                                Text(record.name).type(.t16).foregroundStyle(Palette.text).frame(maxWidth: .infinity, alignment: .leading)
-                                Text("\(weight(record.kg, training.settings.unit)) \(training.settings.unit.rawValue)").type(.t14).monospacedDigit().foregroundStyle(Palette.text)
-                                Icon.next.image(IconSize.small).foregroundStyle(Palette.muted)
-                            }
-                            .pad().raised().contentShape(Rectangle())
-                        }
-                        .buttonStyle(CardStyle())
-                    }
-                }
-                .padding(.top, Space.s2)
+            if !lifts.isEmpty { exercises(lifts, now: now) }
+        }
+    }
+
+    /// Exercises: the count trained, the sort, then a card per exercise (its graph page) and Show all. A sort swaps the
+    /// list whole, as History's filters do: glided, rows slid through each other (the PWA's lesson).
+    private func exercises(_ lifts: [TrainedLift], now: Int) -> some View {
+        let unit = training.settings.unit
+        let sorted = lifts.sorted { a, b in
+            switch order {
+            case .recent: a.last == b.last ? a.name < b.name : a.last > b.last
+            case .best: a.kg == b.kg ? a.name < b.name : a.kg > b.kg
+            case .gained: a.gained == b.gained ? a.name < b.name : a.gained > b.gained
             }
         }
+        let list = all ? sorted : Array(sorted.prefix(Self.shown))
+        // A row stays as it is only where the same exercise stays on the same spot; anywhere else it's swapped.
+        let rows = list.indices.map { (key: "\(list[$0].name)\u{0}\($0)", lift: list[$0]) }
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s3) {
+                Text("Exercises").type(.t20).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                Text("\(lifts.count) trained").type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
+            }
+            Seg(label: "Sort exercises", options: Order.allCases.map { (value: $0, text: $0.rawValue) }, value: $order, moves: true)
+                .padding(.top, Space.s2)
+            VStack(spacing: Space.s3) {
+                ForEach(rows, id: \.key) { item in
+                    Button { model.open(.lift(item.lift.name)) } label: { row(item.lift, unit: unit, now: now) }
+                        .buttonStyle(CardStyle())
+                        .transition(.swap)
+                }
+                if !all && lifts.count > Self.shown {
+                    Button("Show all \(lifts.count)") { Motion.tap { all = true } }.buttonStyle(SecondaryStyle()).transition(.swap)
+                }
+            }
+            .padding(.top, Space.s2)
+        }
+        .padding(.top, Space.s6)
+    }
+
+    private func row(_ lift: TrainedLift, unit: TrackCore.Settings.Unit, now: Int) -> some View {
+        let when = ago(lift.last, now: now)
+        let gained = order == .gained && lift.gained >= 1 ? dot + "+\(weight(lift.gained, unit)) \(unit.rawValue)" : ""
+        // Sorted by gain, the gain says it: both crowded a 320-wide row onto a second line.
+        let best = lift.record && order != .gained
+        return HStack(spacing: Space.s3) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(lift.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
+                Text("\(when.prefix(1).uppercased() + when.dropFirst() + gained)\(best ? dot : "")\(Text(best ? "New best" : "").foregroundStyle(Palette.accent))")
+                    .type(.t12).monospacedDigit().foregroundStyle(Palette.muted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(lift.kg > 0 ? "\(weight(lift.kg, unit)) \(unit.rawValue)" : "Bodyweight").type(.t14).monospacedDigit().foregroundStyle(Palette.text)
+            Icon.next.image(IconSize.small).foregroundStyle(Palette.muted)
+        }
+        .pad().raised().contentShape(Rectangle())
     }
 
     private func chart(_ training: Training, now: Int) -> some View {

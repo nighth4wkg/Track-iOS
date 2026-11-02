@@ -21,7 +21,7 @@ struct HistoryScreen: View {
         let filtering = !query.trimmingCharacters(in: .whitespaces).isEmpty || !from.isEmpty || !to.isEmpty
         TabPage {
             TabHead(title: "History") {
-                RoundButton(icon: .filter, label: datesOpen ? "Hide date range" : "Filter by date") { datesOpen.toggle() }
+                RoundButton(icon: .filter, label: datesOpen ? "Hide date range" : "Filter by date") { Motion.tap { datesOpen.toggle() } }
             }
             Field(placeholder: "Search workouts or exercises", text: $query, label: "Search workouts or exercises", icon: .search)
                 .padding(.top, Space.s4)
@@ -44,12 +44,14 @@ struct HistoryScreen: View {
     }
 
     private func list(_ results: [Session], filtering: Bool, unit: TrackCore.Settings.Unit) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // Keyed by place too: a new search or day swaps the rows (out, then in), never gliding them past each other.
+        let rows = results.prefix(shown).enumerated().map { (key: $1.id + "\u{0}" + String($0), session: $1) }
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space.s3) {
                 Text(filtering ? count(results.count, "result") : "Recent").type(.t20).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
                 if filtering {
-                    Button("Clear") { query = ""; from = ""; to = "" }.buttonStyle(SecondaryStyle(hug: true))
+                    Button("Clear") { Motion.tap { query = ""; from = ""; to = "" } }.buttonStyle(SecondaryStyle(hug: true))
                 }
             }
             .frame(minHeight: Size.control)
@@ -58,16 +60,20 @@ struct HistoryScreen: View {
                     .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
             } else {
                 LazyVStack(spacing: Space.s3) {
-                    ForEach(results.prefix(shown)) { session in
-                        Button { model.open(.session(session.id)) } label: { HistoryRow(session: session, unit: unit) }.buttonStyle(CardStyle())
+                    ForEach(rows, id: \.key) { item in
+                        Button { model.open(.session(item.session.id)) } label: { HistoryRow(session: item.session, unit: unit) }
+                            .buttonStyle(CardStyle())
+                            .transition(.swap)
                     }
                 }
                 .padding(.top, Space.s2)
                 if results.count > shown {
-                    Button("Show more") { shown += Self.page }.buttonStyle(SecondaryStyle()).padding(.top, Space.s3)
+                    Button("Show more") { Motion.tap { shown += Self.page } }.buttonStyle(SecondaryStyle()).padding(.top, Space.s3)
                 }
             }
         }
+        // Typing a search or tapping a day changes the rows without a tap of ours: they still swap.
+        .motion(on: rows.map(\.key), !Motion.still)
     }
 }
 

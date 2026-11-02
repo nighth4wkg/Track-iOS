@@ -8,6 +8,8 @@ struct HomeScreen: View {
     @Environment(AppModel.self) private var model
     @Environment(\.tabTraining) private var training
     @State private var arranging = false
+    /// A split's card and its arranging row are one row: each glides to where the other is.
+    @Namespace private var rows
 
     var body: some View {
         let now = nowMillis()
@@ -48,19 +50,21 @@ struct HomeScreen: View {
                 Spacer(minLength: 0)
                 HStack(spacing: Space.s1) {
                     if training.splits.count > 1 {
-                        RoundButton(icon: arranging ? .check : .arrange, label: arranging ? "Done arranging splits" : "Arrange splits") { arranging.toggle() }
+                        RoundButton(icon: arranging ? .check : .arrange, label: arranging ? "Done arranging splits" : "Arrange splits") { Motion.tap { arranging.toggle() } }
                     }
                     if !arranging { RoundButton(icon: .plus, label: "New split") { model.present(NewSplitSheet()) } }
                 }
             }
             if arranging {
-                ArrangeList(items: training.splits, name: \.name, onMove: { from, to in model.update { $0.splits = $0.splits.moved(from, to: to) } }) { split in
+                ArrangeList(items: training.splits, name: \.name, glides: rows, onMove: { from, to in model.update(moving: false) { $0.splits = $0.splits.moved(from, to: to) } }) { split in
                     SplitLine(split: split)
                 }
             } else {
                 VStack(spacing: Space.s3) {
                     ForEach(training.splits) { split in
                         SplitCard(split: split, next: training.active == nil && next == split.id)
+                            .matchedGeometryEffect(id: split.id, in: rows)
+                            .transition(.row)
                     }
                 }
             }

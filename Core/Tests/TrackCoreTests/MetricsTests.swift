@@ -108,4 +108,13 @@ final class MetricsTests: XCTestCase {
         XCTAssertEqual(training.nextSplit?.split.id, "a")
         XCTAssertEqual(training.nextSplit?.lastDone, at(2026, 9, 29))
     }
+
+    func testTrainedLiftsKeepTheHeaviestTheLastAndTheGain() {
+        let lifts = [workout(at(2026, 1, 5), kg: 60), workout(at(2026, 1, 12), kg: 50), workout(at(2026, 1, 19), kg: 70)].trainedLifts
+        XCTAssertEqual(lifts.count, 1)
+        XCTAssertEqual(lifts[0].kg, 70)
+        XCTAssertEqual(lifts[0].last, at(2026, 1, 19))
+        XCTAssertTrue(lifts[0].record)
+        XCTAssertEqual(lifts[0].gained, 10 * (1 + 10.0 / 30), accuracy: 0.001)
+    }
 }

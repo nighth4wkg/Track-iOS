@@ -37,12 +37,14 @@ struct Shell: View {
                     .accessibilityHidden(!shown || behind)
                     .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
                     .swipeBack(shown) { model.back() }
+                    .transition(.identity)
             }
-            if model.workoutOpen, model.training.active != nil { WorkoutScreen() }
-            if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished) }
+            // Screens come and go at once, even in a tap's move (starting or finishing a workout): each shifts in itself (Arrive).
+            if model.workoutOpen, model.training.active != nil { WorkoutScreen().transition(.identity) }
+            if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished).transition(.identity) }
             StatusFade()
             if !covered && !keyboard {
-                NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom()
+                NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom().transition(.identity)
             }
             SheetLayer()
             AskLayer()
@@ -62,6 +64,8 @@ struct Shell: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in model.refreshDay() }
         // A new day draws the pages again: their dates and "today" are worked out as they draw.
         .id(model.day)
+        // Words and numbers change in place, as the PWA's do, even inside a tap's move (Motion.tap).
+        .contentTransition(.identity)
         .transaction { $0.disablesAnimations = true }
     }
 
@@ -205,32 +209,14 @@ struct NavPill: View {
     @Environment(AppModel.self) private var model
     private static let tabs: [(tab: AppTab, label: String, icon: Icon)] =
         [(.home, "Home", .home), (.history, "History", .history), (.progress, "Progress", .progress), (.rank, "Rank", .rank)]
+    private static var items: [(value: AppTab, text: String, icon: (Bool) -> AnyView)] {
+        tabs.map { item in (value: item.tab, text: item.label, icon: { (on: Bool) -> AnyView in AnyView(item.icon.image(IconSize.logo, bold: on)) }) }
+    }
 
     var body: some View {
-        HStack(spacing: Space.s1) {
-            ForEach(Self.tabs, id: \.tab) { item in
-                let on = model.tab == item.tab
-                Button { model.go(item.tab) } label: {
-                    VStack(spacing: Gap.tab) {
-                        item.icon.image(IconSize.logo, bold: on)
-                        Text(item.label).type(.t12)
-                    }
-                    .foregroundStyle(on ? Palette.accent : Palette.muted)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background { if on { Color.clear.raised(.control, .pill) } }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(item.label)
-                .accessibilityAddTraits(on ? [.isSelected] : [])
-            }
-        }
-        .padding(Space.s1)
-        .frame(maxWidth: Size.navWidth)
-        .frame(height: Size.nav)
-        .raised(.nav, .pill)
-        .padding(.horizontal, Space.s4)
-        .sensoryFeedback(.selection, trigger: model.tab)
+        PillTabs(label: "Tabs", items: Self.items, chosen: model.tab) { model.go($0) }
+            .padding(.horizontal, Space.s4)
+            .sensoryFeedback(.selection, trigger: model.tab)
     }
 }
 

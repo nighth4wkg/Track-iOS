@@ -122,6 +122,7 @@ struct ExercisePicker: View {
                     .raised(isAdded ? .green : .control, .pill)
             }
             .buttonStyle(CardStyle())
+            .pops(when: isAdded)
             .accessibilityLabel("\(replacing == nil ? "Add" : "Use") \(name)")
             .sensoryFeedback(.impact(weight: .light), trigger: isAdded) { _, now in now }
         }

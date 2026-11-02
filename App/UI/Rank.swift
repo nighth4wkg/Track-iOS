@@ -143,7 +143,7 @@ private struct MuscleRow: View {
         let color = rank.best == nil ? Palette.muted : Palette.ranks[rank.rank]
         let opens = rank.best != nil || !names.isEmpty
         VStack(alignment: .leading, spacing: 0) {
-            Button { opened = open ? nil : rank.muscle } label: {
+            Button { Motion.tap { opened = open ? nil : rank.muscle } } label: {
                 VStack(alignment: .leading, spacing: Space.s2) {
                     HStack(spacing: Space.s2) {
                         Text(rank.muscle.rawValue).type(.t16).foregroundStyle(Palette.text)
