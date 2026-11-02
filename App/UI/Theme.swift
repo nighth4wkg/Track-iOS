@@ -138,8 +138,9 @@ enum Motion {
     /// there, a new one is uncovered (`.row`), a card grows round what it opens, and whatever sits under them moves in
     /// step (moved one list at a time, the parts under it jumped). Text changes in place (Shell's contentTransition).
     /// A finger's own move (an arranged row let go, typing) changes without it.
-    @MainActor static func tap(_ change: () -> Void) {
-        if still { change() } else { withAnimation(move, change) }
+    /// Callable from the model (not main-actor isolated), whose changes all run on the main thread.
+    static func tap(_ change: () -> Void) {
+        MainActor.assumeIsolated { if still { change() } else { withAnimation(move, change) } }
     }
 }
 
