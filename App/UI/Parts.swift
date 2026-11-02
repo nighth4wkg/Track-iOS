@@ -422,7 +422,8 @@ final class EdgeScroll: NSObject {
         guard near != 0 else { return }
         let lowest = -page.adjustedContentInset.top
         let highest = max(lowest, page.contentSize.height - page.bounds.height + page.adjustedContentInset.bottom)
-        let by = Self.speed * min(1, abs(near) / Self.zone) * (near < 0 ? -1 : 1) * (link.targetTimestamp - link.timestamp)
+        let frame = CGFloat(link.targetTimestamp - link.timestamp)
+        let by: CGFloat = Self.speed * min(1, abs(near) / Self.zone) * frame * (near < 0 ? -1 : 1)
         let offset = min(highest, max(lowest, page.contentOffset.y + by))
         guard offset != page.contentOffset.y else { return }
         page.contentOffset.y = offset
