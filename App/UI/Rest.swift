@@ -27,7 +27,8 @@ struct RestTimer: View {
                     let total = Double(max(1, model.training.settings.restSeconds))
                     if left > 0 {
                         if compact {
-                            ring(left, total).accessibilityLabel("Rest, \(time(left)) left").frame(maxWidth: .infinity, alignment: .leading)
+                            ring(left, total).accessibilityLabel("Rest, \(time(left)) left").padding(.horizontal, Space.s2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             full(left, total)
                         }

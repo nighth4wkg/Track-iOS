@@ -131,6 +131,9 @@ enum Motion {
     static let move = Animation.smooth(duration: normal)
     /// What goes away by fading alone: --motion-fast on an even curve (the PWA's --ease-fade), so it never snaps.
     static let fade = Animation.easeInOut(duration: fast)
+    /// The PWA's --ease on the iPhone: most of the way in its first frames, then settling. A pop runs on it, so what
+    /// just happened shows at once (on `move`'s gentle start a ✓ stayed hidden ~150 ms).
+    static let ease = UnitCurve.bezier(startControlPoint: UnitPoint(x: 0.3, y: 0.45), endControlPoint: UnitPoint(x: 0.1, y: 1))
     /// Reduce Motion is on: everything shows at once.
     @MainActor static var still: Bool { UIAccessibility.isReduceMotionEnabled }
 
@@ -145,11 +148,12 @@ enum Motion {
 }
 
 extension AnyTransition {
-    /// A list's row (or what a card opens) coming or going: uncovered from its top down as what's under it makes room,
-    /// wiped away from below as what's under it comes up, by a clip on the row alone (the PWA's lesson: a box moved
+    /// A list's row (or what a card opens) coming or going: uncovered from its top down and faded in as what's under it
+    /// makes room, wiped away from below and faded out as what's under it comes up (the PWA's fade and resize; at full
+    /// strength from the first frame it read as a curtain over the cards still sliding), by a clip on the row alone (the PWA's lesson: a box moved
     /// one way and its contents the other ran out of step). Its edge never passes the top of the row gliding by, so
     /// its text never shows over that row's.
-    static let row = AnyTransition(Uncover())
+    static let row = AnyTransition(Uncover()).combined(with: .opacity)
     /// Something that comes in because it just happened (a new best's note): its part marked `popsIn()` pops as it
     /// arrives. Shown with what holds it (a card opened), it shows as it is.
     static let pop = AnyTransition(PopIn())
@@ -254,22 +258,27 @@ private struct Pop: ViewModifier {
     var waits = false
     /// Seconds hidden (at --pop-from) before it swells.
     var delay = 0.0
-    /// The PWA's --pop-from and --pop-over; it swells to its overshoot 60% of the way.
+    /// The PWA's --pop-from and --pop-over; it swells to its overshoot (and is fully shown) 60% of the way.
     private static let from = 0.6, over = 1.15, peak = 0.6
 
     func body(content: Content) -> some View {
         // Turning false (or with Reduce Motion) it stays as it is.
         let plays = on && !Motion.still
-        content.keyframeAnimator(initialValue: waits && !Motion.still ? Self.from : 1, trigger: on) { view, scale in
-            view.scaleEffect(scale).opacity(min(1, (scale - Self.from) / (1 - Self.from)))
+        // How far through (0 to 1) on the PWA's curve, its scale and fade straight lines between keyframes as a web
+        // animation's are.
+        content.keyframeAnimator(initialValue: waits && !Motion.still ? 0.0 : 1, trigger: on) { view, done in
+            view.scaleEffect(Self.scale(done)).opacity(min(1, done / Self.peak))
         } keyframes: { _ in
             KeyframeTrack {
-                MoveKeyframe(plays ? Self.from : 1)
-                LinearKeyframe(plays ? Self.from : 1, duration: plays ? delay : 0)
-                CubicKeyframe(plays ? Self.over : 1, duration: Motion.normal * Self.peak)
-                CubicKeyframe(1, duration: Motion.normal * (1 - Self.peak))
+                MoveKeyframe(plays ? 0.0 : 1)
+                LinearKeyframe(plays ? 0.0 : 1, duration: plays ? delay : 0)
+                LinearKeyframe(1.0, duration: plays ? Motion.normal : 0, timingCurve: Motion.ease)
             }
         }
+    }
+
+    private static func scale(_ done: Double) -> Double {
+        done < peak ? from + (over - from) * done / peak : over + (1 - over) * (done - peak) / (1 - peak)
     }
 }
 

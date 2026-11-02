@@ -61,6 +61,7 @@ struct CompleteScreen: View {
                     .frame(maxWidth: Size.column)
                     .floatingBottom()
                     .floatingBar(Size.primary)
+                    .arrives(forward: true, shifts: false) // fades in with the recap, not at full strength alone
             }
             .sensoryFeedback(.success, trigger: finished.id)
         } else {
@@ -74,8 +75,8 @@ struct CompleteScreen: View {
     /// The badges pop once their parts have risen (the PWA's --motion + --motion-fast).
     private static let badgeDelay = Motion.normal + Motion.fast
 
-    /// Back to Home, done with the recap.
-    private func leave() { model.finished = nil; model.go(.home) }
+    /// Back to Home, done with the recap: Home comes back as a page does (owner: it cut straight to it).
+    private func leave() { model.finished = nil; model.go(.home, swapping: false) }
 
     /// The level ring with the level, +XP, and the bar to the next level.
     private func xpCard(_ level: Experience.Progress) -> some View {

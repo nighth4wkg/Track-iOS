@@ -76,10 +76,11 @@ final class AppModel {
     private(set) var day = dayKey(nowMillis())
     var finished: Finished?
 
-    /// A tab, from the nav pill: whatever was open over the last one closes.
+    /// A tab, from the nav pill: whatever was open over the last one closes. Not `swapping` (the recap's Continue), the
+    /// tab comes back as a page does: shifted in from the left.
     // Written only when they change: any write wakes every view that reads them (a tap on the chosen tab redrew all).
-    func go(_ next: AppTab) {
-        swapAt = ProcessInfo.processInfo.systemUptime
+    func go(_ next: AppTab, swapping swaps: Bool = true) {
+        if swaps { swapAt = ProcessInfo.processInfo.systemUptime }
         if tab != next { tab = next }
         if !pages.isEmpty { pages = [] }
         if !sheets.isEmpty { sheets = [] }

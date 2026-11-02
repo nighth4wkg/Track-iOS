@@ -9,6 +9,9 @@ struct WorkoutScreen: View {
     @Environment(AppModel.self) private var model
     /// The exercise opened by hand; nil follows the workout (the first with a set to do).
     @State private var opened: String?
+    /// The card the workout follows (the first with a set to do), a beat behind: a card whose last set was just done
+    /// stays open while its ✓ pops, then hands over (owner: it closed before the ✓ showed).
+    @State private var following: String?
     @State private var arranging = false
     /// A card and its arranging row are one row: going in and out of arranging, each glides to where the other is.
     @Namespace private var rows
@@ -19,12 +22,13 @@ struct WorkoutScreen: View {
         if let active = model.training.active {
             let fields: [String] = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
             // Once every set is done none opens by itself: the page goes up to Finish instead.
-            let expanded: String? = opened.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil }
-                ?? active.exercises.first { $0.doneCount < $0.setCount }?.id
+            let current = active.exercises.first { $0.doneCount < $0.setCount }?.id
+            let here = { (id: String?) -> String? in id.flatMap { id in active.exercises.contains { $0.id == id } ? id : nil } }
+            let expanded: String? = here(opened) ?? here(following) ?? current
             let splitId = active.splitId
             let previous: Session? = model.derived("previous \(splitId)") { _ in model.training.latestSession(of: splitId) }
             ScrollViewReader { proxy in
-                ScrollView { content(active, expanded: expanded, previous: previous).arrives(forward: true) }
+                ScrollView { content(active, expanded: expanded, current: current, previous: previous).arrives(forward: true) }
                     .scrollDismissesKeyboard(.interactively)
                     .setKeyboard($focus)
                     .background(Backdrop())
@@ -49,11 +53,25 @@ struct WorkoutScreen: View {
                             if focus == nil { reveal(proxy, set.id, anchor: nil) } // while typing, the keyboard keeps its set in view
                             return
                         }
-                        if opened == card.id { Motion.tap { opened = nil } } // the next card opens as this one closes
                         focus = nil
-                        reveal(proxy, active.exercises.first { $0.doneCount < $0.setCount }?.id ?? Self.top, anchor: .top)
+                        // Its ✓ pops first (Motion.normal), then the next card opens as this one closes.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + (Motion.still ? 0 : Motion.normal)) {
+                            let next = model.training.active?.exercises.first { $0.doneCount < $0.setCount }?.id
+                            Motion.tap {
+                                if opened == card.id { opened = nil }
+                                following = next
+                            }
+                            reveal(proxy, next ?? Self.top, anchor: .top)
+                        }
+                    }
+                    // Anything else that changes which card the workout is on (a set undone, an exercise added, removed
+                    // or arranged) shows at once; a card just finished hands over above, once its ✓ has popped.
+                    .onChange(of: current) { was, now in
+                        let finished = active.exercises.first { $0.id == was }.map { $0.doneCount >= $0.setCount } ?? false
+                        if !finished { Motion.tap { following = now } }
                     }
             }
+            .onAppear { following = current }
             .onDisappear { focus = nil }
         }
     }
@@ -67,7 +85,7 @@ struct WorkoutScreen: View {
     }
 
     /// The header, the progress bar, then the cards (or the list being arranged) and Add exercise.
-    private func content(_ active: Session, expanded: String?, previous: Session?) -> some View {
+    private func content(_ active: Session, expanded: String?, current: String?, previous: Session?) -> some View {
         let done = active.exercises.doneCount, planned = active.exercises.plannedCount
         let unit = model.training.settings.unit
         return VStack(alignment: .leading, spacing: 0) {
@@ -76,7 +94,11 @@ struct WorkoutScreen: View {
                 .padding(.top, Space.s3)
                 .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
             Group {
-                if arranging { arrangeList(active, previous: previous, unit: unit) } else { cards(active, expanded: expanded, previous: previous, unit: unit) }
+                if arranging {
+                    arrangeList(active, current: current, previous: previous, unit: unit)
+                } else {
+                    cards(active, expanded: expanded, current: current, previous: previous, unit: unit)
+                }
             }
             .padding(.top, Space.s4)
         }
@@ -89,7 +111,7 @@ struct WorkoutScreen: View {
         .sensoryFeedback(trigger: active.exercises.reduce(0) { $0 + $1.sets.filter(\.done).count }) { was, now in now > was ? .impact(weight: .medium) : .selection }
     }
 
-    private func arrangeList(_ active: Session, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
+    private func arrangeList(_ active: Session, current: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
         // The held row settles from the finger itself (ArrangeList), so the move shows at once.
         ArrangeList(items: active.exercises, name: \.name, glides: rows, onMove: { from, to in
             model.update(moving: false) { training in
@@ -98,8 +120,7 @@ struct WorkoutScreen: View {
             }
         }) { exercise in
             HStack(spacing: Space.s3) {
-                Text("\((active.exercises.firstIndex { $0.id == exercise.id } ?? 0) + 1)").type(.t16).monospacedDigit()
-                    .foregroundStyle(Palette.text).frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                ExerciseCard.number((active.exercises.firstIndex { $0.id == exercise.id } ?? 0) + 1, current: exercise.id == current)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t16).foregroundStyle(Palette.text)
                     Text(ExerciseCard.detail(exercise, last: previous?.match(exercise), unit)).type(.t14).foregroundStyle(Palette.muted)
@@ -108,14 +129,14 @@ struct WorkoutScreen: View {
         }
     }
 
-    private func cards(_ active: Session, expanded: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
+    private func cards(_ active: Session, expanded: String?, current: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
         let settings = model.training.settings
         let bests = model.bests
         return VStack(spacing: Space.s3) {
             ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
                 let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
                 let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
-                ExerciseCard(exercise: exercise, number: index + 1, open: expanded == exercise.id, unit: unit,
+                ExerciseCard(exercise: exercise, number: index + 1, current: current == exercise.id, open: expanded == exercise.id, unit: unit,
                              autoLog: settings.logSets != .manual, bests: bests,
                              last: previous?.match(exercise),
                              restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
@@ -174,13 +195,16 @@ struct WorkoutScreen: View {
     /// While typing: one bar just over the keyboard with the rest's time on the left, then Next (weight → reps → RIR →
     /// next set) and Done. It replaces the rest timer meanwhile, so the two never stack up.
     private func keyboardBar(_ fields: [String]) -> some View {
-        HStack(spacing: Space.s2) {
-            // The rest's time takes the free room; with no rest the pill hugs its buttons.
-            RestTimer(compact: true).padding(.leading, Space.s2)
-            if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
-                Button("Next") { self.focus = fields[index + 1] }.buttonStyle(SecondaryStyle(hug: true))
+        HStack(spacing: 0) {
+            // The rest's time takes the free room (with its own room round it); with no rest the pill hugs its buttons,
+            // Next as near its edge as Done is to the other.
+            RestTimer(compact: true)
+            HStack(spacing: Space.s2) {
+                if let focus, let index = fields.firstIndex(of: focus), index + 1 < fields.count {
+                    Button("Next") { self.focus = fields[index + 1] }.buttonStyle(SecondaryStyle(hug: true))
+                }
+                Button("Done") { focus = nil }.buttonStyle(PrimaryStyle(compact: true))
             }
-            Button("Done") { focus = nil }.buttonStyle(PrimaryStyle(compact: true))
         }
         .padding(Space.s1)
         .raised(.float, .pill)
@@ -196,6 +220,8 @@ struct ExerciseCard: View, Equatable {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     let number: Int
+    /// The exercise the workout is on: its number is green, as the next set's is (the PWA's .tile.green).
+    let current: Bool
     let open: Bool
     let unit: TrackCore.Settings.Unit
     let autoLog: Bool
@@ -233,8 +259,7 @@ struct ExerciseCard: View, Equatable {
     private var closed: some View {
         Button { if held { held = false } else { onOpen() } } label: {
             HStack(spacing: Space.s3) {
-                Text("\(number)").type(.t16).monospacedDigit().foregroundStyle(Palette.text)
-                    .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
+                Self.number(number, current: current)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.leading)
                     Text(Self.detail(exercise, last: last, unit)).type(.t14).monospacedDigit().foregroundStyle(Palette.muted)
@@ -303,9 +328,15 @@ struct ExerciseCard: View, Equatable {
 
     /// Saving a set redraws only its card, not every card in the workout (the keyboard focus updates each by itself).
     static func == (a: Self, b: Self) -> Bool {
-        a.exercise == b.exercise && a.number == b.number && a.open == b.open && a.unit == b.unit && a.autoLog == b.autoLog
+        a.exercise == b.exercise && a.number == b.number && a.current == b.current && a.open == b.open && a.unit == b.unit && a.autoLog == b.autoLog
             && a.bests.id == b.bests.id && a.last == b.last && a.restSeconds == b.restSeconds && a.muscle == b.muscle && a.focusHere == b.focusHere
             && (a.onArrange == nil) == (b.onArrange == nil) // a second exercise lets the first one's hold arrange
+    }
+
+    /// A closed card's (and its arranging row's) number tile.
+    static func number(_ number: Int, current: Bool) -> some View {
+        Text("\(number)").type(.t16).monospacedDigit().foregroundStyle(current ? Palette.accent : Palette.text)
+            .frame(width: Size.tile, height: Size.tile).raised(.control, .inner)
     }
 
     /// "1 of 3 sets · last 60×8": done of the sets as counted, and last time's first set.

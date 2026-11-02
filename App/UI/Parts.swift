@@ -455,10 +455,11 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                 .frame(minHeight: Size.controlRow)
                 .raised()
                 .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { step = $0 }
-                .matched(item.id, in: glides)
-                .transition(.row)
                 .offset(y: room(index, from, steps))
                 .follow(finger, while: item.id == held)
+                // Its glide and uncover outside the drag's moves (inside them, a row passed over vanished: build 70).
+                .matched(item.id, in: AB.stillArrange ? nil : glides)
+                .transition(AB.stillArrange ? AnyTransition.identity : .row)
                 .zIndex(item.id == held ? 1 : 0)
             }
         }
