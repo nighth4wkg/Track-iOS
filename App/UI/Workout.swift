@@ -40,9 +40,9 @@ struct WorkoutScreen: View {
                     // As the PWA's moveOn: a set done in a card with more to do shows its next set; the card's last set
                     // hands over to the next card with sets to do (also one opened by hand; the keyboard goes with it)
                     // and the page goes to it, or after the last one up to Finish. Each side counts here: L done shows R.
-                    .onChange(of: active.exercises.map { $0.sets.filter(\.done).count }) { was, now in
-                        guard was.count == now.count, let index = now.indices.first(where: { now[$0] > was[$0] }) else { return }
-                        let card = active.exercises[index]
+                    // By exercise, not place: arranging the cards moved the counts and read as a set done.
+                    .onChange(of: Dictionary(active.exercises.map { ($0.id, $0.sets.filter(\.done).count) }, uniquingKeysWith: { first, _ in first })) { was, now in
+                        guard Set(was.keys) == Set(now.keys), let card = active.exercises.first(where: { (now[$0.id] ?? 0) > (was[$0.id] ?? 0) }) else { return }
                         if let set = card.sets.first(where: { !$0.done }) {
                             if focus == nil { reveal(proxy, set.id, anchor: nil) } // while typing, the keyboard keeps its set in view
                             return
