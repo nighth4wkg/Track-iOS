@@ -19,6 +19,9 @@ public struct TrainingSet: Codable, Equatable, Identifiable, Sendable {
         self.id = id; self.kg = kg; self.reps = reps; self.rir = rir; self.done = done; self.side = side
     }
 
+    // Written out: with both its own decode and encode, Swift makes no CodingKeys.
+    enum CodingKeys: String, CodingKey { case id, kg, reps, rir, done, side }
+
     /// A RIR over the limit (10, before RIR stopped at 9) reads as the limit, as the website reads it.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
