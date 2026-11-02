@@ -124,6 +124,8 @@ struct SetRow: View {
     private func typedInto(_ id: String) {
         if id == "rir" { rirTyped = true }
         pending?.cancel()
+        // A RIR no key can lengthen ("1" may yet be "10") logs the set now: the pause only held up the rest and move-on.
+        if id == "rir", autoLog, let n = Int(rir), n * 10 > Limits.rir { flush(); return }
         pending = Task { try? await Task.sleep(for: Self.typingPause); if !Task.isCancelled { flush() } }
     }
     /// A key typed into a field here: a digit (or, in the weight, the decimal point), or nil for delete. As the

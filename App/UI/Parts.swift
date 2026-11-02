@@ -302,7 +302,8 @@ extension View {
 }
 
 /// Arranging by drag (the PWA's ArrangeRow and Grip): each row on its card with a grip at its end. The held row follows
-/// the finger; the others step aside at once as it crosses them; let go and it moves that many places.
+/// the finger; the others step aside at once as it crosses them; let go and it moves that many places. Held near the
+/// top or bottom of the page, the page scrolls (the PWA's drag does) and the row goes with it.
 struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     let items: [Item]
     let name: (Item) -> String
@@ -317,6 +318,7 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     @State private var steps = 0
     /// One row and the gap under it: a drag's step per place.
     @State private var step = Size.row
+    @State private var edge = EdgeScroll()
 
     var body: some View {
         let from = items.firstIndex { $0.id == held }
@@ -329,13 +331,16 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                         .contentShape(Circle())
                         .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .global)
                             .updating($gripping) { _, state, _ in state = true }
-                            .onChanged {
-                                finger.y = $0.translation.height
-                                let crossed = max(-index, min(items.count - 1 - index, Int((finger.y / step).rounded())))
+                            .onChanged { drag in
                                 if held != item.id { held = item.id }
-                                if crossed != steps { steps = crossed }
+                                edge.drag(at: drag.location.y) { scrolled in
+                                    finger.y = drag.translation.height + scrolled
+                                    let crossed = max(-index, min(items.count - 1 - index, Int((finger.y / step).rounded())))
+                                    if crossed != steps { steps = crossed }
+                                }
                             }
                             .onEnded { value in
+                                edge.stop()
                                 // In its new place, it slides in from where the finger left it.
                                 finger.y -= CGFloat(steps) * step
                                 finger.speed = value.velocity.height
@@ -356,7 +361,8 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
             }
         }
         .sensoryFeedback(.selection, trigger: steps)
-        .onChange(of: gripping) { _, now in BackPan.holding = now }
+        .onChange(of: gripping) { _, now in BackPan.holding = now; if !now { edge.stop() } }
+        .background(ScrollFinder(edge: edge))
     }
 
     /// Those between the held row's place and where it would go stand one place its way.
@@ -371,6 +377,73 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
 extension ArrangeList where End == EmptyView {
     init(items: [Item], name: @escaping (Item) -> String, onMove: @escaping (_ from: Int, _ to: Int) -> Void, @ViewBuilder row: @escaping (Item) -> Content) {
         self.init(items: items, name: name, onMove: onMove, row: row, end: { _ in EmptyView() })
+    }
+}
+
+/// Scrolls the page under a held row while the finger is near its top or bottom edge, every screen refresh, faster
+/// the closer it is.
+final class EdgeScroll: NSObject {
+    /// How near the edge (pt) the page starts to scroll, and its speed (pt/s) right at the edge.
+    static let zone = Size.controlRow
+    static let speed: CGFloat = 900
+    weak var page: UIScrollView?
+    private var link: CADisplayLink?
+    private var y: CGFloat = 0
+    private var startOffset: CGFloat?
+    private var update: (CGFloat) -> Void = { _ in }
+
+    /// The finger at `y` (screen points): `update` gets how far the page has scrolled since the drag began, now and on
+    /// each refresh it scrolls.
+    func drag(at y: CGFloat, update: @escaping (CGFloat) -> Void) {
+        guard let page else { update(0); return }
+        if startOffset == nil { startOffset = page.contentOffset.y }
+        self.y = y
+        self.update = update
+        update(page.contentOffset.y - (startOffset ?? 0))
+        if link == nil {
+            let link = CADisplayLink(target: self, selector: #selector(tick))
+            link.add(to: .main, forMode: .common)
+            self.link = link
+        }
+    }
+
+    func stop() {
+        link?.invalidate()
+        link = nil
+        startOffset = nil
+        update = { _ in }
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        guard let page, let start = startOffset else { return stop() }
+        let shown = page.convert(page.bounds, to: nil)
+        let top = shown.minY + page.adjustedContentInset.top, bottom = shown.maxY - page.adjustedContentInset.bottom
+        let near = y < top + Self.zone ? -(top + Self.zone - y) : y > bottom - Self.zone ? y - (bottom - Self.zone) : 0
+        guard near != 0 else { return }
+        let lowest = -page.adjustedContentInset.top
+        let highest = max(lowest, page.contentSize.height - page.bounds.height + page.adjustedContentInset.bottom)
+        let by = Self.speed * min(1, abs(near) / Self.zone) * (near < 0 ? -1 : 1) * (link.targetTimestamp - link.timestamp)
+        let offset = min(highest, max(lowest, page.contentOffset.y + by))
+        guard offset != page.contentOffset.y else { return }
+        page.contentOffset.y = offset
+        update(offset - start)
+    }
+}
+
+/// Finds the page (the scroll view) a list sits in, for EdgeScroll.
+private struct ScrollFinder: UIViewRepresentable {
+    let edge: EdgeScroll
+    func makeUIView(context: Context) -> Probe { Probe() }
+    func updateUIView(_ view: Probe, context: Context) { view.edge = edge; view.find() }
+
+    final class Probe: UIView {
+        weak var edge: EdgeScroll?
+        override func didMoveToWindow() { super.didMoveToWindow(); find() }
+        func find() {
+            var view = superview
+            while let next = view, !(next is UIScrollView) { view = next.superview }
+            edge?.page = view as? UIScrollView
+        }
     }
 }
 
