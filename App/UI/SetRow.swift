@@ -59,7 +59,7 @@ struct SetRow: View {
                     .frame(maxWidth: .infinity, minHeight: Size.control).raised(.control, .inner)
                     .accessibilityLabel(name)
                 Text(ExerciseCard.lastText(last, unit)).type(.t12).monospacedDigit().foregroundStyle(Palette.muted)
-                    .lineLimit(1).minimumScaleFactor(Shrink.figure)
+                    .lineLimit(1).minimumScaleFactor(AB.plainText ? 1 : Shrink.figure)
                     .accessibilityLabel("Last time \(ExerciseCard.lastText(last, unit))")
                 field(weight, id: "kg", label: "\(unit.rawValue), \(name)", bad: error?.fields.contains("kg") == true)
                 field(reps, id: "reps", label: "Reps, \(name)", bad: error?.fields.contains("reps") == true)
@@ -111,7 +111,7 @@ struct SetRow: View {
     /// A number field on the workout's one keyboard, named for VoiceOver as the PWA's: "Reps, Set 1". Its ring: red
     /// out of range, green while typing in it.
     private func field(_ text: String, id: String, label: String, bad: Bool) -> some View {
-        Text(text).type(.t16).fontWeight(.semibold).monospacedDigit().lineLimit(1).minimumScaleFactor(Shrink.value)
+        Text(text).type(.t16).fontWeight(.semibold).monospacedDigit().lineLimit(1).minimumScaleFactor(AB.plainText ? 1 : Shrink.value)
             .foregroundStyle(Palette.text)
             .frame(maxWidth: .infinity, minHeight: Size.control)
             .sunk(.inner, ring: bad ? Palette.danger : focused == id ? Palette.accent : nil)

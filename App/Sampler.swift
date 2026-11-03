@@ -132,6 +132,12 @@ enum AB {
     static let noGlide = args.contains("-ab-no-glide")
     /// Card open: every card's sets built once and kept, shut, so opening one only uncovers it (it took ~20 ms to build).
     static let builtSets = args.contains("-ab-built-sets")
+    /// Card open, measuring only: a card's sets without their rows (what the rows cost against the rest).
+    static let noRows = args.contains("-ab-no-rows")
+    /// Card open, measuring only: rows without their swipe and hold (a UIKit recognizer each).
+    static let noSwipe = args.contains("-ab-no-swipe")
+    /// Card open, measuring only: a row's numbers without shrinking to fit (each measured at several sizes).
+    static let plainText = args.contains("-ab-plain-text")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in

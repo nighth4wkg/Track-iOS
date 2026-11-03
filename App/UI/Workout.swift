@@ -322,7 +322,7 @@ struct ExerciseCard: View, Equatable {
             .padding(.top, Space.s4)
             .accessibilityHidden(true)
             VStack(spacing: Space.s2) {
-                ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
+                ForEach(AB.noRows ? [] : Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
                     SetRow(exercise: exercise, set: set, label: labels[index], next: index == next, unit: unit, autoLog: autoLog, bests: bests,
                            last: last.flatMap { $0.sets.indices.contains(index) ? $0.sets[index] : nil },
                            focus: focus,

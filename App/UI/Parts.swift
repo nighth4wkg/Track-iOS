@@ -670,7 +670,11 @@ struct SwipeToArm: ViewModifier {
     /// How long a press arms it.
     static let hold = 0.5
 
-    func body(content: Content) -> some View {
+    @ViewBuilder func body(content: Content) -> some View {
+        if AB.noSwipe { content } else { armable(content) }
+    }
+
+    private func armable(_ content: Content) -> some View {
         content
             .contentShape(Rectangle())
             .gesture(SidewaysPan(right: armed) { x, velocity in armed = abs(velocity) > SidewaysPan.flick ? velocity < 0 : x < 0 })
