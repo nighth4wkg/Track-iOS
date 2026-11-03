@@ -21,9 +21,22 @@ struct CardList: UIViewControllerRepresentable {
         controller.show(rows, animated: context.transaction.animation != nil && !Motion.still)
     }
 
+    /// A row's view, read by its cell's SwiftUI piece (-ab-slot-cells): a change goes into the piece already there,
+    /// instead of iOS setting the cell up again (two cards re-set took 35-57 ms of a card open on the iPhone 13).
+    @Observable final class Slot {
+        var view: AnyView
+        init(_ view: AnyView) { self.view = view }
+    }
+
+    private struct Slotted: View {
+        let slot: Slot
+        var body: some View { slot.view }
+    }
+
     final class Controller: UIViewController {
         private let model: AppModel
         private var rows: [String: Row] = [:]
+        private var slots: [String: Slot] = [:]
         private var order: [String] = []
         private let list = UICollectionView(frame: .zero, collectionViewLayout: Controller.layout())
         private var source: UICollectionViewDiffableDataSource<Int, String>?
@@ -46,7 +59,13 @@ struct CardList: UIViewControllerRepresentable {
                 // A growing card is uncovered from its top as its cell grows (the PWA's resize).
                 cell.clipsToBounds = true
                 guard let row = self.rows[id] else { return }
-                cell.contentConfiguration = UIHostingConfiguration { self.content(row) }.margins(.all, 0)
+                if AB.slotCells {
+                    let slot = self.slots[id] ?? Slot(row.view)
+                    self.slots[id] = slot
+                    cell.contentConfiguration = UIHostingConfiguration { self.content(Slotted(slot: slot)) }.margins(.all, 0)
+                } else {
+                    cell.contentConfiguration = UIHostingConfiguration { self.content(row.view) }.margins(.all, 0)
+                }
             }
             source = UICollectionViewDiffableDataSource(collectionView: list) { list, index, id in
                 list.dequeueConfiguredReusableCell(using: cell, for: index, item: id)
@@ -54,8 +73,8 @@ struct CardList: UIViewControllerRepresentable {
         }
 
         /// What Shell gives each screen (its own SwiftUI piece doesn't inherit it).
-        private func content(_ row: Row) -> some View {
-            row.view
+        private func content(_ view: some View) -> some View {
+            view
                 .environment(model)
                 .tint(Palette.accent)
                 .contentTransition(.identity)
@@ -69,16 +88,28 @@ struct CardList: UIViewControllerRepresentable {
             let ids = next.map(\.id)
             rows = Dictionary(next.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
             guard ids != order || !changed.isEmpty else { return }
+            let moved = ids != order
             order = ids
             var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
             snapshot.appendSections([0])
             snapshot.appendItems(ids)
-            snapshot.reconfigureItems(changed)
+            let animate = animated && view.window != nil && !AB.stillList
             let start = CACurrentMediaTime()
-            if animated, view.window != nil, !AB.stillList {
-                UIView.animate(springDuration: Motion.normal, bounce: 0) { source.apply(snapshot, animatingDifferences: true) }
+            let update = { [self] in
+                if AB.slotCells {
+                    slots = slots.filter { rows[$0.key] != nil }
+                    for id in changed { slots[id]?.view = rows[id]!.view }
+                    if moved { source.apply(snapshot, animatingDifferences: animate) }
+                    list.layoutIfNeeded()
+                } else {
+                    snapshot.reconfigureItems(changed)
+                    source.apply(snapshot, animatingDifferences: animate)
+                }
+            }
+            if animate {
+                UIView.animate(springDuration: Motion.normal, bounce: 0, animations: update)
             } else {
-                source.apply(snapshot, animatingDifferences: false)
+                UIView.performWithoutAnimation(update)
             }
             let applied = CACurrentMediaTime()
             list.layoutIfNeeded()
