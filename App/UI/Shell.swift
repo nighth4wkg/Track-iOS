@@ -21,15 +21,29 @@ struct Shell: View {
         ZStack {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 let shown = !covered && model.tab == tab
-                if shown || !AB.dropHidden { TabData(shown: shown, live: model.training) { page(tab) }
-                    .environment(\.shown, shown)
-                    .opacity(shown ? 1 : 0)
+                if AB.sharedTabs {
+                    TabData(shown: shown, live: model.training) { page(tab) }
+                        .environment(\.shown, shown)
+                        .opacity(shown ? 1 : 0)
+                        .allowsHitTesting(shown)
+                        .accessibilityHidden(!shown || behind)
+                } else {
+                    TabHost(shown: shown) {
+                        TabData(shown: shown, live: model.training) { page(tab) }
+                            .environment(\.shown, shown)
+                            .environment(model)
+                            .tint(Palette.accent)
+                            .contentTransition(.identity)
+                            .transaction { $0.disablesAnimations = true }
+                    }
+                    .ignoresSafeArea()
                     .allowsHitTesting(shown)
-                    .accessibilityHidden(!shown || behind) }
+                    .accessibilityHidden(!shown || behind)
+                }
             }
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
-                if shown || !AB.dropHidden { deeper(route)
+                deeper(route)
                     .environment(\.shown, shown)
                     .id(route)
                     .opacity(shown ? 1 : 0)
@@ -37,7 +51,7 @@ struct Shell: View {
                     .accessibilityHidden(!shown || behind)
                     .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
                     .swipeBack(shown) { model.back() }
-                    .transition(.identity) }
+                    .transition(.identity)
             }
             // Screens come and go at once, even in a tap's move (starting or finishing a workout): each shifts in itself (Arrive).
             if model.workoutOpen, model.training.active != nil { WorkoutScreen().transition(.identity) }
@@ -108,6 +122,72 @@ private struct TabData<Content: View>: View {
     var body: some View {
         if shown || kept.training == nil { kept.training = live }
         return content.environment(\.tabTraining, kept.training ?? live)
+    }
+}
+
+/// A tab in its own hosting controller, kept built but taken out of the window while hidden: every update of the app
+/// (a set typed, a toast, a card opened) then skips it, where hidden at opacity 0 in the app's own tree it cost each one
+/// ~10-20 ms (build 81's motion check). Its state stays, so showing it again is as quick as before. Hidden, it gets
+/// `shown` false and settles once (it's ready to come back from the left, at the top) before it leaves the window.
+private struct TabHost<Content: View>: UIViewControllerRepresentable {
+    let shown: Bool
+    @ViewBuilder let content: Content
+
+    func makeUIViewController(context: Context) -> Holder {
+        let holder = Holder(UIHostingController(rootView: content))
+        holder.show(shown)
+        // Built once in the window as the app starts, as all four were before, so the first tap on it isn't the build.
+        if !shown { DispatchQueue.main.async { holder.prebuild() } }
+        return holder
+    }
+
+    func updateUIViewController(_ holder: Holder, context: Context) {
+        // A hidden tab isn't given each new version: TabData keeps the training it last showed anyway.
+        guard shown || holder.shown else { return }
+        holder.host.rootView = content
+        holder.show(shown)
+    }
+
+    final class Holder: UIViewController {
+        let host: UIHostingController<Content>
+        private(set) var shown = false
+
+        init(_ host: UIHostingController<Content>) {
+            self.host = host
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            view.backgroundColor = .clear
+            host.view.backgroundColor = .clear
+            addChild(host)
+            host.didMove(toParent: self)
+        }
+
+        func prebuild() {
+            guard !shown, host.view.superview == nil, view.window != nil else { return }
+            show(true)
+            host.view.layoutIfNeeded()
+            show(false)
+        }
+
+        func show(_ on: Bool) {
+            loadViewIfNeeded()
+            if on, host.view.superview == nil {
+                host.view.frame = view.bounds
+                host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                view.addSubview(host.view)
+            } else if !on, host.view.superview != nil {
+                host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
+                host.view.removeFromSuperview()
+            }
+            // An empty holder over the shown tab mustn't take its touches.
+            view.isUserInteractionEnabled = on
+            shown = on
+        }
     }
 }
 
