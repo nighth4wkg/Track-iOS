@@ -44,6 +44,7 @@ final class MotionCheck {
     private func step(_ name: String, settle: Double = 1, _ change: () -> Void) async {
         await Self.pause(0.3)
         _ = meter.take()
+        Sampler.begin("motion \(name)", for: Self.sampled) // with -probe: where the main thread's time went
         change()
         await Self.pause(settle)
         let late = meter.take()
@@ -55,6 +56,9 @@ final class MotionCheck {
         await step("\(name) opens", open)
         await step("\(name) closes") { if let id = model.sheets.last?.id { model.dismiss(id) } }
     }
+
+    /// The first frames, where the late ones are.
+    private static let sampled = 0.25
 
     private static func pause(_ seconds: Double) async { try? await Task.sleep(for: .seconds(seconds)) }
 
