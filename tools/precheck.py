@@ -1,8 +1,9 @@
 """Checks to run before every push, for what this Windows PC can't compile (SwiftUI):
 1. a top-level type declared twice in one module (the "invalid redeclaration" that failed a whole CI run);
-2. a UI test asking for a label the app can't show (tests written for an older app stop at their first tap).
+2. a UI test asking for a label the app can't show (tests written for an older app stop at their first tap);
+3. Core (no SwiftUI) built and tested with Swift for Windows, so only the app's own errors are left to CI.
 Usage: python tools/precheck.py [UITests/X.swift ...]  (the tests about to run; all of them if none)."""
-import pathlib, re, sys
+import pathlib, re, shutil, subprocess, sys
 
 root = pathlib.Path(__file__).resolve().parent.parent
 problems = []
@@ -35,6 +36,14 @@ for f in tests:
         for label in re.findall(r'\.(?:buttons|staticTexts|textFields)\["([^"\\]+)"\]', line):
             if f'"{label}"' not in data and not any(p.fullmatch(label) for p in patterns):
                 problems.append(f'{f.relative_to(root)}:{n}: "{label}" is not a label the app has')
+
+# 3. Core compiles and its tests pass (swift test builds it first).
+if shutil.which('swift'):
+    run = subprocess.run(['swift', 'test'], cwd=root / 'Core', capture_output=True, text=True, encoding='utf-8', errors='replace')
+    if run.returncode:
+        problems.append('Core: swift test failed\n' + '\n'.join((run.stdout + run.stderr).splitlines()[-30:]))
+else:
+    problems.append('Core: swift not found (Swift for Windows, winget Swift.Toolchain)')
 
 sys.stdout.reconfigure(encoding='utf-8')
 print('\n'.join(problems) or 'precheck OK')

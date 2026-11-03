@@ -44,8 +44,8 @@ targets:
             CFBundleURLSchemes: [track]
         ITSAppUsesNonExemptEncryption: false
         NSSupportsLiveActivities: true
-        # ProMotion: without it iPhone holds an app's own motion and scrolling to 60 Hz (measured: Track peaked at 60 fps
-        # on the iPhone 13 Pro Max), so it moved at half the rate of the keyboard and other apps.
+        # ProMotion: without it iPhone holds an app's own motion and scrolling to 60 Hz (measured on the iPhone 13 Pro Max:
+        # late frames came in 16.7 ms steps, 8 ms with it), half the rate of the keyboard and other apps.
         CADisableMinimumFrameDurationOnPhone: true
     settings:
       base:
