@@ -11,6 +11,8 @@ import os
 /// "touch 12 up at 196,801: ready 3 ms, frame 8 ms, first change 3 ms, last change 3 ms, changed [CALayer x2], longest
 /// gap 8 ms, check 0.4 ms". "changed" names the views whose own layer changed (what keeps redrawing).
 /// Without the argument nothing here runs. (A copy of the screen per refresh cost 50–90 ms: it was the delay itself.)
+/// -touchMark instead: each touch only marked ("touch 3 down at 196,801 mark"), with no layer checks (~30 ms a tap), so a
+/// frame test can leave out the late frames before it: the test's own tap readying (~90–170 ms, measured).
 @MainActor final class TouchLog: NSObject, UIGestureRecognizerDelegate {
     private static var shared: TouchLog?
     private let logger = Logger(subsystem: "Track", category: "touch")
@@ -27,9 +29,11 @@ import os
     private var own: [ObjectIdentifier: Int] = [:], diff: [String: Int] = [:]
     /// How long a touch is watched for a later change.
     private static let window: CFTimeInterval = 0.6
+    private static let marksOnly = !ProcessInfo.processInfo.arguments.contains("-touchLog")
 
     static func install() {
-        guard shared == nil, ProcessInfo.processInfo.arguments.contains("-touchLog"),
+        let args = ProcessInfo.processInfo.arguments
+        guard shared == nil, args.contains("-touchLog") || args.contains("-touchMark"),
               let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
         let log = TouchLog()
         log.scene = scene
@@ -71,6 +75,7 @@ import os
     }
 
     private func start(_ name: String, _ at: CFTimeInterval) {
+        if Self.marksOnly { count += 1; logger.log("touch \(self.count) \(name, privacy: .public) mark"); return }
         if watching != nil { finish() }
         count += 1
         watching = Watch(name: "touch \(count) \(name)", at: at, before: layers(), ready: nil, frame: nil, first: nil, change: nil, lastTick: CACurrentMediaTime())
