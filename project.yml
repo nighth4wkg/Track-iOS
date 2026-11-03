@@ -13,7 +13,7 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.19.5"
-    CURRENT_PROJECT_VERSION: "75"
+    CURRENT_PROJECT_VERSION: "76"
 targets:
   Track:
     type: application
@@ -44,6 +44,9 @@ targets:
             CFBundleURLSchemes: [track]
         ITSAppUsesNonExemptEncryption: false
         NSSupportsLiveActivities: true
+        # ProMotion: without it iPhone holds an app's own motion and scrolling to 60 Hz (measured: Track peaked at 60 fps
+        # on the iPhone 13 Pro Max), so it moved at half the rate of the keyboard and other apps.
+        CADisableMinimumFrameDurationOnPhone: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nighth4wkg.track
