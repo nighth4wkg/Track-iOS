@@ -158,6 +158,7 @@ enum AB {
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
     static let stillRest = args.contains("-still-rest")
+    static let stillTap = args.contains("-still-tap")         // a tap's change (Motion.tap): cards, rows, arranging
 }
 
 extension View {

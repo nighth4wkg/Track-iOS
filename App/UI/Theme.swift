@@ -143,7 +143,7 @@ enum Motion {
     /// A finger's own move (an arranged row let go, typing) changes without it.
     /// Callable from the model (not main-actor isolated), whose changes all run on the main thread.
     static func tap(_ change: () -> Void) {
-        MainActor.assumeIsolated { if still { change() } else { withAnimation(move, change) } }
+        MainActor.assumeIsolated { if still || AB.stillTap { change() } else { withAnimation(move, change) } }
     }
 }
 
