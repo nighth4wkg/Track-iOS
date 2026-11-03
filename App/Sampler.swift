@@ -86,7 +86,12 @@ final class Sampler: Thread, @unchecked Sendable {
         var result = ("?", "?")
         if dladdr(UnsafeRawPointer(bitPattern: address - 1), &info) != 0 {
             let image = info.dli_fname.map { String(cString: $0).split(separator: "/").last.map(String.init) ?? "?" } ?? "?"
-            result = (image, info.dli_sname.map { demangle(String(cString: $0)) } ?? "?")
+            // System names are hidden on the phone: the function's place in its library instead, named later from the
+            // phone's own symbols (pymobiledevice3 developer fetch-symbols).
+            let symbol = info.dli_sname.map { String(cString: $0) }
+            let start = UInt(bitPattern: info.dli_saddr ?? UnsafeMutableRawPointer(bitPattern: address - 1))
+            let base = UInt(bitPattern: info.dli_fbase)
+            result = (image, symbol == nil || symbol == "<redacted>" ? "+0x" + String(start &- base, radix: 16) : demangle(symbol!))
         }
         names[address] = result
         return result
