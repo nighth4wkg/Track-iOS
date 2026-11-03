@@ -226,9 +226,22 @@ class PressControl: UIControl {
 
     @objc private func fire() { action() }
 
-    /// Lifted outside its frame but inside where it's shown: it moved under the finger mid-move.
+    /// Where the touch went down, on the screen (a tap's drift is measured there, not on a control that moves).
+    private var downAt: CGPoint?
+    /// How far a finger may drift and still tap.
+    private static let drift = Size.control / 2
+
+    override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        downAt = touch.location(in: nil)
+        return super.beginTracking(touch, with: event)
+    }
+
+    /// Lifted outside its frame but inside where it's shown, without the finger drifting: it moved under a still
+    /// finger mid-move. (Cancelled touches, a scroll taking over, don't come here.)
     @objc private func lifted(_ control: UIControl, _ event: UIEvent) {
-        guard let touch = event.allTouches?.first, bounds.contains(onScreen(touch.location(in: self))) else { return }
+        guard let touch = event.allTouches?.first, let downAt else { return }
+        let at = touch.location(in: nil)
+        guard hypot(at.x - downAt.x, at.y - downAt.y) <= Self.drift, bounds.contains(onScreen(touch.location(in: self))) else { return }
         action()
     }
 
@@ -321,7 +334,7 @@ enum Moves {
     /// The app's move (Motion.move) in UIKit. What's moving still takes touches, as in SwiftUI (UIKit's default
     /// ignores them until it settles, so a quick next tap was lost).
     @MainActor static func spring(_ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
-        UIView.animate(springDuration: Motion.normal, bounce: 0, options: .allowUserInteraction, animations: change, completion: completion)
+        UIView.animate(springDuration: Motion.normal, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState], animations: change, completion: completion)
     }
 
     /// The pop (Pop): swells from Pop.from past full size and settles, fading in over its first part.

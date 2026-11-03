@@ -50,6 +50,9 @@ struct CardList: UIViewControllerRepresentable {
         private var heights: [String: CGFloat] = [:]
         private var tops: [String: CGFloat] = [:]
         private var width: CGFloat = 0
+        /// On screen and laid out: before that the scroll view's size is provisional (SwiftUI sizes the page in
+        /// passes), so which cards are in sight isn't known.
+        private var appeared = false
         /// Measures the cards not made yet.
         private lazy var sizer = CardView()
 
@@ -71,12 +74,24 @@ struct CardList: UIViewControllerRepresentable {
             view.addSubview(scroll)
         }
 
+        override func viewIsAppearing(_ animated: Bool) {
+            super.viewIsAppearing(animated)
+            appeared = true
+            view.setNeedsLayout()
+        }
+
         override func viewDidLayoutSubviews() {
             super.viewDidLayoutSubviews()
-            guard scroll.bounds.width != width else { return }
-            width = scroll.bounds.width
-            for id in order { measure(id) }
-            UIView.performWithoutAnimation { place() }
+            if scroll.bounds.width != width {
+                width = scroll.bounds.width
+                for id in order { measure(id) }
+                UIView.performWithoutAnimation { place() }
+            }
+            let before = cards.count
+            UIView.performWithoutAnimation { makeInSight() }
+            if cards.count != before {
+                Sampler.note("cardlist in sight \(scroll.bounds.debugDescription) of \(Int(scroll.contentSize.height)): \(cards.count) made")
+            }
         }
 
         func show(_ next: [Row], animated: Bool) {
@@ -191,13 +206,13 @@ struct CardList: UIViewControllerRepresentable {
         }
 
         private func inSight(_ id: String) -> Bool {
-            guard rows[id]?.card != nil, let top = tops[id] else { return false }
+            guard appeared, view.window != nil, rows[id]?.card != nil, let top = tops[id] else { return false }
             return CGRect(x: 0, y: top, width: width, height: heights[id] ?? 0).intersects(scroll.bounds)
         }
 
-        func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            for id in order where cards[id] == nil && inSight(id) { build(id) }
-        }
+        private func makeInSight() { for id in order where cards[id] == nil && inSight(id) { build(id) } }
+
+        func scrollViewDidScroll(_ scrollView: UIScrollView) { makeInSight() }
 
         /// A removed row closes up and clears as what's under it comes up, then goes.
         private func leave(_ id: String) {
