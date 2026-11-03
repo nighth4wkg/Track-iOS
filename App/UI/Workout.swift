@@ -28,7 +28,15 @@ struct WorkoutScreen: View {
             let splitId = active.splitId
             let previous: Session? = model.derived("previous \(splitId)") { _ in model.training.latestSession(of: splitId) }
             ScrollViewReader { proxy in
-                ScrollView { content(active, expanded: expanded, current: current, previous: previous).arrives(forward: true) }
+                Group {
+                    if AB.uikitList && !arranging {
+                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model)
+                            .arrives(forward: true)
+                            .feedback(active)
+                    } else {
+                        ScrollView { content(active, expanded: expanded, current: current, previous: previous).arrives(forward: true) }
+                    }
+                }
                     .scrollDismissesKeyboard(.interactively)
                     .setKeyboard($focus)
                     .background(Backdrop())
@@ -116,9 +124,33 @@ struct WorkoutScreen: View {
         // The top with its padding: on the header, going up to Finish stopped 16 short of the page's top.
         .id(Self.top)
         .frame(maxWidth: Size.column).frame(maxWidth: .infinity)
-        .sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
-        // A set done (or undone), each side of a pair too: here, since the last set's row goes with its card.
-        .sensoryFeedback(trigger: active.exercises.reduce(0) { $0 + $1.sets.filter(\.done).count }) { was, now in now > was ? .impact(weight: .medium) : .selection }
+        .feedback(active)
+    }
+
+    /// The page as CardList's rows: the header and bar, each card, Add exercise; spaced as `content` spaces them, each
+    /// row keeping its own share of the gap (a card's shadow stays inside its row, whose edge uncovers it as it grows).
+    private func rows(_ active: Session, expanded: String?, current: String?, previous: Session?) -> [CardList.Row] {
+        let done = active.exercises.doneCount, planned = active.exercises.plannedCount
+        let unit = model.training.settings.unit
+        let heading = VStack(alignment: .leading, spacing: 0) {
+            header(active, done: done, planned: planned)
+            Bar(value: Double(done) / Double(max(1, planned)))
+                .padding(.top, Space.s3)
+                .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
+        }
+        var rows = [CardList.Row(id: Self.top, value: "\(active.name) \(done) \(planned)", view: column(heading, Space.s4, Space.s4 - Space.s1))]
+        for (index, exercise) in active.exercises.enumerated() {
+            let card = card(index, exercise, active, expanded: expanded, current: current, previous: previous, unit: unit)
+            rows.append(CardList.Row(id: exercise.id, value: card, view: column(card.equatable(), Space.s1, Space.s3 - Space.s1)))
+        }
+        rows.append(CardList.Row(id: "add", value: 0, view: column(addExercise, Space.s1, Space.s6)))
+        return rows
+    }
+
+    /// A CardList row in the page's column, with its share of the gaps above and below.
+    private func column(_ view: some View, _ top: CGFloat, _ bottom: CGFloat) -> AnyView {
+        AnyView(view.padding(.top, top).padding(.bottom, bottom).padding(.horizontal, Space.s4)
+            .frame(maxWidth: Size.column).frame(maxWidth: .infinity))
     }
 
     private func arrangeList(_ active: Session, current: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
@@ -147,19 +179,23 @@ struct WorkoutScreen: View {
         }
     }
 
-    @ViewBuilder private func cardList(_ active: Session, expanded: String?, current: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
+    private func card(_ index: Int, _ exercise: Exercise, _ active: Session, expanded: String?, current: String?, previous: Session?,
+                      unit: TrackCore.Settings.Unit) -> ExerciseCard {
         let settings = model.training.settings
-        let bests = model.bests
+        let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
+        let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
+        return ExerciseCard(exercise: exercise, number: index + 1, current: current == exercise.id, open: expanded == exercise.id, unit: unit,
+                            autoLog: settings.logSets != .manual, bests: model.bests,
+                            last: previous?.match(exercise),
+                            restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
+                            onOpen: { Motion.tap { opened = exercise.id } },
+                            onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) },
+                            onArrange: active.exercises.count < 2 ? nil : { focus = nil; Motion.tap { opened = nil; arranging = true } })
+    }
+
+    @ViewBuilder private func cardList(_ active: Session, expanded: String?, current: String?, previous: Session?, unit: TrackCore.Settings.Unit) -> some View {
         ForEach(Array(active.exercises.enumerated()), id: \.element.id) { index, exercise in
-            let muscle = muscleLabel(LiftTable.muscles(for: exercise.name, choices: settings.lifts ?? [:]))
-            let here: String? = focus.flatMap { id in exercise.sets.contains { id.hasPrefix($0.id) } ? id : nil }
-            ExerciseCard(exercise: exercise, number: index + 1, current: current == exercise.id, open: expanded == exercise.id, unit: unit,
-                         autoLog: settings.logSets != .manual, bests: bests,
-                         last: previous?.match(exercise),
-                         restSeconds: settings.restSeconds, muscle: muscle, focus: $focus, focusHere: here,
-                         onOpen: { Motion.tap { opened = exercise.id } },
-                         onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) },
-                         onArrange: active.exercises.count < 2 ? nil : { focus = nil; Motion.tap { opened = nil; arranging = true } })
+            card(index, exercise, active, expanded: expanded, current: current, previous: previous, unit: unit)
                 .equatable()
                 // A card moving as another opens or closes moves as one piece: without it every text and surface in
                 // it got its own animated frame, each frame, on every card below the one that changed.
@@ -168,6 +204,10 @@ struct WorkoutScreen: View {
                 .matched(exercise.id, in: AB.noGlide ? nil : rows)
                 .transition(.row)
         }
+        addExercise
+    }
+
+    private var addExercise: some View {
         Button {
             focus = nil
             model.present(ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }, tall: true)
@@ -229,6 +269,14 @@ struct WorkoutScreen: View {
         .raised(.float, .pill)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .padding(.horizontal, Space.s4).padding(.bottom, Space.s2)
+    }
+}
+
+private extension View {
+    /// The workout's haptics: an exercise added, removed or arranged; a set done (or undone), each side of a pair too.
+    func feedback(_ active: Session) -> some View {
+        sensoryFeedback(.selection, trigger: active.exercises.map(\.id))
+            .sensoryFeedback(trigger: active.exercises.reduce(0) { $0 + $1.sets.filter(\.done).count }) { was, now in now > was ? .impact(weight: .medium) : .selection }
     }
 }
 

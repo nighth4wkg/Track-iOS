@@ -159,6 +159,8 @@ enum AB {
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
     static let stillRest = args.contains("-still-rest")
     static let stillTap = args.contains("-still-tap")         // a tap's change (Motion.tap): cards, rows, arranging
+    /// The workout's page as a UIKit list, each row its own SwiftUI piece (CardList).
+    static let uikitList = args.contains("-ab-uikit-list")
 }
 
 extension View {
