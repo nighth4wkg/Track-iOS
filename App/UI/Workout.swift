@@ -221,10 +221,10 @@ struct WorkoutScreen: View {
         .buttonStyle(SecondaryStyle())
     }
 
-    /// ⌄, the name over the time and sets (it opens the options), Finish (Done while arranging).
+    /// ‹, the name over the time and sets (it opens the options), Finish (Done while arranging).
     private func header(_ active: Session, done: Int, planned: Int) -> some View {
         HStack(spacing: Space.s3) {
-            RoundButton(icon: .down, label: "Keep for later") { model.workoutOpen = false }
+            RoundButton(icon: .back, label: "Keep for later") { model.workoutOpen = false }
                 .accessibilityHint("Keeps the workout going for later").accessibilityIdentifier("keep-for-later")
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button {
