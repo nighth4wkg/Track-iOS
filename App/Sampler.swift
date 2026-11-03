@@ -35,6 +35,13 @@ final class Sampler: Thread, @unchecked Sendable {
 
     private init(target: thread_act_t) { self.target = target }
 
+    /// A measured line in the probe log (nothing without -probe).
+    static func note(_ text: @autoclosure () -> String) {
+        guard let s = shared else { return }
+        let line = text()
+        s.log.log("probe note \(line, privacy: .public)")
+    }
+
     static func begin(_ name: String, for seconds: CFTimeInterval) {
         guard let s = shared else { return }
         s.lock.lock(); s.window = (name, CACurrentMediaTime() + seconds); s.lock.unlock()
@@ -120,7 +127,7 @@ final class Sampler: Thread, @unchecked Sendable {
         log.log("probe \(action, privacy: .public): \(named.count) busy samples, \(self.idle) idle")
         for (k, v) in top(images, 6) { log.log("probe \(action, privacy: .public) self \(v) \(k, privacy: .public)") }
         for (k, v) in top(leaves, 20) { log.log("probe \(action, privacy: .public) leaf \(v) \(String(k.prefix(200)), privacy: .public)") }
-        for (k, v) in top(frames, 25) { log.log("probe \(action, privacy: .public) incl \(v) \(String(k.prefix(200)), privacy: .public)") }
+        for (k, v) in top(frames, 80) { log.log("probe \(action, privacy: .public) incl \(v) \(String(k.prefix(200)), privacy: .public)") }
         for (k, v) in top(ours, 15) { log.log("probe \(action, privacy: .public) ours \(v) \(String(k.prefix(200)), privacy: .public)") }
     }
 }
@@ -161,6 +168,8 @@ enum AB {
     static let stillTap = args.contains("-still-tap")         // a tap's change (Motion.tap): cards, rows, arranging
     /// The workout's page as a UIKit list, each row its own SwiftUI piece (CardList).
     static let uikitList = args.contains("-ab-uikit-list")
+    /// That list's changes shown at once, without iOS animating the heights (what the animation costs there).
+    static let stillList = args.contains("-ab-still-list")
 }
 
 extension View {

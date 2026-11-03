@@ -74,9 +74,18 @@ struct CardList: UIViewControllerRepresentable {
             snapshot.appendSections([0])
             snapshot.appendItems(ids)
             snapshot.reconfigureItems(changed)
-            guard animated, view.window != nil else { source.apply(snapshot, animatingDifferences: false); return }
-            UIView.animate(springDuration: Motion.normal, bounce: 0) { source.apply(snapshot, animatingDifferences: true) }
+            let start = CACurrentMediaTime()
+            if animated, view.window != nil, !AB.stillList {
+                UIView.animate(springDuration: Motion.normal, bounce: 0) { source.apply(snapshot, animatingDifferences: true) }
+            } else {
+                source.apply(snapshot, animatingDifferences: false)
+            }
+            let applied = CACurrentMediaTime()
+            list.layoutIfNeeded()
+            Sampler.note("cardlist \(changed.count) changed: apply \(Self.ms(applied - start)) ms, layout \(Self.ms(CACurrentMediaTime() - applied)) ms")
         }
+
+        private static func ms(_ seconds: CFTimeInterval) -> Int { Int((seconds * 1000).rounded()) }
 
         private static func same(_ a: any Equatable, _ b: any Equatable) -> Bool {
             func check<T: Equatable>(_ a: T) -> Bool { (b as? T) == a }
