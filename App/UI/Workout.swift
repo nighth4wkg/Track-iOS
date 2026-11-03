@@ -161,6 +161,9 @@ struct WorkoutScreen: View {
                          onOptions: { focus = nil; model.present(ExerciseOptions(exerciseId: exercise.id)) },
                          onArrange: active.exercises.count < 2 ? nil : { focus = nil; Motion.tap { opened = nil; arranging = true } })
                 .equatable()
+                // A card moving as another opens or closes moves as one piece: without it every text and surface in
+                // it got its own animated frame, each frame, on every card below the one that changed.
+                .geometryGroup(when: !AB.noGeometryGroup)
                 .id(exercise.id)
                 .matched(exercise.id, in: AB.noGlide ? nil : rows)
                 .transition(.row)

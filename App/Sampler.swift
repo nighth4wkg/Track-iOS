@@ -140,8 +140,17 @@ enum AB {
     static let plainText = args.contains("-ab-plain-text")
     /// The four tabs back in the app's own view tree (before build 83), to measure what keeping them there costs.
     static let sharedTabs = args.contains("-ab-shared-tabs")
+    /// Cards without .geometryGroup() (before build 84), to measure what it saves.
+    static let noGeometryGroup = args.contains("-ab-no-geometry-group")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
     static let stillRest = args.contains("-still-rest")
+}
+
+extension View {
+    /// .geometryGroup(), unless an AB switch measures without it.
+    @ViewBuilder func geometryGroup(when on: Bool) -> some View {
+        if on { geometryGroup() } else { self }
+    }
 }
