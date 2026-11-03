@@ -37,16 +37,21 @@ struct CardList: UIViewControllerRepresentable {
 
     /// -ab-own-list: the page as one scroll view that places every row itself, so a card that opens updates itself
     /// and the rows move to where it says, in one animation (the collection view's own re-measuring took ~11 ms of a
-    /// card open). Every card is kept; the heading and Add exercise are SwiftUI pieces measured when they change.
+    /// card open). A card is made as it comes into sight, the rest one an idle turn after (making all 24 took ~45 ms
+    /// of Continue workout), and kept; until then a sizer gives its height. The heading and Add exercise are SwiftUI
+    /// pieces measured when they change.
     final class Placed: UIViewController, CardListShowing, UIScrollViewDelegate {
         private let model: AppModel
-        private let scroll = UIScrollView()
+        private let scroll = Scroll()
         private var order: [String] = []
         private var rows: [String: Row] = [:]
         private var cards: [String: CardView] = [:]
         private var hosts: [String: UIHostingController<AnyView>] = [:]
         private var heights: [String: CGFloat] = [:]
+        private var tops: [String: CGFloat] = [:]
         private var width: CGFloat = 0
+        /// Measures the cards not made yet.
+        private lazy var sizer = CardView()
 
         init(model: AppModel) {
             self.model = model
@@ -96,20 +101,14 @@ struct CardList: UIViewControllerRepresentable {
                 for id in gone { leave(id) }
                 place()
             }
-            if animate { UIView.animate(springDuration: Motion.normal, bounce: 0, animations: change) } else { UIView.performWithoutAnimation(change) }
-            Sampler.note("cardlist placed \(changed.count) changed: \(CardList.ms(CACurrentMediaTime() - start)) ms")
-            if AB.prebuiltSets { prebuildSoon() }
+            if animate { Moves.spring(change) } else { UIView.performWithoutAnimation(change) }
+            Sampler.note("cardlist placed \(changed.count) changed (\(cards.count) made): \(CardList.ms(CACurrentMediaTime() - start)) ms")
+            prebuildSoon()
         }
 
         private func make(_ id: String) {
             guard let row = rows[id] else { return }
-            if let card = row.card {
-                let view = CardView()
-                view.onResize = { [weak self] in self?.resized(id) }
-                view.update(card, model: model)
-                cards[id] = view
-                scroll.addSubview(view)
-            } else {
+            if row.card == nil {
                 let host = UIHostingController(rootView: AnyView(content(row.view)))
                 host.view.backgroundColor = .clear
                 host.safeAreaRegions = []
@@ -119,6 +118,21 @@ struct CardList: UIViewControllerRepresentable {
                 hosts[id] = host
             }
             measure(id)
+        }
+
+        /// A card's views, where it was (`top`) or is, so it moves in with the rest.
+        @discardableResult private func build(_ id: String, at top: CGFloat? = nil) -> CardView? {
+            if let built = cards[id] { return built }
+            guard let card = rows[id]?.card else { return nil }
+            let view = CardView()
+            view.onResize = { [weak self] in self?.resized(id) }
+            UIView.performWithoutAnimation {
+                view.update(card, model: model)
+                if let top = top ?? tops[id] { view.frame = CGRect(x: x, y: top + Space.s1, width: inner, height: (heights[id] ?? 0) - Space.s3) }
+            }
+            cards[id] = view
+            scroll.addSubview(view)
+            return view
         }
 
         private func refresh(_ id: String) {
@@ -138,33 +152,51 @@ struct CardList: UIViewControllerRepresentable {
         /// A row's height at the page's width (a card's with its share of the gaps, as CardCell's).
         private func measure(_ id: String) {
             guard width > 0 else { return }
-            if let card = cards[id] {
-                heights[id] = Space.s1 + card.height(for: inner).pixelUp(view.scale) + Space.s3 - Space.s1
+            if let card = rows[id]?.card {
+                // An open card is always made (it has what it opens to measure).
+                let shown: CardView
+                if let made = cards[id] ?? (card.open ? build(id) : nil) {
+                    shown = made
+                } else {
+                    UIView.performWithoutAnimation { sizer.update(card, model: model) }
+                    shown = sizer
+                }
+                heights[id] = Space.s1 + shown.height(for: inner).pixelUp(view.scale) + Space.s3 - Space.s1
             } else if let host = hosts[id] {
                 heights[id] = host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height
             }
         }
 
         private var inner: CGFloat { min(width, Size.column) - Space.s4 * 2 }
+        private var x: CGFloat { (width - min(width, Size.column)) / 2 + Space.s4 }
 
         /// Every row where it goes (`only` these, `shut`: closed up at the top of their place).
         private func place(only: Set<String>? = nil, shut: Bool = false) {
+            let was = tops
             var y: CGFloat = 0
-            let x = (width - min(width, Size.column)) / 2 + Space.s4
-            for id in order {
-                let height = heights[id] ?? 0
-                if only?.contains(id) ?? true {
-                    if let card = cards[id] {
-                        card.frame = CGRect(x: x, y: y + Space.s1, width: inner, height: shut ? 0 : height - Space.s3)
-                        card.alpha = shut ? 0 : 1
-                    } else if let host = hosts[id] {
-                        host.view.frame = CGRect(x: 0, y: y, width: width, height: shut ? 0 : height)
-                        host.view.alpha = shut ? 0 : 1
-                    }
-                }
-                y += height
-            }
+            for id in order { tops[id] = y; y += heights[id] ?? 0 }
             if only == nil { scroll.contentSize = CGSize(width: width, height: y) }
+            // Cards coming into sight are made where they were, so they move in with the rest.
+            for id in order where cards[id] == nil && only?.contains(id) ?? true && inSight(id) { build(id, at: was[id]) }
+            for id in order where only?.contains(id) ?? true {
+                let height = heights[id] ?? 0, top = tops[id] ?? 0
+                if let card = cards[id] {
+                    card.frame = CGRect(x: x, y: top + Space.s1, width: inner, height: shut ? 0 : height - Space.s3)
+                    card.alpha = shut ? 0 : 1
+                } else if let host = hosts[id] {
+                    host.view.frame = CGRect(x: 0, y: top, width: width, height: shut ? 0 : height)
+                    host.view.alpha = shut ? 0 : 1
+                }
+            }
+        }
+
+        private func inSight(_ id: String) -> Bool {
+            guard rows[id]?.card != nil, let top = tops[id] else { return false }
+            return CGRect(x: 0, y: top, width: width, height: heights[id] ?? 0).intersects(scroll.bounds)
+        }
+
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            for id in order where cards[id] == nil && inSight(id) { build(id) }
         }
 
         /// A removed row closes up and clears as what's under it comes up, then goes.
@@ -173,6 +205,7 @@ struct CardList: UIViewControllerRepresentable {
             let view: UIView? = card ?? hosts[id]?.view
             card?.flush()
             heights[id] = nil
+            tops[id] = nil
             guard let view else { return }
             let host = hosts.removeValue(forKey: id)
             var frame = view.frame
@@ -194,29 +227,58 @@ struct CardList: UIViewControllerRepresentable {
         /// A card's height changed by itself (typing showed an error or a new best).
         private func resized(_ id: String) {
             measure(id)
-            UIView.animate(springDuration: Motion.normal, bounce: 0) { self.place() }
+            Moves.spring { self.place() }
         }
 
-        /// -ab-prebuilt-sets: once a move has settled, the cards in sight build what they open, one a run-loop turn,
-        /// while the page isn't scrolling.
+        /// Once a move has settled, one thing an idle turn while the page isn't scrolling: the cards not made yet,
+        /// nearest first, then (-ab-prebuilt-sets) what the cards near sight open.
         private func prebuildSoon() {
+            settled = CACurrentMediaTime() + Motion.normal
+            guard !preparing else { return }
+            preparing = true
             DispatchQueue.main.asyncAfter(deadline: .now() + Motion.normal) { [weak self] in self?.prebuild() }
         }
 
+        /// When the last move settles, and whether idle work is under way (one chain, however many moves).
+        private var settled: CFTimeInterval = 0
+        private var preparing = false
+
         private func prebuild() {
-            guard !scroll.isTracking, !scroll.isDecelerating else { prebuildSoon(); return }
-            let near = scroll.bounds.insetBy(dx: 0, dy: -scroll.bounds.height)
-            guard let id = order.first(where: { cards[$0].map { $0.needsSets && $0.frame.intersects(near) } ?? false }),
-                  let card = cards[id] else { return }
+            let wait = settled - CACurrentMediaTime()
+            guard wait <= 0, !scroll.isTracking, !scroll.isDecelerating else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + max(wait, Motion.normal)) { [weak self] in self?.prebuild() }
+                return
+            }
             let start = CACurrentMediaTime()
-            card.buildSets()
-            Sampler.note("cardlist prebuilt a card's sets: \(CardList.ms(CACurrentMediaTime() - start)) ms")
+            let away = { [self] (id: String) in abs((tops[id] ?? 0) - scroll.bounds.midY) }
+            let near = scroll.bounds.insetBy(dx: 0, dy: -scroll.bounds.height)
+            if let id = order.filter({ rows[$0]?.card != nil && cards[$0] == nil }).min(by: { away($0) < away($1) }) {
+                build(id)
+                Sampler.note("cardlist made a card ahead: \(CardList.ms(CACurrentMediaTime() - start)) ms")
+            } else if AB.prebuiltSets, let card = order.lazy.compactMap({ self.cards[$0] }).first(where: { $0.needsSets && $0.frame.intersects(near) }) {
+                card.buildSets()
+                Sampler.note("cardlist prebuilt a card's sets: \(CardList.ms(CACurrentMediaTime() - start)) ms")
+            } else {
+                preparing = false
+                return
+            }
             DispatchQueue.main.async { [weak self] in self?.prebuild() }
         }
 
-        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { if AB.prebuiltSets { prebuildSoon() } }
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { prebuildSoon() }
         func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-            if AB.prebuiltSets, !decelerate { prebuildSoon() }
+            if !decelerate { prebuildSoon() }
+        }
+
+        /// A touch goes to the row shown under the finger: mid-move a row's frame is already where it's going.
+        private final class Scroll: UIScrollView {
+            override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+                guard isUserInteractionEnabled, !isHidden, alpha > 0, self.point(inside: point, with: event) else { return nil }
+                for row in subviews.reversed() {
+                    if let hit = row.hitTest(row.onScreen(convert(point, to: row)), with: event) { return hit }
+                }
+                return self
+            }
         }
     }
 
@@ -286,7 +348,7 @@ struct CardList: UIViewControllerRepresentable {
             snapshot.reconfigureItems(changed)
             let start = CACurrentMediaTime()
             if animate {
-                UIView.animate(springDuration: Motion.normal, bounce: 0) { source.apply(snapshot, animatingDifferences: true) }
+                Moves.spring { source.apply(snapshot, animatingDifferences: true) }
             } else {
                 UIView.performWithoutAnimation { source.apply(snapshot, animatingDifferences: false) }
             }
@@ -310,7 +372,7 @@ struct CardList: UIViewControllerRepresentable {
                 }
                 list.layoutIfNeeded()
             }
-            if animate { UIView.animate(springDuration: Motion.normal, bounce: 0, animations: change) } else { UIView.performWithoutAnimation(change) }
+            if animate { Moves.spring(change) } else { UIView.performWithoutAnimation(change) }
             if !hidden.isEmpty {
                 var snapshot = source.snapshot()
                 snapshot.reconfigureItems(hidden)

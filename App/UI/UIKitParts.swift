@@ -97,6 +97,12 @@ final class Words: UILabel {
 extension UIView {
     /// The screen's pixels a point (a view not yet on screen has none of its own).
     var scale: CGFloat { max(traitCollection.displayScale, UITraitCollection.current.displayScale, 1) }
+
+    /// A point in this view's space moved to where the view is shown now (mid-move its frame is where it's going).
+    func onScreen(_ point: CGPoint) -> CGPoint {
+        guard let shown = layer.presentation(), let root = window?.layer else { return point }
+        return shown.convert(layer.convert(point, to: root), from: nil)
+    }
 }
 
 extension CGFloat {
@@ -213,11 +219,18 @@ class PressControl: UIControl {
     override init(frame: CGRect) {
         super.init(frame: frame)
         addTarget(self, action: #selector(fire), for: .touchUpInside)
+        addTarget(self, action: #selector(lifted), for: .touchUpOutside)
     }
 
     required init?(coder: NSCoder) { nil }
 
     @objc private func fire() { action() }
+
+    /// Lifted outside its frame but inside where it's shown: it moved under the finger mid-move.
+    @objc private func lifted(_ control: UIControl, _ event: UIEvent) {
+        guard let touch = event.allTouches?.first, bounds.contains(onScreen(touch.location(in: self))) else { return }
+        action()
+    }
 
     override var isHighlighted: Bool {
         didSet {
@@ -302,7 +315,13 @@ final class Arming: NSObject, UIGestureRecognizerDelegate {
 enum Moves {
     /// A part's change as SwipeToArm's motion: cross-faded on iOS's curve (at once with Reduce Motion).
     @MainActor static func swap(_ change: @escaping () -> Void) {
-        if Motion.still { change() } else { UIView.animate(springDuration: Motion.normal, bounce: 0, animations: change) }
+        if Motion.still { change() } else { spring(change) }
+    }
+
+    /// The app's move (Motion.move) in UIKit. What's moving still takes touches, as in SwiftUI (UIKit's default
+    /// ignores them until it settles, so a quick next tap was lost).
+    @MainActor static func spring(_ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
+        UIView.animate(springDuration: Motion.normal, bounce: 0, options: .allowUserInteraction, animations: change, completion: completion)
     }
 
     /// The pop (Pop): swells from Pop.from past full size and settles, fading in over its first part.

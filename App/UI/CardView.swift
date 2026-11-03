@@ -273,7 +273,7 @@ private final class SetsView: UIView {
     private func gone(_ row: SetRowView) {
         row.flush()
         guard UIView.inheritedAnimationDuration > 0 else { row.removeFromSuperview(); return }
-        UIView.animate(springDuration: Motion.normal, bounce: 0, animations: { row.alpha = 0 }, completion: { _ in row.removeFromSuperview() })
+        Moves.spring({ row.alpha = 0 }, completion: { _ in row.removeFromSuperview() })
     }
 
     func flush() { rows.values.forEach { $0.flush() } }
@@ -462,7 +462,7 @@ final class SetRowView: UIView {
             checkIcon.tintColor = armed ? .danger : shown.done ? .onGreen : .muted
         }
         if armed != wasArmed, !Motion.still {
-            UIView.transition(with: checkIcon, duration: Motion.normal, options: .transitionCrossDissolve, animations: icon)
+            UIView.transition(with: checkIcon, duration: Motion.normal, options: [.transitionCrossDissolve, .allowUserInteraction], animations: icon)
         } else {
             UIView.performWithoutAnimation(icon)
         }
