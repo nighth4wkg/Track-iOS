@@ -126,6 +126,12 @@ enum AB {
     static let lazyCards = args.contains("-ab-lazy")
     /// iOS's keyboard loaded once, out of sight, after launch, so the first field tapped doesn't wait ~100 ms for it.
     static let warmKeyboard = args.contains("-ab-warm-keyboard")
+    /// Card open, measuring only: raised and sunk surfaces as plain fills (their cost in a card's first frame).
+    static let flatSurfaces = args.contains("-ab-flat")
+    /// Card open, measuring only: the workout's cards without their shared glide (matchedGeometryEffect).
+    static let noGlide = args.contains("-ab-no-glide")
+    /// Card open: every card's sets built once and kept, shut, so opening one only uncovers it (it took ~20 ms to build).
+    static let builtSets = args.contains("-ab-built-sets")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in

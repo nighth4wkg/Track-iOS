@@ -152,7 +152,7 @@ struct WorkoutScreen: View {
                          onArrange: active.exercises.count < 2 ? nil : { focus = nil; Motion.tap { opened = nil; arranging = true } })
                 .equatable()
                 .id(exercise.id)
-                .matchedGeometryEffect(id: exercise.id, in: rows, properties: .position)
+                .matched(exercise.id, in: AB.noGlide ? nil : rows)
                 .transition(.row)
         }
         Button {
@@ -253,7 +253,12 @@ struct ExerciseCard: View, Equatable {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if open { heading.transition(.identity) } else { closed.transition(.identity) }
-            if open { sets.transition(.uncover) }
+            if AB.builtSets {
+                // Shut, it keeps its height for itself and lays out none, as the transition's leaving part does.
+                sets.fixedSize(horizontal: false, vertical: true).uncovered(open)
+                    .frame(height: open ? nil : 0, alignment: .top)
+                    .allowsHitTesting(open).accessibilityHidden(!open)
+            } else if open { sets.transition(.uncover) }
         }
         .pad()
         .raised()

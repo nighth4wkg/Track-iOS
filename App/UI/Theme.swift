@@ -186,6 +186,8 @@ extension View {
     func pops(when trigger: Bool) -> some View { modifier(Pop(on: trigger)) }
     /// The part that pops when what holds it comes in by `.pop`.
     func popsIn() -> some View { modifier(PopsIn()) }
+    /// `.uncover` for a part that stays built: shown, or cut away to nothing from below.
+    func uncovered(_ open: Bool) -> some View { clipShape(Uncover.Cut(open: open ? 1 : 0)) }
 
     /// A part of a screen that comes in a step at a time (the recap, the first screen; the PWA's .celebrate and
     /// .arrive): up from Space.s6 and faded as it shows, `order` half a --motion-fast after the one before.
@@ -384,10 +386,12 @@ struct Raised: ViewModifier {
         // The edge line as three plain fills (shade, the fading white over it, the shade again 1 pt in): no mask or
         // stroke, so no offscreen pass per card.
         content.background {
-            shape.fill(shade)
-                .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
-                .overlay(shape.fill(fade))
-                .overlay(shape.inset(by: 1).fill(shade))
+            if AB.flatSurfaces { shape.fill(Palette.well) } else {
+                shape.fill(shade)
+                    .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
+                    .overlay(shape.fill(fade))
+                    .overlay(shape.inset(by: 1).fill(shade))
+            }
         }
     }
 }
@@ -400,8 +404,10 @@ struct Sunk: ViewModifier {
     func body(content: Content) -> some View {
         let shape = corner.shape
         content.background {
-            shape.fill(Palette.well.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1)))
-                .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
+            if AB.flatSurfaces { shape.fill(Palette.well) } else {
+                shape.fill(Palette.well.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1)))
+                    .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
+            }
         }
     }
 }
