@@ -36,7 +36,7 @@ jobs:
       - name: Build (Release)
         run: |
           xcodebuild -project Track.xcodeproj -scheme Track -configuration Release -destination "id=$UDID" -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || { grep -E "error:" -A4 build.log | head -n 100; tail -n 30 build.log; exit 1; }
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || { grep -E "error:" -A4 build.log | head -n 100; tail -n 30 build.log; exit 1; }
           echo "APP=$(ls -d build/Build/Products/Release-iphonesimulator/Track.app)" >> "$GITHUB_ENV"
       - name: Profile the motion check
         run: |
