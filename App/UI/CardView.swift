@@ -120,6 +120,12 @@ final class CardView: UIView {
         clip.addSubview(built)
     }
 
+    /// Where a set's row is in it, while it's open.
+    func frame(ofSet id: String) -> CGRect? {
+        guard card?.open == true, let row = sets?.row(id) else { return nil }
+        return row.convert(row.bounds, to: self)
+    }
+
     /// Closed and not yet built what it opens (-ab-prebuilt-sets).
     var needsSets: Bool { card?.open == false && sets == nil }
 
@@ -277,6 +283,7 @@ private final class SetsView: UIView {
     }
 
     func flush() { rows.values.forEach { $0.flush() } }
+    func row(_ id: String) -> UIView? { rows[id] }
     /// Opened again: its rows show the sets' numbers, as rows built anew did.
     func reload() { rows.values.forEach { $0.reload() } }
 

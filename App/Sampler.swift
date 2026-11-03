@@ -138,8 +138,9 @@ enum AB {
     private static let args = ProcessInfo.processInfo.arguments
     /// The workout's cards built as they scroll into view (Start workout spent ~165 ms in SwiftUI on 22 cards).
     static let lazyCards = args.contains("-ab-lazy")
-    /// iOS's keyboard loaded once, out of sight, after launch, so the first field tapped doesn't wait ~100 ms for it.
-    static let warmKeyboard = args.contains("-ab-warm-keyboard")
+    /// iOS's keyboard loaded once, out of sight, after launch, so the first field tapped doesn't wait for it (Keyboard
+    /// up 62 → 47 ms, down 37 → 18 ms on the iPhone 13); -ab-cold-keyboard measures without.
+    static let warmKeyboard = !args.contains("-ab-cold-keyboard")
     /// Card open, measuring only: raised and sunk surfaces as plain fills (their cost in a card's first frame).
     static let flatSurfaces = args.contains("-ab-flat")
     /// Card open, measuring only: the workout's cards without their shared glide (matchedGeometryEffect).
@@ -166,19 +167,21 @@ enum AB {
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
     static let stillRest = args.contains("-still-rest")
     static let stillTap = args.contains("-still-tap")         // a tap's change (Motion.tap): cards, rows, arranging
-    /// The workout's page as a UIKit list, each row its own SwiftUI piece (CardList).
-    static let uikitList = args.contains("-ab-uikit-list")
+    /// The workout's page as before build 97, one SwiftUI ScrollView, to measure against.
+    static let swiftUIList = args.contains("-ab-swiftui-list")
+    /// The workout's page as a UIKit list (CardList).
+    static let uikitList = !swiftUIList
     /// That list's changes shown at once, without iOS animating the heights (what the animation costs there).
     static let stillList = args.contains("-ab-still-list")
     /// That list's cards drawn by UIKit (CardView), not SwiftUI.
-    static let uikitCard = args.contains("-ab-uikit-card")
+    static let uikitCard = !swiftUIList
     /// Those cards changed in place (a card opened) update their own views and resize in the list's animation,
     /// without a snapshot (the list's own update took ~12 ms of a card open on the iPhone 13).
     static let directCards = args.contains("-ab-direct-cards")
     /// Cards in view build what they open in idle turns, so a tap only shows it (building took ~7 ms of a first open).
-    static let prebuiltSets = args.contains("-ab-prebuilt-sets")
-    /// With -ab-uikit-card: the page as one scroll view placing every row itself (CardList.Placed), no collection view.
-    static let ownList = args.contains("-ab-own-list")
+    static let prebuiltSets = !swiftUIList
+    /// The page as one scroll view placing every row itself (CardList.Placed), no collection view.
+    static let ownList = !swiftUIList
 }
 
 extension View {

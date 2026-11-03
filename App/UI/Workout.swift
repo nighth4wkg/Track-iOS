@@ -99,7 +99,9 @@ struct WorkoutScreen: View {
 
     /// Glides the page to it (nil anchor: just enough), once the cards have their new heights.
     private func reveal(_ proxy: ScrollViewProxy, _ id: String, anchor: UnitPoint?) {
-        DispatchQueue.main.async { Motion.tap { proxy.scrollTo(id, anchor: anchor) } }
+        DispatchQueue.main.async {
+            if AB.uikitList { CardList.reveal(id, top: anchor == .top) } else { Motion.tap { proxy.scrollTo(id, anchor: anchor) } }
+        }
     }
 
     /// The header, the progress bar, then the cards (or the list being arranged) and Add exercise.

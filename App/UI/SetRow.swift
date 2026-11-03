@@ -219,7 +219,7 @@ private struct SetKeyboard: ViewModifier {
     private func reveal(_ proxy: ScrollViewProxy) {
         guard let focus, let dot = focus.lastIndex(of: ".") else { return }
         let set = String(focus[..<dot])
-        DispatchQueue.main.async { proxy.scrollTo(set) }
+        DispatchQueue.main.async { if AB.uikitList { CardList.reveal(set, top: false) } else { proxy.scrollTo(set) } }
     }
 }
 

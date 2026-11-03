@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// The workout's page as a UIKit list (-ab-uikit-list, being measured): each row is its own piece, so opening a card
+/// The workout's page as a UIKit list (-ab-swiftui-list measures the SwiftUI page it replaced): each row is its own piece, so opening a card
 /// updates that card alone (in one ScrollView a card open redid the whole page's SwiftUI graph, ~45 ms on the iPhone
 /// 13), and iOS animates the heights itself, on the curve the app's moves use. A card is drawn by UIKit
 /// (-ab-uikit-card, CardView): updating a SwiftUI card took 15-25 ms itself.
@@ -33,6 +33,11 @@ struct CardList: UIViewControllerRepresentable {
         return check(a)
     }
 
+    /// The page going to a row, or a set in an open card (`top`: to the page's top, else just enough), as
+    /// ScrollViewReader's scrollTo does in the SwiftUI page.
+    static let revealed = Notification.Name("CardList.revealed")
+    static func reveal(_ id: String, top: Bool) { NotificationCenter.default.post(name: revealed, object: (id, top)) }
+
     private static func ms(_ seconds: CFTimeInterval) -> Int { Int((seconds * 1000).rounded()) }
 
     /// -ab-own-list: the page as one scroll view that places every row itself, so a card that opens updates itself
@@ -52,6 +57,8 @@ struct CardList: UIViewControllerRepresentable {
         private var width: CGFloat = 0
         /// Measures the cards not made yet.
         private lazy var sizer = CardView()
+        /// Where to go once the page is laid out (the card it's in may just have opened, the keyboard come up).
+        private var going: (id: String, top: Bool)?
 
         init(model: AppModel) {
             self.model = model
@@ -69,6 +76,36 @@ struct CardList: UIViewControllerRepresentable {
             scroll.frame = view.bounds
             scroll.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.addSubview(scroll)
+            NotificationCenter.default.addObserver(self, selector: #selector(revealed), name: CardList.revealed, object: nil)
+        }
+
+        @objc private func revealed(_ note: Notification) {
+            guard let to = note.object as? (String, Bool) else { return }
+            going = to
+            view.setNeedsLayout()
+        }
+
+        private func go(_ id: String, top: Bool) {
+            let rect: CGRect
+            if let y = tops[id] {
+                rect = CGRect(x: 0, y: y, width: width, height: heights[id] ?? 0)
+            } else if case let (card, frame)? = order.lazy.compactMap({ self.cards[$0] }).compactMap({ card in card.frame(ofSet: id).map { (card, $0) } }).first {
+                rect = scroll.convert(frame, from: card)
+            } else {
+                return
+            }
+            let inset = scroll.adjustedContentInset
+            let shown = scroll.bounds.height - inset.top - inset.bottom
+            let lowest = -inset.top, highest = max(lowest, scroll.contentSize.height + inset.bottom - scroll.bounds.height)
+            var y = scroll.contentOffset.y
+            if top || rect.height > shown || rect.minY < y + inset.top {
+                y = rect.minY - inset.top
+            } else if rect.maxY > y + inset.top + shown {
+                y = rect.maxY - inset.top - shown
+            }
+            y = min(max(y, lowest), highest)
+            guard y != scroll.contentOffset.y else { return }
+            Moves.swap { self.scroll.contentOffset.y = y }
         }
 
         override func viewDidLayoutSubviews() {
@@ -83,6 +120,7 @@ struct CardList: UIViewControllerRepresentable {
             if cards.count != before {
                 Sampler.note("cardlist in sight \(scroll.bounds.debugDescription) of \(Int(scroll.contentSize.height)): \(cards.count) made")
             }
+            if let going { self.going = nil; go(going.id, top: going.top) }
         }
 
         func show(_ next: [Row], animated: Bool) {
