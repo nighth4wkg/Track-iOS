@@ -104,15 +104,17 @@ final class Sampler: Thread, @unchecked Sendable {
     /// Busy samples (1 ms each; idle ones only counted): self time by image, then the heaviest frames (inclusive).
     private func report(_ action: String, _ stacks: [[UInt]]) {
         let named = stacks.map { $0.map(name) }
-        var images: [String: Int] = [:], frames: [String: Int] = [:], ours: [String: Int] = [:]
+        var images: [String: Int] = [:], frames: [String: Int] = [:], ours: [String: Int] = [:], leaves: [String: Int] = [:]
         for stack in named {
             images[stack[0].image, default: 0] += 1
+            leaves["\(stack[0].image)`\(stack[0].symbol)", default: 0] += 1
             for frame in Set(stack.map { "\($0.image)`\($0.symbol)" }) { frames[frame, default: 0] += 1 }
             for frame in Set(stack.filter { $0.image == "Track" }.map(\.symbol)) { ours[frame, default: 0] += 1 }
         }
         let top = { (d: [String: Int], k: Int) in d.sorted { $0.value > $1.value }.prefix(k) }
         log.log("probe \(action, privacy: .public): \(named.count) busy samples, \(self.idle) idle")
         for (k, v) in top(images, 6) { log.log("probe \(action, privacy: .public) self \(v) \(k, privacy: .public)") }
+        for (k, v) in top(leaves, 20) { log.log("probe \(action, privacy: .public) leaf \(v) \(String(k.prefix(200)), privacy: .public)") }
         for (k, v) in top(frames, 25) { log.log("probe \(action, privacy: .public) incl \(v) \(String(k.prefix(200)), privacy: .public)") }
         for (k, v) in top(ours, 15) { log.log("probe \(action, privacy: .public) ours \(v) \(String(k.prefix(200)), privacy: .public)") }
     }
@@ -142,6 +144,11 @@ enum AB {
     static let sharedTabs = args.contains("-ab-shared-tabs")
     /// Cards without .geometryGroup() (before build 84), to measure what it saves.
     static let noGeometryGroup = args.contains("-ab-no-geometry-group")
+    /// Drawing costs, measuring only: no drop shadow on raised surfaces, no inner shadow in sunk ones, each surface
+    /// flattened into one layer (drawingGroup).
+    static let noShadow = args.contains("-ab-no-shadow")
+    static let noInner = args.contains("-ab-no-inner")
+    static let surfaceGroup = args.contains("-ab-surface-group")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
@@ -152,5 +159,10 @@ extension View {
     /// .geometryGroup(), unless an AB switch measures without it.
     @ViewBuilder func geometryGroup(when on: Bool) -> some View {
         if on { geometryGroup() } else { self }
+    }
+
+    /// .drawingGroup(), only while an AB switch measures it.
+    @ViewBuilder func drawingGroup(when on: Bool) -> some View {
+        if on { drawingGroup() } else { self }
     }
 }

@@ -388,9 +388,10 @@ struct Raised: ViewModifier {
         content.background {
             if AB.flatSurfaces { shape.fill(Palette.well) } else {
                 shape.fill(shade)
-                    .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
+                    .shadow(color: .black.opacity(AB.noShadow ? 0 : 0.45), radius: AB.noShadow ? 0 : 4, y: AB.noShadow ? 0 : 3)
                     .overlay(shape.fill(fade))
                     .overlay(shape.inset(by: 1).fill(shade))
+                    .drawingGroup(when: AB.surfaceGroup)
             }
         }
     }
@@ -405,8 +406,11 @@ struct Sunk: ViewModifier {
         let shape = corner.shape
         content.background {
             if AB.flatSurfaces { shape.fill(Palette.well) } else {
-                shape.fill(Palette.well.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1)))
-                    .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
+                Group {
+                    if AB.noInner { shape.fill(Palette.well) } else { shape.fill(Palette.well.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1))) }
+                }
+                .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
+                .drawingGroup(when: AB.surfaceGroup)
             }
         }
     }
