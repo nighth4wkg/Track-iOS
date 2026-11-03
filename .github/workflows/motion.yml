@@ -42,12 +42,15 @@ jobs:
         run: |
           mkdir -p out
           xcrun simctl install "$UDID" "$APP"
-          # Launched by simctl (xctrace's --launch couldn't find the app in the Simulator), then attached; the check starts
-          # 2 s after launch and takes ~90 s, the trace stops a little after.
-          pid=$(SIMCTL_CHILD_TRACK_SEED="$(python3 tools/demo-data.py)" xcrun simctl launch "$UDID" com.nighth4wkg.track -dryRun -motionCheck ${{ inputs.args }} | awk '{print $NF}')
-          echo "Track is process $pid"
-          xcrun xctrace record --template "${{ inputs.template || 'Time Profiler' }}" --device "$UDID" --attach "$pid" --time-limit 110s --output out/motion.trace > out/xctrace.log 2>&1 || true
+          # Launched by xctrace from the app's absolute path (a relative one wasn't found); the check starts 2 s after
+          # launch and takes ~90 s, the trace stops a little after.
+          xcrun xctrace record --template "${{ inputs.template || 'Time Profiler' }}" --device "$UDID" --time-limit 110s --output out/motion.trace \
+            --env TRACK_SEED="$(python3 tools/demo-data.py)" --launch -- "$PWD/$APP" -dryRun -motionCheck ${{ inputs.args }} > out/xctrace.log 2>&1 || true
           cat out/xctrace.log
+          # Whether the check ran (its lines in the Simulator's log), and why Track stopped if it crashed.
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'subsystem == "Track"' > out/track.log 2>&1 || true
+          grep -c "motion " out/track.log || true; grep "motion done" out/track.log || true
+          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i track && head -n 60 ~/Library/Logs/DiagnosticReports/Track* || true
           xcrun xctrace export --input out/motion.trace --toc > out/toc.xml
           for schema in $(grep -o 'schema="[^"]*"' out/toc.xml | cut -d'"' -f2 | sort -u); do
             xcrun xctrace export --input out/motion.trace --xpath "/trace-toc/run[@number=\"1\"]/data/table[@schema=\"$schema\"]" > "out/$schema.xml" || true
@@ -60,4 +63,5 @@ jobs:
           path: |
             out/*.xml
             out/xctrace.log
+            out/track.log
           retention-days: 3
