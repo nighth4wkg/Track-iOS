@@ -131,6 +131,11 @@ final class CardView: UIView {
             sets?.isUserInteractionEnabled = false
             sets?.accessibilityElementsHidden = true
             sets?.update(card, model: model)
+            // Laid out under its edge, out of sight, so its words are drawn now rather than as it opens.
+            guard let sets else { return }
+            let inner = bounds.width - Space.s4 * 2
+            let height = sets.place(inner, apply: true)
+            sets.frame = CGRect(x: Space.s4, y: bounds.height, width: inner, height: height)
         }
     }
 

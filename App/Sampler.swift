@@ -177,6 +177,8 @@ enum AB {
     static let directCards = args.contains("-ab-direct-cards")
     /// Cards in view build what they open in idle turns, so a tap only shows it (building took ~7 ms of a first open).
     static let prebuiltSets = args.contains("-ab-prebuilt-sets")
+    /// With -ab-uikit-card: the page as one scroll view placing every row itself (CardList.Placed), no collection view.
+    static let ownList = args.contains("-ab-own-list")
 }
 
 extension View {

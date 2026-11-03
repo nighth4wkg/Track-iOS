@@ -50,14 +50,19 @@ final class Words: UILabel {
 
     private func restyle() {
         font = style.font(traitCollection, weight: weight, mono: mono)
-        show(words)
+        show(words, again: true)
     }
 
     /// The text shown (multi-line text keeps its line spacing).
     private(set) var words = ""
+    /// Its height at a width, kept until its text or size changes (a card asks several times a move).
+    private var measured: (width: CGFloat, height: CGFloat)?
 
-    func show(_ text: String) {
+    /// The same text again draws nothing (`again`: the font changed).
+    func show(_ text: String, again: Bool = false) {
+        guard again || text != words || self.text == nil else { return }
         words = text
+        measured = nil
         guard numberOfLines != 1 else { self.text = text; return }
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = extra
@@ -77,9 +82,12 @@ final class Words: UILabel {
 
     func height(for width: CGFloat) -> CGFloat {
         guard numberOfLines != 1 else { return line }
+        if let measured, measured.width == width { return measured.height }
         let rect = (words as NSString).boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude), options: .usesLineFragmentOrigin,
                                                     attributes: [.font: font as Any], context: nil)
-        return lines(max(1, Int((rect.height / font.lineHeight).rounded())))
+        let height = lines(max(1, Int((rect.height / font.lineHeight).rounded())))
+        measured = (width, height)
+        return height
     }
 
     /// One line's width.
