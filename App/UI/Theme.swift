@@ -537,10 +537,10 @@ enum Icon: String {
 }
 
 extension View {
-    /// A floating part (nav pill, rest timer, toast, docked button) Space.s4 above the SCREEN's bottom edge, over the
-    /// home indicator's strip as iOS's own floating bars sit (owner: not lifted above it as on Android). For a view laid
-    /// out inside the bottom safe area.
-    func floatingBottom(_ above: CGFloat = 0) -> some View { padding(.bottom, Space.s4 + above - homeIndicator) }
+    /// A floating part (nav pill, rest timer, toast, docked button) `floatingGap` above the SCREEN's bottom edge, over
+    /// the home indicator's strip as iOS's own floating bars sit (owner: not lifted above it as on Android). For a view
+    /// laid out inside the bottom safe area.
+    func floatingBottom(_ above: CGFloat = 0) -> some View { padding(.bottom, floatingGap + above - homeIndicator) }
 
     /// Marks this as the bar floating at the bottom of a covering screen (the rest timer, a page's docked button), so
     /// the pill sits above it as the PWA's does over .nav and .dock.
@@ -558,6 +558,10 @@ struct FloatingBar: PreferenceKey {
 
 /// The status bar's height, where content scrolling up fades out (see Shell).
 @MainActor var statusBarHeight: CGFloat { keyWindow?.safeAreaInsets.top ?? 0 }
+
+/// How far floating parts sit above the screen's bottom edge: where iOS's own tab bars sit (owner: 16 sat lower than
+/// other apps').
+let floatingGap = Space.s6
 
 /// The home indicator's strip (0 on a phone with a home button), never the keyboard.
 @MainActor var homeIndicator: CGFloat { keyWindow?.safeAreaInsets.bottom ?? 0 }

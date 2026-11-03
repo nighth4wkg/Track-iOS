@@ -303,7 +303,7 @@ struct ToastLayer: View {
                 // Its own: a new one comes in as the last goes, rather than taking over its pill.
                 .id(toast.id)
                 // From past the screen's edge it sits nearest: its height and the gap to that edge.
-                .transition(.rise(top ? -(Size.row + Space.s2 + statusBarHeight) : Size.row + Space.s4 + above, moving))
+                .transition(.rise(top ? -(Size.row + Space.s2 + statusBarHeight) : Size.row + floatingGap + above, moving))
             }
         }
         .frame(maxHeight: .infinity, alignment: top ? .top : .bottom)

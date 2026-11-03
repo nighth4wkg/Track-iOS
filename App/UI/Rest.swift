@@ -45,7 +45,7 @@ struct RestTimer: View {
                     over = until
                 }
                 // Here, outside the clock's .id (it turns over with each ±, and those just show).
-                .transition(.rise(Size.nav + Space.s4, moving))
+                .transition(.rise(Size.nav + floatingGap, moving))
             }
         }
         .motion(on: resting, moving)

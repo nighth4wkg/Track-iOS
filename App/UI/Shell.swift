@@ -124,7 +124,7 @@ struct TabPage<Content: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Space.s4)
                 .padding(.top, Space.s4)
-                .padding(.bottom, Size.nav + Space.s4 * 3 - homeIndicator)
+                .padding(.bottom, Size.nav + floatingGap + Space.s4 * 2 - homeIndicator)
                 .frame(maxWidth: Size.column)
                 .frame(maxWidth: .infinity)
                 .arrives(forward: false)

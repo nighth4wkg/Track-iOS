@@ -53,7 +53,7 @@ struct CompleteScreen: View {
                     .rises(3)
                 }
                 // Room for the dock, so the last card scrolls clear of it.
-                Color.clear.frame(height: Size.primary + Space.s4 - homeIndicator)
+                Color.clear.frame(height: Size.primary + floatingGap - homeIndicator)
             }
             .overlay(alignment: .bottom) {
                 Button("Continue", action: leave).buttonStyle(PrimaryStyle())

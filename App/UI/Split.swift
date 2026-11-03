@@ -89,7 +89,7 @@ struct SplitScreen: View {
                     .padding(.top, Space.s6)
                 }
                 // Room for the dock, so the last card scrolls clear of it.
-                if !editing { Color.clear.frame(height: Size.primary + Space.s4 - homeIndicator) }
+                if !editing { Color.clear.frame(height: Size.primary + floatingGap - homeIndicator) }
             }
             .overlay(alignment: .bottom) {
                 if !editing {
