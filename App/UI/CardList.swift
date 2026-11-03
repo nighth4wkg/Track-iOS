@@ -50,9 +50,6 @@ struct CardList: UIViewControllerRepresentable {
         private var heights: [String: CGFloat] = [:]
         private var tops: [String: CGFloat] = [:]
         private var width: CGFloat = 0
-        /// On screen and laid out: before that the scroll view's size is provisional (SwiftUI sizes the page in
-        /// passes), so which cards are in sight isn't known.
-        private var appeared = false
         /// Measures the cards not made yet.
         private lazy var sizer = CardView()
 
@@ -72,12 +69,6 @@ struct CardList: UIViewControllerRepresentable {
             scroll.frame = view.bounds
             scroll.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.addSubview(scroll)
-        }
-
-        override func viewIsAppearing(_ animated: Bool) {
-            super.viewIsAppearing(animated)
-            appeared = true
-            view.setNeedsLayout()
         }
 
         override func viewDidLayoutSubviews() {
@@ -206,7 +197,10 @@ struct CardList: UIViewControllerRepresentable {
         }
 
         private func inSight(_ id: String) -> Bool {
-            guard appeared, view.window != nil, rows[id]?.card != nil, let top = tops[id] else { return false }
+            // Only once on screen at a real size: SwiftUI sizes the page in passes first, and a provisional size had
+            // every card in sight (a representable's controller isn't told it's appearing).
+            guard let window = view.window, scroll.bounds.height > 0, scroll.bounds.height <= window.bounds.height,
+                  rows[id]?.card != nil, let top = tops[id] else { return false }
             return CGRect(x: 0, y: top, width: width, height: heights[id] ?? 0).intersects(scroll.bounds)
         }
 
