@@ -118,10 +118,14 @@ final class Sampler: Thread, @unchecked Sendable {
     }
 }
 
-/// Bench-only A/B switches: each turns one kind of motion off (as Reduce Motion does), so a part that drops frames can
-/// be checked against its still self on one install.
+/// Bench-only A/B switches: each turns one kind of motion off (as Reduce Motion does), or one speed-up on, so a part
+/// that drops frames can be checked against the other way on one install.
 enum AB {
     private static let args = ProcessInfo.processInfo.arguments
+    /// The workout's cards built as they scroll into view (Start workout spent ~165 ms in SwiftUI on 22 cards).
+    static let lazyCards = args.contains("-ab-lazy")
+    /// iOS's keyboard loaded once, out of sight, after launch, so the first field tapped doesn't wait ~100 ms for it.
+    static let warmKeyboard = args.contains("-ab-warm-keyboard")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in

@@ -14,6 +14,16 @@ struct TrackApp: App {
         }
     }
 
+    /// A hidden field takes the keyboard and gives it back at once, so iOS loads its keyboard before a field is tapped;
+    /// skipped when a sheet or the workout is already up (a field there may be in use).
+    @MainActor private static func warmKeyboard(_ model: AppModel) {
+        guard let window = keyWindow, !model.workoutOpen, model.sheets.isEmpty else { return }
+        let field = UITextField(frame: .zero)
+        window.addSubview(field)
+        UIView.performWithoutAnimation { _ = field.becomeFirstResponder(); _ = field.resignFirstResponder() }
+        field.removeFromSuperview()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -31,6 +41,7 @@ struct TrackApp: App {
                 // the workout's cards and the ranks.
                 let names = Catalog.names + model.training.sessions.flatMap { $0.exercises.map(\.name) }
                 Task.detached(priority: .utility) { LiftTable.warm(names) }
+                if AB.warmKeyboard { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { Self.warmKeyboard(model) } }
             }
             // The rest Live Activity: back to the workout in progress.
             .onOpenURL { url in if url.host == "workout", model.training.active != nil { model.workoutOpen = true } }
