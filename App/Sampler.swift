@@ -191,6 +191,12 @@ enum AB {
     static let emptySheets = args.contains("-ab-empty-sheets")
     /// Tabs: a hidden one stays in the window, hidden, not taken out (what coming back into the window costs).
     static let attachedTabs = args.contains("-ab-attached-tabs")
+    /// Measuring only: a screen's arrival only shifts (no fade), or only fades (no shift): which one the screen
+    /// recording's stutter comes from.
+    static let shiftOnly = args.contains("-ab-shift-only")
+    static let fadeOnly = args.contains("-ab-fade-only")
+    /// Tabs: the one shown comes in by Core Animation, flattened to one layer as it moves, not by SwiftUI's Arrive.
+    static let caTabs = args.contains("-ab-ca-tabs")
 }
 
 extension View {

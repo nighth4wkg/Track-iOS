@@ -176,6 +176,15 @@ private struct TabHost<Content: View>: UIViewControllerRepresentable {
             host.didMove(toParent: self)
         }
 
+        /// -ab-ca-tabs: from the left and faded, as Arrive, flattened to one layer while it moves.
+        private func arrive() {
+            let moving = host.view!
+            moving.layer.rasterizationScale = moving.scale
+            moving.layer.shouldRasterize = true
+            UIView.performWithoutAnimation { moving.transform = CGAffineTransform(translationX: -Space.s6, y: 0); moving.alpha = 0 }
+            Moves.spring({ moving.transform = .identity; moving.alpha = 1 }, completion: { _ in moving.layer.shouldRasterize = false })
+        }
+
         func prebuild() {
             guard !shown, host.view.superview == nil || AB.attachedTabs, view.window != nil else { return }
             show(true)
@@ -200,6 +209,7 @@ private struct TabHost<Content: View>: UIViewControllerRepresentable {
                 host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
                 host.view.removeFromSuperview()
             }
+            if AB.caTabs, on, !shown, !Motion.still { arrive() }
             // An empty holder over the shown tab mustn't take its touches.
             view.isUserInteractionEnabled = on
             shown = on
@@ -223,7 +233,7 @@ struct TabPage<Content: View>: View {
                 .padding(.bottom, Size.nav + floatingGap + Space.s4 * 2 - homeIndicator)
                 .frame(maxWidth: Size.column)
                 .frame(maxWidth: .infinity)
-                .arrives(forward: false)
+                .arrives(forward: false, on: !AB.caTabs)
         }
         .scrollPosition($position)
         .scrollDismissesKeyboard(.interactively)
@@ -257,7 +267,9 @@ extension View {
     /// a page, the workout), from the left as it's come back to. A tab swapped to just shows; so does all of it with
     /// Reduce Motion. A page's docked button fades in with it but doesn't shift (`shifts` false): alone at full
     /// strength over a page still fading in, it popped in. The nav pill is the app's, not the page's, and stays put.
-    func arrives(forward: Bool, shifts: Bool = true) -> some View { modifier(Arrive(forward: forward, shifts: shifts)) }
+    @ViewBuilder func arrives(forward: Bool, shifts: Bool = true, on: Bool = true) -> some View {
+        if on { modifier(Arrive(forward: forward, shifts: shifts)) } else { self }
+    }
 }
 
 private struct Arrive: ViewModifier {
@@ -277,8 +289,8 @@ private struct Arrive: ViewModifier {
     func body(content: Content) -> some View {
         let moving = !still && !AB.stillPages
         content
-            .offset(x: moving && shifts ? x : 0)
-            .opacity(moving ? opacity : 1)
+            .offset(x: moving && shifts && !AB.fadeOnly ? x : 0)
+            .opacity(moving && !AB.shiftOnly ? opacity : 1)
             .onAppear { settle() }
             .onChange(of: shown) { _, now in
                 if !now {
