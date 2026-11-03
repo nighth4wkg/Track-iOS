@@ -182,6 +182,15 @@ enum AB {
     static let prebuiltSets = !swiftUIList
     /// The page as one scroll view placing every row itself (CardList.Placed), no collection view.
     static let ownList = !swiftUIList
+    /// Screens: their shift and fade start on the frame after the screen was built, not in the build's own update
+    /// (the video showed a page's move begin with a jump and a stutter while its first frame took 30-70 ms).
+    static let lateArrive = args.contains("-ab-late-arrive")
+    /// Measuring only: an empty page in place of a split, lift, past workout or Settings, and an empty sheet (the
+    /// screen's own content against what's around it).
+    static let emptyPages = args.contains("-ab-empty-pages")
+    static let emptySheets = args.contains("-ab-empty-sheets")
+    /// Tabs: a hidden one stays in the window, hidden, not taken out (what coming back into the window costs).
+    static let attachedTabs = args.contains("-ab-attached-tabs")
 }
 
 extension View {

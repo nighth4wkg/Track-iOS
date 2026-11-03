@@ -94,6 +94,29 @@ final class Words: UILabel {
     var width: CGFloat { ceil((words as NSString).size(withAttributes: [.font: font as Any]).width) }
 }
 
+/// Runs once on the screen's next frame: after the update in progress has been committed (-ab-late-arrive).
+@MainActor final class NextFrame: NSObject {
+    private let action: () -> Void
+    private var link: CADisplayLink?
+
+    private init(_ action: @escaping () -> Void) { self.action = action }
+
+    static func run(_ action: @escaping () -> Void) {
+        let next = NextFrame(action)
+        // The link holds its target until it's invalidated, on its one tick.
+        let link = CADisplayLink(target: next, selector: #selector(tick))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        next.link = link
+        link.add(to: .main, forMode: .common)
+    }
+
+    @objc private func tick() {
+        link?.invalidate()
+        link = nil
+        action()
+    }
+}
+
 extension UIView {
     /// The screen's pixels a point (a view not yet on screen has none of its own).
     var scale: CGFloat { max(traitCollection.displayScale, UITraitCollection.current.displayScale, 1) }

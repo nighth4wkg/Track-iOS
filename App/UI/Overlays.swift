@@ -32,7 +32,7 @@ struct SheetLayer: View {
                     .opacity(gone ? 0 : 1)
                     .allowsHitTesting(!gone)
                     .transition(.dim(moving))
-                SheetBox(tall: sheet.tall, close: { close(sheet) }) { sheet.view }
+                SheetBox(tall: sheet.tall, close: { close(sheet) }) { if AB.emptySheets { Color.clear.frame(height: Size.column / 2) } else { sheet.view } }
                     .environment(\.closeSheet, { close(sheet) })
                     .offset(y: gone ? drop : 0)
                     .allowsHitTesting(!gone)

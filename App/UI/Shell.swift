@@ -93,6 +93,10 @@ struct Shell: View {
     }
 
     @ViewBuilder private func deeper(_ route: Route) -> some View {
+        if AB.emptyPages { DeepPage { EmptyView() } } else { screen(route) }
+    }
+
+    @ViewBuilder private func screen(_ route: Route) -> some View {
         switch route {
         case .split(let id): SplitScreen(splitId: id)
         case .lift(let name): LiftScreen(name: name)
@@ -144,8 +148,13 @@ private struct TabHost<Content: View>: UIViewControllerRepresentable {
     func updateUIViewController(_ holder: Holder, context: Context) {
         // A hidden tab isn't given each new version: TabData keeps the training it last showed anyway.
         guard shown || holder.shown else { return }
+        let start = CACurrentMediaTime(), was = holder.shown
         holder.host.rootView = content
+        let given = CACurrentMediaTime()
         holder.show(shown)
+        if shown != was {
+            Sampler.note("tab \(shown ? "shown" : "hidden"): content \(Int((given - start) * 1000)) ms, show \(Int((CACurrentMediaTime() - given) * 1000)) ms")
+        }
     }
 
     final class Holder: UIViewController {
@@ -168,7 +177,7 @@ private struct TabHost<Content: View>: UIViewControllerRepresentable {
         }
 
         func prebuild() {
-            guard !shown, host.view.superview == nil, view.window != nil else { return }
+            guard !shown, host.view.superview == nil || AB.attachedTabs, view.window != nil else { return }
             show(true)
             host.view.layoutIfNeeded()
             show(false)
@@ -176,7 +185,14 @@ private struct TabHost<Content: View>: UIViewControllerRepresentable {
 
         func show(_ on: Bool) {
             loadViewIfNeeded()
-            if on, host.view.superview == nil {
+            if AB.attachedTabs {
+                if host.view.superview == nil {
+                    host.view.frame = view.bounds
+                    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                    view.addSubview(host.view)
+                }
+                host.view.isHidden = !on
+            } else if on, host.view.superview == nil {
                 host.view.frame = view.bounds
                 host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
                 view.addSubview(host.view)
@@ -280,7 +296,7 @@ private struct Arrive: ViewModifier {
 
     private func settle() {
         guard x != 0 || opacity != 1 else { return }
-        withAnimation(Motion.move) { x = 0; opacity = 1 }
+        if AB.lateArrive { NextFrame.run { withAnimation(Motion.move) { x = 0; opacity = 1 } } } else { withAnimation(Motion.move) { x = 0; opacity = 1 } }
     }
 }
 
