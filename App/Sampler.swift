@@ -170,8 +170,8 @@ enum AB {
     static let uikitList = args.contains("-ab-uikit-list")
     /// That list's changes shown at once, without iOS animating the heights (what the animation costs there).
     static let stillList = args.contains("-ab-still-list")
-    /// That list's cells set up once, a change going into the SwiftUI piece already there (CardList.Slot).
-    static let slotCells = args.contains("-ab-slot-cells")
+    /// That list's cards drawn by UIKit (CardView), not SwiftUI.
+    static let uikitCard = args.contains("-ab-uikit-card")
 }
 
 extension View {

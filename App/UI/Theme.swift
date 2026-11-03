@@ -256,14 +256,14 @@ private struct PopOnShow: ViewModifier {
     }
 }
 
-private struct Pop: ViewModifier {
+struct Pop: ViewModifier {
     let on: Bool
     /// Hidden until it plays (it pops in rather than swelling from where it was).
     var waits = false
     /// Seconds hidden (at --pop-from) before it swells.
     var delay = 0.0
     /// The PWA's --pop-from and --pop-over; it swells to its overshoot (and is fully shown) 60% of the way.
-    private static let from = 0.6, over = 1.15, peak = 0.6
+    static let from = 0.6, over = 1.15, peak = 0.6
 
     func body(content: Content) -> some View {
         // Turning false (or with Reduce Motion) it stays as it is.
@@ -281,7 +281,7 @@ private struct Pop: ViewModifier {
         }
     }
 
-    private static func scale(_ done: Double) -> Double {
+    static func scale(_ done: Double) -> Double {
         done < peak ? from + (over - from) * done / peak : over + (1 - over) * (done - peak) / (1 - peak)
     }
 }
@@ -433,8 +433,7 @@ private struct Pressed: ViewModifier {
 private struct Faded: ViewModifier {
     @Environment(\.isEnabled) private var enabled
     var keep = false
-    static let opacity = 0.45
-    func body(content: Content) -> some View { content.opacity(enabled || keep ? 1 : Self.opacity) }
+    func body(content: Content) -> some View { content.opacity(enabled || keep ? 1 : Press.faded) }
 }
 
 /// The screen's main action: the green pill. `compact` beside other controls: a control's height, as wide as its words.

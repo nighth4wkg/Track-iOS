@@ -32,7 +32,7 @@ struct SetRow: View {
     @State private var rirTyped = false
     @State private var pending: Task<Void, Never>?
     /// Typing saves once the keys pause this long, not on every key.
-    private static let typingPause = Duration.milliseconds(400)
+    static let typingPause = Duration.milliseconds(400)
     @State private var replacing: String? // the field just tapped: its first keystroke replaces it (key)
 
     init(exercise: Exercise, set: TrainingSet, label: String, next: Bool, unit: TrackCore.Settings.Unit, autoLog: Bool,

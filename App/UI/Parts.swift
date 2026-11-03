@@ -179,6 +179,8 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
 struct Press: ButtonStyle {
     /// A pressed button's look: a little darker (CardStyle).
     static let dim = 0.75
+    /// A disabled control, card or row (the PWA's button:disabled).
+    static let faded = 0.45
     let changed: (Bool) -> Void
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.onChange(of: configuration.isPressed) { _, now in changed(now) }

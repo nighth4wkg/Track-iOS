@@ -1,15 +1,18 @@
 import SwiftUI
 import UIKit
 
-/// The workout's page as a UIKit list (-ab-uikit-list, being measured): each row is its own SwiftUI piece, so opening a
-/// card updates that card alone (in one ScrollView a card open redid the whole page's SwiftUI graph, ~45 ms on the
-/// iPhone 13), and iOS animates the heights itself, on the curve the app's moves use.
+/// The workout's page as a UIKit list (-ab-uikit-list, being measured): each row is its own piece, so opening a card
+/// updates that card alone (in one ScrollView a card open redid the whole page's SwiftUI graph, ~45 ms on the iPhone
+/// 13), and iOS animates the heights itself, on the curve the app's moves use. A card is drawn by UIKit
+/// (-ab-uikit-card, CardView): updating a SwiftUI card took 15-25 ms itself.
 struct CardList: UIViewControllerRepresentable {
     struct Row {
         let id: String
         /// What the row draws: a row whose value hasn't changed isn't updated.
         let value: any Equatable
         let view: AnyView
+        /// A card drawn by UIKit instead of `view`.
+        var card: ExerciseCard? = nil
     }
 
     let rows: [Row]
@@ -21,22 +24,9 @@ struct CardList: UIViewControllerRepresentable {
         controller.show(rows, animated: context.transaction.animation != nil && !Motion.still)
     }
 
-    /// A row's view, read by its cell's SwiftUI piece (-ab-slot-cells): a change goes into the piece already there,
-    /// instead of iOS setting the cell up again (two cards re-set took 35-57 ms of a card open on the iPhone 13).
-    @Observable final class Slot {
-        var view: AnyView
-        init(_ view: AnyView) { self.view = view }
-    }
-
-    private struct Slotted: View {
-        let slot: Slot
-        var body: some View { slot.view }
-    }
-
     final class Controller: UIViewController {
         private let model: AppModel
         private var rows: [String: Row] = [:]
-        private var slots: [String: Slot] = [:]
         private var order: [String] = []
         private let list = UICollectionView(frame: .zero, collectionViewLayout: Controller.layout())
         private var source: UICollectionViewDiffableDataSource<Int, String>?
@@ -59,16 +49,15 @@ struct CardList: UIViewControllerRepresentable {
                 // A growing card is uncovered from its top as its cell grows (the PWA's resize).
                 cell.clipsToBounds = true
                 guard let row = self.rows[id] else { return }
-                if AB.slotCells {
-                    let slot = self.slots[id] ?? Slot(row.view)
-                    self.slots[id] = slot
-                    cell.contentConfiguration = UIHostingConfiguration { self.content(Slotted(slot: slot)) }.margins(.all, 0)
-                } else {
-                    cell.contentConfiguration = UIHostingConfiguration { self.content(row.view) }.margins(.all, 0)
-                }
+                cell.contentConfiguration = UIHostingConfiguration { self.content(row.view) }.margins(.all, 0)
             }
-            source = UICollectionViewDiffableDataSource(collectionView: list) { list, index, id in
-                list.dequeueConfiguredReusableCell(using: cell, for: index, item: id)
+            let card = UICollectionView.CellRegistration<CardCell, String> { [unowned self] cell, _, id in
+                guard let card = self.rows[id]?.card else { return }
+                cell.card.update(card, model: self.model)
+            }
+            source = UICollectionViewDiffableDataSource(collectionView: list) { [unowned self] list, index, id in
+                self.rows[id]?.card != nil ? list.dequeueConfiguredReusableCell(using: card, for: index, item: id)
+                    : list.dequeueConfiguredReusableCell(using: cell, for: index, item: id)
             }
         }
 
@@ -88,28 +77,17 @@ struct CardList: UIViewControllerRepresentable {
             let ids = next.map(\.id)
             rows = Dictionary(next.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
             guard ids != order || !changed.isEmpty else { return }
-            let moved = ids != order
             order = ids
             var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
             snapshot.appendSections([0])
             snapshot.appendItems(ids)
+            snapshot.reconfigureItems(changed)
             let animate = animated && view.window != nil && !AB.stillList
             let start = CACurrentMediaTime()
-            let update = { [self] in
-                if AB.slotCells {
-                    slots = slots.filter { rows[$0.key] != nil }
-                    for id in changed { slots[id]?.view = rows[id]!.view }
-                    if moved { source.apply(snapshot, animatingDifferences: animate) }
-                    list.layoutIfNeeded()
-                } else {
-                    snapshot.reconfigureItems(changed)
-                    source.apply(snapshot, animatingDifferences: animate)
-                }
-            }
             if animate {
-                UIView.animate(springDuration: Motion.normal, bounce: 0, animations: update)
+                UIView.animate(springDuration: Motion.normal, bounce: 0) { source.apply(snapshot, animatingDifferences: true) }
             } else {
-                UIView.performWithoutAnimation(update)
+                UIView.performWithoutAnimation { source.apply(snapshot, animatingDifferences: false) }
             }
             let applied = CACurrentMediaTime()
             list.layoutIfNeeded()
@@ -128,5 +106,43 @@ struct CardList: UIViewControllerRepresentable {
             let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
             return UICollectionViewCompositionalLayout(section: NSCollectionLayoutSection(group: group))
         }
+    }
+}
+
+/// A card's row: the card in the page's column, with its share of the gaps (Space.s1 above, the rest of Space.s3
+/// below), as Workout's `column` places a SwiftUI row.
+final class CardCell: UICollectionViewCell {
+    let card = CardView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // A growing card is uncovered from its top as its cell grows (the PWA's resize).
+        clipsToBounds = true
+        contentView.addSubview(card)
+        card.onResize = { [weak self] in self?.invalidateIntrinsicContentSize() }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        card.flush()
+    }
+
+    private func place(_ width: CGFloat) -> CGRect {
+        let column = min(width, Size.column), inner = column - Space.s4 * 2
+        return CGRect(x: (width - column) / 2 + Space.s4, y: Space.s1, width: inner, height: card.height(for: inner))
+    }
+
+    override func preferredLayoutAttributesFitting(_ attributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+        let fitted = attributes.copy() as! UICollectionViewLayoutAttributes
+        fitted.size.height = place(attributes.size.width).height + Space.s3
+        return fitted
+    }
+
+    // In the list's animation, so the card grows with its row.
+    override func apply(_ attributes: UICollectionViewLayoutAttributes) {
+        super.apply(attributes)
+        card.frame = place(attributes.size.width)
     }
 }

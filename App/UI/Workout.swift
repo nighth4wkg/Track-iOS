@@ -141,7 +141,11 @@ struct WorkoutScreen: View {
         var rows = [CardList.Row(id: Self.top, value: "\(active.name) \(done) \(planned)", view: column(heading, Space.s4, Space.s4 - Space.s1))]
         for (index, exercise) in active.exercises.enumerated() {
             let card = card(index, exercise, active, expanded: expanded, current: current, previous: previous, unit: unit)
-            rows.append(CardList.Row(id: exercise.id, value: card, view: column(card.equatable(), Space.s1, Space.s3 - Space.s1)))
+            if AB.uikitCard {
+                rows.append(CardList.Row(id: exercise.id, value: card, view: AnyView(EmptyView()), card: card))
+            } else {
+                rows.append(CardList.Row(id: exercise.id, value: card, view: column(card.equatable(), Space.s1, Space.s3 - Space.s1)))
+            }
         }
         rows.append(CardList.Row(id: "add", value: 0, view: column(addExercise, Space.s1, Space.s6)))
         return rows
