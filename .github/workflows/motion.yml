@@ -1,13 +1,13 @@
 # Which views update, and how long each takes, through the motion check (Settings → About, hold Version): a Release
 # build runs it by itself (-dryRun -motionCheck) on the demo training in the Simulator under Instruments. Every table
-# the template recorded (the SwiftUI one: view body updates and their causes, plus Time Profiler's samples) is attached.
+# the template recorded is attached (Time Profiler: the SwiftUI instrument doesn't run in the Simulator).
 name: Motion profile
 on:
   workflow_dispatch:
     inputs:
       template:
         description: Instruments template
-        default: SwiftUI
+        default: Time Profiler
       args:
         description: Extra launch arguments (AB switches)
         default: ''
@@ -43,7 +43,7 @@ jobs:
           mkdir -p out
           xcrun simctl install "$UDID" "$APP"
           # The check takes ~90 s from launch; the trace stops a little after.
-          xcrun xctrace record --template "${{ inputs.template || 'SwiftUI' }}" --device "$UDID" --time-limit 120s --output out/motion.trace \
+          xcrun xctrace record --template "${{ inputs.template || 'Time Profiler' }}" --device "$UDID" --time-limit 120s --output out/motion.trace \
             --env TRACK_SEED="$(python3 tools/demo-data.py)" --launch -- "$APP" -dryRun -motionCheck ${{ inputs.args }} > out/xctrace.log 2>&1 || true
           cat out/xctrace.log
           xcrun xctrace export --input out/motion.trace --toc > out/toc.xml
