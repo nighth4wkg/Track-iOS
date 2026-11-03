@@ -35,6 +35,11 @@ struct Confirm: Identifiable {
     let action: () -> Void
 }
 
+/// What the motion check does on the workout screen, whose state is its own.
+enum BenchMove: Equatable {
+    case card(String), focus(String?), arrange(Bool)
+}
+
 /// A short note at the bottom ("Set removed"), with Undo when there's something to bring back.
 struct Toast: Identifiable, Equatable {
     let id = UUID()
@@ -75,6 +80,8 @@ final class AppModel {
     /// Today, refreshed when Track comes back on a new day, so Home's date, "Done today" and the week move on.
     private(set) var day = dayKey(nowMillis())
     var finished: Finished?
+    /// The motion check's move on the workout screen (MotionCheck), as a tap there would make it.
+    var bench: BenchMove?
 
     /// A tab, from the nav pill: whatever was open over the last one closes. Not `swapping` (the recap's Continue), the
     /// tab comes back as a page does: shifted in from the left.
@@ -139,7 +146,7 @@ final class AppModel {
 
     /// The rest's alert and Live Activity follow the data when its rest or workout changes.
     private func syncRest(_ old: Training, _ next: Training) {
-        guard next.restUntil != old.restUntil || (next.active == nil) != (old.active == nil) else { return }
+        guard !benching, next.restUntil != old.restUntil || (next.active == nil) != (old.active == nil) else { return }
         if let until = next.restUntil, until > nowMillis() {
             RestAlert.schedule(at: until)
             // The ring's whole is the rest setting, as Track's own ring: after +15s or −15s it keeps its place.
@@ -159,7 +166,7 @@ final class AppModel {
         next.editedAt = nowMillis()
         syncRest(training, next)
         if moving { Motion.tap { training = next } } else { training = next }
-        guard canSave, !Self.dryRun, let saver else { return }
+        guard canSave, !Self.dryRun, !benching, let saver else { return }
         saver.save(next) { [weak self] _ in
             DispatchQueue.main.async { self?.problem("Couldn’t save on this iPhone.") }
         }
@@ -202,6 +209,22 @@ final class AppModel {
         }
         update { $0 = backup }
         workoutOpen = false
+    }
+
+    /// While the motion check runs: the training is a copy, never saved, and the rest alert and Live Activity are left
+    /// as they were.
+    @ObservationIgnored private(set) var benching = false
+
+    /// Starts the motion check on a copy of the training (saving and the rest's alerts stop) and hands back the real one.
+    func beginBench() -> Training {
+        benching = true
+        return training
+    }
+
+    /// Ends it: the real training back as it was, saving on again.
+    func endBench(_ kept: Training) {
+        training = kept
+        benching = false
     }
 
     func show(_ text: String, undo: (() -> Void)? = nil) { toast = Toast(text: text, undo: undo) }

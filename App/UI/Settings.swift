@@ -130,6 +130,9 @@ struct SettingsScreen: View {
                 Button { if let url = Self.privacy { showWebPage(url) } } label: { Row(title: "Privacy", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
                 Row(title: "Version", value: Self.version)
+                    // Hidden, for checking motion on this iPhone: every motion run by itself on a copy that's never saved.
+                    .onLongPressGesture(minimumDuration: Self.holdForCheck) { MotionCheck.run(model) }
+                    .accessibilityAction(named: "Motion check") { MotionCheck.run(model) }
             }
         }
     }
@@ -177,6 +180,9 @@ struct SettingsScreen: View {
             model.show("Backup restored")
         }
     }
+
+    /// How long Version is held to start the motion check.
+    private static let holdForCheck = 1.0
 
     static var version: String {
         let info = Bundle.main.infoDictionary

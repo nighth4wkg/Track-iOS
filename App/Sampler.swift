@@ -138,10 +138,6 @@ enum AB {
     static let noSwipe = args.contains("-ab-no-swipe")
     /// Card open, measuring only: a row's numbers without shrinking to fit (each measured at several sizes).
     static let plainText = args.contains("-ab-plain-text")
-    /// Card open, measured with no test tool attached (XCTest turns on accessibility, which adds to every update):
-    /// a dry run starts the workout and opens cards 1 and 2 in turn by itself, logging "auto open N" before each.
-    static let autoCards = args.contains("-ab-auto-cards") && AppModel.dryRun
-    static let bench = Logger(subsystem: "Track", category: "bench")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in

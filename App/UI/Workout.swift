@@ -72,20 +72,18 @@ struct WorkoutScreen: View {
                     }
             }
             .onAppear { following = current }
-            .task { if AB.autoCards { await autoCards() } }
+            // The motion check's moves, as the taps that make them.
+            .onChange(of: model.bench) { _, move in
+                switch move {
+                case .card(let id)?: Motion.tap { opened = id }
+                case .focus(let id)?: focus = id
+                case .arrange(true)?: focus = nil; Motion.tap { opened = nil; arranging = true }
+                case .arrange(false)?: Motion.tap { arranging = false }
+                case nil: break
+                }
+            }
             .onDisappear { focus = nil }
         }
-    }
-
-    /// AB.autoCards: cards 1 and 2 opened in turn, 24 times, as a tap would.
-    private func autoCards() async {
-        for n in 0..<24 {
-            try? await Task.sleep(for: .seconds(1))
-            guard let exercises = model.training.active?.exercises, exercises.count > 1 else { return }
-            AB.bench.log("auto open \(n)")
-            Motion.tap { opened = exercises[(n + 1) % 2].id }
-        }
-        AB.bench.log("auto done")
     }
 
     /// The page's top, where Finish is.
