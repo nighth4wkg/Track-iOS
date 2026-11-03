@@ -95,12 +95,7 @@ final class CardView: UIView {
             closed.isHidden = next.open
             heading.isHidden = !next.open
             if !next.open { arm(false) }
-            if next.open, sets == nil {
-                let built = SetsView()
-                built.onResize = { [weak self] in self?.onResize?() }
-                sets = built
-                clip.addSubview(built)
-            }
+            if next.open, sets == nil { makeSets() }
             sets?.isUserInteractionEnabled = next.open
             sets?.accessibilityElementsHidden = !next.open
         }
@@ -117,6 +112,27 @@ final class CardView: UIView {
 
     /// Typing saves before the card shows another exercise.
     func flush() { sets?.flush() }
+
+    private func makeSets() {
+        let built = SetsView()
+        built.onResize = { [weak self] in self?.onResize?() }
+        sets = built
+        clip.addSubview(built)
+    }
+
+    /// Closed and not yet built what it opens (-ab-prebuilt-sets).
+    var needsSets: Bool { card?.open == false && sets == nil }
+
+    /// What it opens, built while it's closed (laid out when it opens), so a tap only shows it.
+    func buildSets() {
+        guard needsSets, let card, let model else { return }
+        UIView.performWithoutAnimation {
+            makeSets()
+            sets?.isUserInteractionEnabled = false
+            sets?.accessibilityElementsHidden = true
+            sets?.update(card, model: model)
+        }
+    }
 
     func height(for width: CGFloat) -> CGFloat { place(width, apply: false) }
 
@@ -287,9 +303,9 @@ private final class SetsView: UIView {
             addIcon.sizeToFit()
             let icon = addIcon.bounds.size, words = addWords.width
             // Label's icon and title, side by side in the middle.
-            let x = (width - icon.width - Space.s2 - words) / 2
+            let x = (width - icon.width - Gap.label - words) / 2
             addIcon.frame = CGRect(x: x, y: (height - icon.height) / 2, width: icon.width, height: icon.height)
-            addWords.frame = CGRect(x: x + icon.width + Space.s2, y: (height - addWords.line) / 2, width: words, height: addWords.line)
+            addWords.frame = CGRect(x: x + icon.width + Gap.label, y: (height - addWords.line) / 2, width: words, height: addWords.line)
         }
         return y + height
     }

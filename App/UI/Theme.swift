@@ -97,6 +97,8 @@ enum Pad {
 /// Gaps of single parts (the PWA's --gap-*): a tab's icon to its word, a chart key's swatch to its word.
 enum Gap {
     static let tab: CGFloat = 2, key: CGFloat = 6
+    /// SwiftUI's Label: its icon to its title (measured on the iPhone, for the UIKit card's Add set).
+    static let label: CGFloat = 10
 }
 
 /// How far a one-line figure may shrink to fit a narrow screen rather than wrap: a tile's figure or a set's

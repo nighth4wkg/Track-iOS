@@ -65,19 +65,35 @@ final class Words: UILabel {
         attributedText = NSAttributedString(string: text, attributes: [.font: font as Any, .foregroundColor: textColor as Any, .paragraphStyle: paragraph])
     }
 
-    /// One line's height: the style's line, or the font's own when that's taller.
-    var line: CGFloat { max(style.scaled(style.lineHeight, traitCollection), font.lineHeight) }
-    private var extra: CGFloat { line - font.lineHeight }
+    /// One line's height: the style's line, or the font's own when that's taller (as Typeset: the text, up to the
+    /// screen's pixel as SwiftUI sizes it, and the extra round it).
+    var line: CGFloat { lines(1) }
+    private var extra: CGFloat { max(0, style.scaled(style.lineHeight, traitCollection) - font.lineHeight) }
+
+    private func lines(_ count: Int) -> CGFloat {
+        let n = CGFloat(count)
+        return (n * font.lineHeight + (n - 1) * extra).pixelUp(scale) + extra
+    }
 
     func height(for width: CGFloat) -> CGFloat {
         guard numberOfLines != 1 else { return line }
         let rect = (words as NSString).boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude), options: .usesLineFragmentOrigin,
                                                     attributes: [.font: font as Any], context: nil)
-        return CGFloat(max(1, Int((rect.height / font.lineHeight).rounded()))) * line
+        return lines(max(1, Int((rect.height / font.lineHeight).rounded())))
     }
 
     /// One line's width.
     var width: CGFloat { ceil((words as NSString).size(withAttributes: [.font: font as Any]).width) }
+}
+
+extension UIView {
+    /// The screen's pixels a point (a view not yet on screen has none of its own).
+    var scale: CGFloat { max(traitCollection.displayScale, UITraitCollection.current.displayScale, 1) }
+}
+
+extension CGFloat {
+    /// Up to the next whole pixel, as SwiftUI sizes text and views (a hair under one counts as on it).
+    func pixelUp(_ scale: CGFloat) -> CGFloat { ((self * scale) - 0.001).rounded(.up) / scale }
 }
 
 /// A gradient-backed view: its gradient resizes with it in a UIKit animation.

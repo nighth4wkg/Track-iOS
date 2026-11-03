@@ -172,6 +172,11 @@ enum AB {
     static let stillList = args.contains("-ab-still-list")
     /// That list's cards drawn by UIKit (CardView), not SwiftUI.
     static let uikitCard = args.contains("-ab-uikit-card")
+    /// Those cards changed in place (a card opened) update their own views and resize in the list's animation,
+    /// without a snapshot (the list's own update took ~12 ms of a card open on the iPhone 13).
+    static let directCards = args.contains("-ab-direct-cards")
+    /// Cards in view build what they open in idle turns, so a tap only shows it (building took ~7 ms of a first open).
+    static let prebuiltSets = args.contains("-ab-prebuilt-sets")
 }
 
 extension View {
