@@ -52,7 +52,7 @@ struct SplitScreen: View {
                                 }
                                 .pad()
                                 .raised()
-                                .matchedGeometryEffect(id: exercise.id, in: rows)
+                                .matchedGeometryEffect(id: exercise.id, in: rows, properties: .position)
                                 .transition(.row)
                             }
                         }

@@ -77,6 +77,8 @@ struct PillTabs<Value: Hashable>: View {
     let label: String
     let items: [(value: Value, text: String, icon: (Bool) -> AnyView)]
     let chosen: Value
+    /// The nav pill's width; on a page (Settings) as wide as its cards.
+    var width = Size.navWidth
     let choose: (Value) -> Void
 
     var body: some View {
@@ -92,7 +94,7 @@ struct PillTabs<Value: Hashable>: View {
             .accessibilityLabel(item?.text ?? "")
         }
         .padding(Space.s1)
-        .frame(maxWidth: Size.navWidth)
+        .frame(maxWidth: width)
         .frame(height: Size.nav)
         .raised(.nav, .pill)
         .accessibilityElement(children: .contain)
@@ -416,8 +418,8 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
     @State private var finger = Finger()
     /// Places the held row has crossed: the only part of the drag that redraws the list.
     @State private var steps = 0
-    /// One row and the gap under it: a drag's step per place.
-    @State private var step = Size.row
+    /// Each row and the gap under it: a long name wraps, so rows differ (one shared step put a taller row out of place).
+    @State private var heights: [Item.ID: CGFloat] = [:]
     @State private var edge = EdgeScroll()
 
     var body: some View {
@@ -435,14 +437,14 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                                 if held != item.id { held = item.id }
                                 edge.drag(at: drag.location.y) { scrolled in
                                     finger.y = drag.translation.height + scrolled
-                                    let crossed = max(-index, min(items.count - 1 - index, Int((finger.y / step).rounded())))
-                                    if crossed != steps { steps = crossed }
+                                    let now = crossed(finger.y, from: index)
+                                    if now != steps { steps = now }
                                 }
                             }
                             .onEnded { value in
                                 edge.stop()
                                 // In its new place, it slides in from where the finger left it.
-                                finger.y -= CGFloat(steps) * step
+                                finger.y -= span(index, steps)
                                 finger.speed = value.velocity.height
                                 if steps != 0 { onMove(index, index + steps) }
                                 held = nil
@@ -454,12 +456,13 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
                 .pad()
                 .frame(minHeight: Size.controlRow)
                 .raised()
-                .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { step = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height + Space.s3 } action: { heights[item.id] = $0 }
                 .offset(y: room(index, from, steps))
                 .follow(finger, while: item.id == held)
-                // Its glide and uncover outside the drag's moves (inside them, a row passed over vanished: build 70).
-                .matched(item.id, in: AB.stillArrange ? nil : glides)
-                .transition(AB.stillArrange ? AnyTransition.identity : .row)
+                .matched(item.id, in: glides)
+                // A fade, not .row: a transition wraps the whole row, so the uncover's clip stayed on its resting place
+                // and cut away a row moved by the drag (owner, builds 70-71: rows passed over vanished).
+                .transition(.opacity)
                 .zIndex(item.id == held ? 1 : 0)
             }
         }
@@ -468,12 +471,31 @@ struct ArrangeList<Item: Identifiable, Content: View, End: View>: View {
         .background(ScrollFinder(edge: edge))
     }
 
-    /// Those between the held row's place and where it would go stand one place its way.
+    /// Those between the held row's place and where it would go stand aside by the held row's height.
     private func room(_ index: Int, _ from: Int?, _ steps: Int) -> CGFloat {
         guard let from, index != from else { return 0 }
-        if steps > 0, index > from, index <= from + steps { return -step }
-        if steps < 0, index < from, index >= from + steps { return step }
+        if steps > 0, index > from, index <= from + steps { return -height(from) }
+        if steps < 0, index < from, index >= from + steps { return height(from) }
         return 0
+    }
+
+    private func height(_ index: Int) -> CGFloat { heights[items[index].id] ?? Size.controlRow + Space.s3 }
+
+    /// The places the row at `index` has crossed with the finger `y` down (up when less than 0): past a row's middle.
+    private func crossed(_ y: CGFloat, from index: Int) -> Int {
+        let way = y < 0 ? -1 : 1
+        var steps = 0, passed: CGFloat = 0
+        while items.indices.contains(index + steps + way), abs(y) > passed + height(index + steps + way) / 2 {
+            steps += way
+            passed += height(index + steps)
+        }
+        return steps
+    }
+
+    /// How far the rows crossed reach, signed as `steps`.
+    private func span(_ index: Int, _ steps: Int) -> CGFloat {
+        let way = steps < 0 ? -1 : 1
+        return CGFloat(way) * (0..<abs(steps)).reduce(0) { $0 + height(index + way * ($1 + 1)) }
     }
 }
 
@@ -485,9 +507,10 @@ extension ArrangeList where End == EmptyView {
 }
 
 extension View {
-    /// The same row as the one with `id` elsewhere in `space` (none: on its own), so swapping one for the other glides.
+    /// The same row as the one with `id` elsewhere in `space` (none: on its own), so swapping one for the other glides:
+    /// its place only, each keeping its own size (sized as the card, a two-line row cut its name short mid-glide).
     @ViewBuilder func matched(_ id: some Hashable, in space: Namespace.ID?) -> some View {
-        if let space { matchedGeometryEffect(id: id, in: space) } else { self }
+        if let space { matchedGeometryEffect(id: id, in: space, properties: .position) } else { self }
     }
 }
 

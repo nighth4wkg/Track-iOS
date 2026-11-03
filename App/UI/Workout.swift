@@ -145,7 +145,7 @@ struct WorkoutScreen: View {
                              onArrange: active.exercises.count < 2 ? nil : { focus = nil; Motion.tap { opened = nil; arranging = true } })
                     .equatable()
                     .id(exercise.id)
-                    .matchedGeometryEffect(id: exercise.id, in: rows)
+                    .matchedGeometryEffect(id: exercise.id, in: rows, properties: .position)
                     .transition(.row)
             }
             Button {
@@ -242,11 +242,12 @@ struct ExerciseCard: View, Equatable {
     /// The hold that just arranged: its lift isn't a tap.
     @State private var held = false
 
-    /// One card either way (the PWA's resize): opened, its edge grows round what it uncovers; closed, it closes over
-    /// it, and the closed line fades in where the open one was. Only the insides swap, so the card never jumps.
+    /// One card either way (the PWA's resize): its line swaps at once, and what's under it is uncovered as the edge
+    /// grows, or closed over as it shrinks. Nothing fades: the two lines crossing showed the name twice (owner, build 71).
     var body: some View {
-        Group {
-            if open { card.transition(.row) } else { closed.transition(.opacity) }
+        VStack(alignment: .leading, spacing: 0) {
+            if open { heading.transition(.identity) } else { closed.transition(.identity) }
+            if open { sets.transition(.uncover) }
         }
         .pad()
         .raised()
@@ -281,25 +282,28 @@ struct ExerciseCard: View, Equatable {
         .accessibilityAction(named: "Arrange exercises") { onArrange?() }
     }
 
-    private var card: some View {
+    private var heading: some View {
+        HStack(spacing: Space.s3) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(exercise.name).type(.t20).foregroundStyle(Palette.text)
+                Text(muscle + dot + "Rest \(clock(restSeconds))").type(.t14).foregroundStyle(Palette.muted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { if armed { armed = false } }
+            if armed {
+                RoundButton(icon: .close, label: "Remove \(exercise.name)", tint: Palette.danger) { armed = false; model.removeExercise(exercise) }
+            } else {
+                RoundButton(icon: .more, label: "\(exercise.name) options", action: onOptions)
+            }
+        }
+        .swipeToArm($armed)
+    }
+
+    private var sets: some View {
         let labels = exercise.setLabels
         let next = exercise.sets.firstIndex { !$0.done }
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: Space.s3) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(exercise.name).type(.t20).foregroundStyle(Palette.text)
-                    Text(muscle + dot + "Rest \(clock(restSeconds))").type(.t14).foregroundStyle(Palette.muted)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .onTapGesture { if armed { armed = false } }
-                if armed {
-                    RoundButton(icon: .close, label: "Remove \(exercise.name)", tint: Palette.danger) { armed = false; model.removeExercise(exercise) }
-                } else {
-                    RoundButton(icon: .more, label: "\(exercise.name) options", action: onOptions)
-                }
-            }
-            .swipeToArm($armed)
             SetColumns {
                 Text("Set"); Text("Last"); Text(unit.rawValue); Text("Reps"); Text("RIR"); Text("Done")
             }

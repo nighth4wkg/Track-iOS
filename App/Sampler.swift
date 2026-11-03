@@ -126,5 +126,4 @@ enum AB {
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in
     static let stillRest = args.contains("-still-rest")
-    static let stillArrange = args.contains("-still-arrange") // arranged rows without their glide and uncover
 }

@@ -63,7 +63,7 @@ struct HomeScreen: View {
                 VStack(spacing: Space.s3) {
                     ForEach(training.splits) { split in
                         SplitCard(split: split, next: training.active == nil && next == split.id)
-                            .matchedGeometryEffect(id: split.id, in: rows)
+                            .matchedGeometryEffect(id: split.id, in: rows, properties: .position)
                             .transition(.row)
                     }
                 }

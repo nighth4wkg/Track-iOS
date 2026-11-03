@@ -29,8 +29,7 @@ struct SettingsScreen: View {
                 Button("Done") { model.back() }.buttonStyle(SecondaryStyle(hug: true))
             }
             .frame(minHeight: Size.control)
-            PillTabs(label: "Settings sections", items: Self.parts, chosen: part) { part = $0 }
-                .frame(maxWidth: .infinity)
+            PillTabs(label: "Settings sections", items: Self.parts, chosen: part, width: .infinity) { part = $0 }
                 .padding(.top, Space.s4)
             Group {
                 switch part {

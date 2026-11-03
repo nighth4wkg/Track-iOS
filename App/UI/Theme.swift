@@ -153,7 +153,9 @@ extension AnyTransition {
     /// strength from the first frame it read as a curtain over the cards still sliding), by a clip on the row alone (the PWA's lesson: a box moved
     /// one way and its contents the other ran out of step). Its edge never passes the top of the row gliding by, so
     /// its text never shows over that row's.
-    static let row = AnyTransition(Uncover()).combined(with: .opacity)
+    static let row = uncover.combined(with: .opacity)
+    /// The uncover alone, at full strength: what a card opens under its line (the PWA's resize fades nothing).
+    static let uncover = AnyTransition(Uncover())
     /// Something that comes in because it just happened (a new best's note): its part marked `popsIn()` pops as it
     /// arrives. Shown with what holds it (a card opened), it shows as it is.
     static let pop = AnyTransition(PopIn())
