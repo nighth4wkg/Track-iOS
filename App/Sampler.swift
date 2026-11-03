@@ -199,9 +199,18 @@ enum AB {
     /// while it moves.
     static let caTabs = args.contains("-ab-ca-tabs")
     static let caRaster = args.contains("-ab-ca-raster")
+    /// A screen's arrival moved as one piece: SwiftUI's shift of the content stuttered on screen while a Core Animation
+    /// shift of the same tab didn't (build 100 recordings). As a compositing group, or a geometry group.
+    static let groupArrive = args.contains("-ab-group-arrive")
+    static let geometryArrive = args.contains("-ab-geometry-arrive")
 }
 
 extension View {
+    /// .compositingGroup(), only while an AB switch measures it.
+    @ViewBuilder func compositingGroup(when on: Bool) -> some View {
+        if on { compositingGroup() } else { self }
+    }
+
     /// .geometryGroup(), unless an AB switch measures without it.
     @ViewBuilder func geometryGroup(when on: Bool) -> some View {
         if on { geometryGroup() } else { self }

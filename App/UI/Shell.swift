@@ -289,6 +289,8 @@ private struct Arrive: ViewModifier {
     func body(content: Content) -> some View {
         let moving = !still && !AB.stillPages
         content
+            .compositingGroup(when: AB.groupArrive)
+            .geometryGroup(when: AB.geometryArrive)
             .offset(x: moving && shifts && !AB.fadeOnly ? x : 0)
             .opacity(moving && !AB.shiftOnly ? opacity : 1)
             .onAppear { settle() }
