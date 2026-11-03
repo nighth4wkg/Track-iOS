@@ -11,6 +11,8 @@ import TrackCore
 @MainActor
 final class MotionCheck {
     private(set) static var running = false
+    /// -dryRun -motionCheck: the check runs by itself after launch, so it's measured with no test tool ever attached.
+    static let onLaunch = AppModel.dryRun && ProcessInfo.processInfo.arguments.contains("-motionCheck")
     private static let log = Logger(subsystem: "Track", category: "motion")
     private let model: AppModel
     private let meter = Meter()

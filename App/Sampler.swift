@@ -138,6 +138,8 @@ enum AB {
     static let noSwipe = args.contains("-ab-no-swipe")
     /// Card open, measuring only: a row's numbers without shrinking to fit (each measured at several sizes).
     static let plainText = args.contains("-ab-plain-text")
+    /// Hidden tabs and pages under the top one left out of the view tree, to measure what keeping them costs every update.
+    static let dropHidden = args.contains("-ab-drop-hidden")
     static let stillSheets = args.contains("-still-sheets")   // sheets and the question
     static let stillToast = args.contains("-still-toast")
     static let stillPages = args.contains("-still-pages")     // a screen's content shifting in

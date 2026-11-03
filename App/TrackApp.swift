@@ -41,6 +41,7 @@ struct TrackApp: App {
                 // the workout's cards and the ranks.
                 let names = Catalog.names + model.training.sessions.flatMap { $0.exercises.map(\.name) }
                 Task.detached(priority: .utility) { LiftTable.warm(names) }
+                if MotionCheck.onLaunch { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MotionCheck.run(model) } }
                 if AB.warmKeyboard { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { Self.warmKeyboard(model) } }
             }
             // The rest Live Activity: back to the workout in progress.

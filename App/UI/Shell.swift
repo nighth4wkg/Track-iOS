@@ -21,15 +21,15 @@ struct Shell: View {
         ZStack {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 let shown = !covered && model.tab == tab
-                TabData(shown: shown, live: model.training) { page(tab) }
+                if shown || !AB.dropHidden { TabData(shown: shown, live: model.training) { page(tab) }
                     .environment(\.shown, shown)
                     .opacity(shown ? 1 : 0)
                     .allowsHitTesting(shown)
-                    .accessibilityHidden(!shown || behind)
+                    .accessibilityHidden(!shown || behind) }
             }
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
-                deeper(route)
+                if shown || !AB.dropHidden { deeper(route)
                     .environment(\.shown, shown)
                     .id(route)
                     .opacity(shown ? 1 : 0)
@@ -37,7 +37,7 @@ struct Shell: View {
                     .accessibilityHidden(!shown || behind)
                     .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
                     .swipeBack(shown) { model.back() }
-                    .transition(.identity)
+                    .transition(.identity) }
             }
             // Screens come and go at once, even in a tap's move (starting or finishing a workout): each shifts in itself (Arrive).
             if model.workoutOpen, model.training.active != nil { WorkoutScreen().transition(.identity) }
