@@ -257,8 +257,8 @@ struct ToastLayer: View {
     @Environment(AppModel.self) private var model
     let above: CGFloat
     let keyboard: Bool
-    /// Whether the showing toast appeared over a sheet: chosen as it appears and kept, so one fired as a sheet closes
-    /// doesn't start at the top and then drop.
+    /// Whether the showing toast is over a sheet or question: chosen as it appears, and set when one opens under it
+    /// (owner: shown first, it covered the question's buttons); kept as they close, so it doesn't drop.
     @State private var placed: (id: UUID, overSheet: Bool)?
     /// How long a pill stays, as the PWA's PILL_MS: a problem a little longer to read, Undo longer to reach it.
     private static let seconds = (done: 3.0, problem: 4.0, undo: 6.0)
@@ -266,7 +266,8 @@ struct ToastLayer: View {
 
     var body: some View {
         let toast = model.toast
-        let top = toast.map { toast in keyboard || (placed?.id == toast.id ? placed!.overSheet : !model.sheets.isEmpty) } ?? false
+        let covered = !model.sheets.isEmpty || model.confirm != nil
+        let top = toast.map { toast in keyboard || (placed?.id == toast.id ? placed!.overSheet : covered) } ?? false
         let moving = !still && !AB.stillToast
         // A ZStack: one going and the next coming share the spot rather than stacking.
         ZStack {
@@ -299,7 +300,8 @@ struct ToastLayer: View {
                     try? await Task.sleep(for: .seconds(toast.undo != nil ? Self.seconds.undo : toast.problem ? Self.seconds.problem : Self.seconds.done))
                     dismiss()
                 }
-                .onChange(of: toast.id, initial: true) { placed = (toast.id, !model.sheets.isEmpty) }
+                .onChange(of: toast.id, initial: true) { placed = (toast.id, covered) }
+                .onChange(of: covered) { _, now in if now { placed = (toast.id, true) } }
                 // Its own: a new one comes in as the last goes, rather than taking over its pill.
                 .id(toast.id)
                 // From past the screen's edge it sits nearest: its height and the gap to that edge.
@@ -310,5 +312,6 @@ struct ToastLayer: View {
         .padding(.top, top ? Space.s2 : 0)
         .floatingBottom(top ? 0 : above)
         .motion(on: toast?.id, moving)
+        .motion(on: top, moving) // up out of a question's way as it opens
     }
 }
