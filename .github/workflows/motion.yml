@@ -42,9 +42,11 @@ jobs:
         run: |
           mkdir -p out
           xcrun simctl install "$UDID" "$APP"
-          # The check takes ~90 s from launch; the trace stops a little after.
-          xcrun xctrace record --template "${{ inputs.template || 'Time Profiler' }}" --device "$UDID" --time-limit 120s --output out/motion.trace \
-            --env TRACK_SEED="$(python3 tools/demo-data.py)" --launch -- "$APP" -dryRun -motionCheck ${{ inputs.args }} > out/xctrace.log 2>&1 || true
+          # Launched by simctl (xctrace's --launch couldn't find the app in the Simulator), then attached; the check starts
+          # 2 s after launch and takes ~90 s, the trace stops a little after.
+          pid=$(SIMCTL_CHILD_TRACK_SEED="$(python3 tools/demo-data.py)" xcrun simctl launch "$UDID" com.nighth4wkg.track -dryRun -motionCheck ${{ inputs.args }} | awk '{print $NF}')
+          echo "Track is process $pid"
+          xcrun xctrace record --template "${{ inputs.template || 'Time Profiler' }}" --device "$UDID" --attach "$pid" --time-limit 110s --output out/motion.trace > out/xctrace.log 2>&1 || true
           cat out/xctrace.log
           xcrun xctrace export --input out/motion.trace --toc > out/toc.xml
           for schema in $(grep -o 'schema="[^"]*"' out/toc.xml | cut -d'"' -f2 | sort -u); do
