@@ -176,11 +176,11 @@ private struct TabHost<Content: View>: UIViewControllerRepresentable {
             host.didMove(toParent: self)
         }
 
-        /// -ab-ca-tabs: from the left and faded, as Arrive, flattened to one layer while it moves.
+        /// -ab-ca-tabs: from the left and faded, as Arrive (-ab-ca-raster: flattened to one layer while it moves).
         private func arrive() {
             let moving = host.view!
             moving.layer.rasterizationScale = moving.scale
-            moving.layer.shouldRasterize = true
+            moving.layer.shouldRasterize = AB.caRaster
             UIView.performWithoutAnimation { moving.transform = CGAffineTransform(translationX: -Space.s6, y: 0); moving.alpha = 0 }
             Moves.spring({ moving.transform = .identity; moving.alpha = 1 }, completion: { _ in moving.layer.shouldRasterize = false })
         }

@@ -195,8 +195,10 @@ enum AB {
     /// recording's stutter comes from.
     static let shiftOnly = args.contains("-ab-shift-only")
     static let fadeOnly = args.contains("-ab-fade-only")
-    /// Tabs: the one shown comes in by Core Animation, flattened to one layer as it moves, not by SwiftUI's Arrive.
+    /// Tabs: the one shown comes in by Core Animation, not by SwiftUI's Arrive; -ab-ca-raster flattens it to one layer
+    /// while it moves.
     static let caTabs = args.contains("-ab-ca-tabs")
+    static let caRaster = args.contains("-ab-ca-raster")
 }
 
 extension View {
