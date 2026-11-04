@@ -79,15 +79,27 @@ extension AppModel {
         save()
     }
 
+    /// Each muscle's rank, kept until the workouts, the bodyweight or the lifts' choices change.
+    func ranks(of sessions: [Session], bodyweight: Double, choices: [String: String]) -> [MuscleRank] {
+        derived("ranks", of: sessions, at: "\(bodyweight) \(Self.signature(choices))") { $0.muscleRanks(bodyweight: bodyweight, choices: choices) }
+    }
+
+    /// The lifts' choices as one key.
+    static func signature(_ choices: [String: String]) -> String {
+        choices.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "|")
+    }
+
     func save() {
-        let before = Experience.progress(of: training.sessions)
+        // As the tabs work them out (their keys): before, already known from the tabs; after, worked out once for the
+        // recap and the tabs it goes back to (each worked out here took ~20 ms of Finish's tap: build 107).
+        let xp = { [self] in derived("xp") { Experience.progress(of: $0) } }
         let bodyweight = training.settings.bodyweight
         let choices = training.settings.lifts ?? [:]
-        let ranksBefore = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0, choices: choices) } ?? []
+        let ranked = { [self] in bodyweight.map { self.ranks(of: training.sessions, bodyweight: $0, choices: choices) } ?? [] }
+        let before = xp(), ranksBefore = ranked()
         update { try $0.finish(); $0.awardLatestQuests() }
         guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
-        let after = Experience.progress(of: training.sessions)
-        let ranksAfter = bodyweight.map { training.sessions.muscleRanks(bodyweight: $0, choices: choices) } ?? []
+        let after = xp(), ranksAfter = ranked()
         workoutOpen = false
         go(.progress)
         finished = Finished(id: session.id, xp: after.total - before.total, level: after.level, leveledUp: after.level > before.level,

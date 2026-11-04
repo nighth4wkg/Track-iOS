@@ -41,7 +41,9 @@ struct TrackApp: App {
                 // The library's and your own exercises' muscles worked out off the main thread, ahead of the picker,
                 // the workout's cards and the ranks.
                 let names = Catalog.names + model.training.sessions.flatMap { $0.exercises.map(\.name) }
-                Task.detached(priority: .utility) { LiftTable.warm(names) }
+                // The library's search words too: made on the first search, they were most of the picker's first
+                // opening (~30 ms, build 107).
+                Task.detached(priority: .utility) { LiftTable.warm(names); _ = Catalog.search("", usage: [:]) }
                 if MotionCheck.onLaunch { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MotionCheck.run(model) } }
                 if AB.warmKeyboard { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { Self.warmKeyboard(model) } }
             }

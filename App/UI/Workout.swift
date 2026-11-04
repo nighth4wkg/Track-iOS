@@ -7,6 +7,7 @@ import TrackCore
 /// walks weight → reps → RIR → next set.
 struct WorkoutScreen: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.shown) private var shown
     /// The exercise opened by hand; nil follows the workout (the first with a set to do).
     @State private var opened: String?
     /// The card the workout follows (the first with a set to do), a beat behind: a card whose last set was just done
@@ -30,16 +31,19 @@ struct WorkoutScreen: View {
             let splitId = active.splitId
             let previous: Session? = model.derived("previous \(splitId)") { _ in model.training.latestSession(of: splitId) }
             ScrollViewReader { proxy in
-                Group {
-                    if AB.uikitList && !arranging {
+                ZStack {
+                    if AB.uikitList {
                         // To the screen's edge under the rest timer, as the PWA's page runs under its floating timer.
-                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model, dock: dock)
+                        // Kept while the cards are arranged, out of sight: made again on Done it cost ~30 ms (build 107).
+                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model, dock: dock, frozen: arranging)
                             .ignoresSafeArea(.container, edges: .bottom)
-                            .feedback(active)
-                    } else {
+                            .opacity(arranging ? 0 : 1).allowsHitTesting(!arranging).accessibilityHidden(arranging)
+                    }
+                    if !AB.uikitList || arranging {
                         ScrollView { content(active, expanded: expanded, current: current, previous: previous).arrives(forward: true) }
                     }
                 }
+                    .feedback(active)
                     .scrollDismissesKeyboard(.interactively)
                     .setKeyboard($focus)
                     .background(Backdrop())
@@ -84,6 +88,12 @@ struct WorkoutScreen: View {
                     }
             }
             .onAppear { following = current }
+            // Kept for later, the screen stays made (made again on Continue it cost ~30 ms: build 107) but comes back as
+            // it did made anew: on the workout's card, not arranging, the keyboard down.
+            .onChange(of: shown) { _, on in
+                guard !on else { return }
+                focus = nil; opened = nil; arranging = false; following = current
+            }
             // The motion check's moves, as the taps that make them.
             .onChange(of: model.bench) { _, move in
                 switch move {
@@ -130,7 +140,6 @@ struct WorkoutScreen: View {
         // The top with its padding: on the header, going up to Finish stopped 16 short of the page's top.
         .id(Self.top)
         .frame(maxWidth: Size.column).frame(maxWidth: .infinity)
-        .feedback(active)
     }
 
     /// The page as CardList's rows: the header and bar, each card, Add exercise; spaced as `content` spaces them, each

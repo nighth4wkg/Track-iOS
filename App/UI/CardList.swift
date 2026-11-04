@@ -22,13 +22,21 @@ struct CardList: UIViewControllerRepresentable {
     /// How tall what floats over the page's bottom is, above the home indicator (the rest timer): the page runs under
     /// it to the screen's edge, and its last row scrolls clear of it.
     var dock: CGFloat = 0
+    /// Out of sight (the cards being arranged): left as it is, and shown as it's become at once, not moved there.
+    var frozen = false
 
     func makeUIViewController(context: Context) -> UIViewController {
         AB.ownList && AB.uikitCard ? Placed(model: model) : Controller(model: model)
     }
 
+    func makeCoordinator() -> Frozen { Frozen() }
+    final class Frozen { var was = false }
+
     func updateUIViewController(_ controller: UIViewController, context: Context) {
-        (controller as? CardListShowing)?.show(rows, animated: context.transaction.animation != nil && !Motion.still)
+        let thawed = context.coordinator.was
+        context.coordinator.was = frozen
+        guard !frozen else { return }
+        (controller as? CardListShowing)?.show(rows, animated: context.transaction.animation != nil && !Motion.still && !thawed)
         (controller as? Placed)?.dock = dock
     }
 
@@ -327,6 +335,12 @@ struct CardList: UIViewControllerRepresentable {
 
         /// A touch goes to the row shown under the finger: mid-move a row's frame is already where it's going.
         private final class Scroll: UIScrollView {
+            /// Kept for later, the page comes back at its top, as it did made anew.
+            override func didMoveToWindow() {
+                super.didMoveToWindow()
+                if window == nil { contentOffset.y = -adjustedContentInset.top }
+            }
+
             override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
                 guard isUserInteractionEnabled, !isHidden, alpha > 0, self.point(inside: point, with: event) else { return nil }
                 for row in subviews.reversed() {

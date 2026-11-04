@@ -151,11 +151,13 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
 struct Covering<Content: View>: View {
     @Environment(AppModel.self) private var model
     var shown = true
+    /// Shown again, it opens anew from the right (the workout continued), not comes back from the left.
+    var anew = false
     @ViewBuilder let content: Content
     @State private var bar: CGFloat = 0
 
     var body: some View {
-        Stage(shown: shown, first: .right, again: model.swapping ? .none : .left) {
+        Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left) {
             Calm(model: model) { content.environment(\.shown, shown) }
                 .onPreferenceChange(FloatingBar.self) { bar = $0 }
         }

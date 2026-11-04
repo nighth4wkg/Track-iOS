@@ -50,7 +50,8 @@ struct Shell: View {
                     .transition(.identity)
             }
             // Screens come and go at once, even in a tap's move (starting or finishing a workout): each moves in itself (Stage).
-            if model.workoutOpen, model.training.active != nil { Covering { WorkoutScreen() }.transition(.identity) }
+            // Kept made while it's kept for later: Continue workout only shows it (made anew it cost ~30 ms: build 107).
+            if model.training.active != nil { Covering(shown: model.workoutOpen, anew: true) { WorkoutScreen() }.transition(.identity) }
             if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished).transition(.identity) }
             StatusFade()
             if !covered && !keyboard {
