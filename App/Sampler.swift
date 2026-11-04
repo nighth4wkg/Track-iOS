@@ -189,16 +189,10 @@ enum AB {
     /// screen's own content against what's around it).
     static let emptyPages = args.contains("-ab-empty-pages")
     static let emptySheets = args.contains("-ab-empty-sheets")
-    /// Tabs: a hidden one stays in the window, hidden, not taken out (what coming back into the window costs).
-    static let attachedTabs = args.contains("-ab-attached-tabs")
     /// Measuring only: a screen's arrival only shifts (no fade), or only fades (no shift): which one the screen
     /// recording's stutter comes from.
     static let shiftOnly = args.contains("-ab-shift-only")
     static let fadeOnly = args.contains("-ab-fade-only")
-    /// Tabs: the one shown comes in by Core Animation, not by SwiftUI's Arrive; -ab-ca-raster flattens it to one layer
-    /// while it moves.
-    static let caTabs = args.contains("-ab-ca-tabs")
-    static let caRaster = args.contains("-ab-ca-raster")
     /// A screen's arrival moved as one piece: SwiftUI's shift of the content stuttered on screen while a Core Animation
     /// shift of the same tab didn't (build 100 recordings). As a compositing group, or a geometry group.
     static let groupArrive = args.contains("-ab-group-arrive")

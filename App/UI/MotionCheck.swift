@@ -45,6 +45,7 @@ final class MotionCheck {
         await Self.pause(0.3)
         _ = meter.take()
         Sampler.begin("motion \(name)", for: Self.sampled) // with -probe: where the main thread's time went
+        Self.log.log("start \(name, privacy: .public)") // when the change happened, for lining up a screen recording
         change()
         await Self.pause(settle)
         let late = meter.take()

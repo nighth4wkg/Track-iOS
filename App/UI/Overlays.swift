@@ -10,41 +10,45 @@ extension EnvironmentValues {
 }
 
 /// The open sheets, newest on top, each over its own dim; a tap on the dim closes the top one. A sheet comes up from
-/// below the screen's edge as its dim fades in, and goes back down the same way.
+/// below the screen's edge as its dim fades in, and goes back down the same way (Stage: by Core Animation, from the
+/// frame after it's built).
 struct SheetLayer: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var still
     /// The sheets drawn: the model's, and the ones closed but still going down (`leaving`).
     @State private var shown: [Presented] = []
     @State private var leaving: [UUID] = []
-    /// How far down takes a sheet off the screen.
-    @State private var drop: CGFloat = 0
+    /// Each sheet's top in the window, where it comes up to. Not observed: it's read as a sheet starts to move.
+    @State private var tops = Tops()
+    private final class Tops { var of: [UUID: CGFloat] = [:] }
 
     var body: some View {
         let moving = !still && !AB.stillSheets
-        ZStack(alignment: .bottom) {
-            // Dim and sheet side by side (not one group), so each comes and goes its own way.
+        ZStack {
             ForEach(shown) { sheet in
-                // A closed sheet goes down as a live view that takes no taps: removed at once (a removal
-                // transition), it still took them as it went, whatever was put on it or over it.
+                // A closed sheet goes down as a live view that takes no taps: removed at once, it still took them as
+                // it went, whatever was put on it or over it.
                 let gone = leaving.contains(sheet.id)
-                Palette.scrim.ignoresSafeArea().onTapGesture { close(sheet) }
-                    .opacity(gone ? 0 : 1)
-                    .allowsHitTesting(!gone)
-                    .transition(.dim(moving))
-                SheetBox(tall: sheet.tall, close: { close(sheet) }) { if AB.emptySheets { Color.clear.frame(height: Size.column / 2) } else { sheet.view } }
-                    .environment(\.closeSheet, { close(sheet) })
-                    .offset(y: gone ? drop : 0)
-                    .allowsHitTesting(!gone)
-                    .accessibilityHidden(gone)
-                    .transition(.sheet(moving))
+                Stage(first: moving ? .up : .none, dim: true, leaving: gone && moving, top: { [tops] in tops.of[sheet.id] }) {
+                    ZStack(alignment: .bottom) {
+                        // Above the sheet is its dim: a tap there closes it.
+                        Color.clear.contentShape(Rectangle()).onTapGesture { close(sheet) }.accessibilityHidden(true)
+                        SheetBox(tall: sheet.tall, close: { close(sheet) }) { if AB.emptySheets { Color.clear.frame(height: Size.column / 2) } else { sheet.view } }
+                            .environment(\.closeSheet, { close(sheet) })
+                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { [tops] in tops.of[sheet.id] = $0 }
+                    }
+                    // It reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
+                    // keyboard still lifts it.
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .environment(model)
+                    .tint(Palette.accent)
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(!gone)
+                .accessibilityHidden(gone)
+                .transition(.identity)
             }
         }
-        // The layer reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
-        // keyboard still lifts it.
-        .ignoresSafeArea(.container, edges: .bottom)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { drop = $0 }
-        .motion(on: [shown.map(\.id), leaving], moving)
         .onChange(of: model.sheets.map(\.id), initial: true) { follow(moving) }
     }
 
@@ -60,6 +64,7 @@ struct SheetLayer: View {
             try? await Task.sleep(for: .seconds(Motion.normal))
             shown.removeAll { closed.contains($0.id) }
             leaving.removeAll { closed.contains($0) }
+            for id in closed { tops.of[id] = nil }
         }
     }
 

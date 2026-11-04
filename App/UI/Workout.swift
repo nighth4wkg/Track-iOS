@@ -31,7 +31,6 @@ struct WorkoutScreen: View {
                 Group {
                     if AB.uikitList && !arranging {
                         CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model)
-                            .arrives(forward: true)
                             .feedback(active)
                     } else {
                         ScrollView { content(active, expanded: expanded, current: current, previous: previous).arrives(forward: true) }

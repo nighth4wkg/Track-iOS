@@ -28,7 +28,7 @@ struct Shell: View {
                         .allowsHitTesting(shown)
                         .accessibilityHidden(!shown || behind)
                 } else {
-                    TabHost(shown: shown) {
+                    Stage(shown: shown, again: model.swapping ? .none : .left) {
                         TabData(shown: shown, live: model.training) { page(tab) }
                             .environment(\.shown, shown)
                             .environment(model)
@@ -43,18 +43,14 @@ struct Shell: View {
             }
             ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
-                deeper(route)
-                    .environment(\.shown, shown)
+                Covering(shown: shown) { deeper(route).swipeBack(shown) { model.back() } }
                     .id(route)
-                    .opacity(shown ? 1 : 0)
                     .allowsHitTesting(shown)
                     .accessibilityHidden(!shown || behind)
-                    .transformPreference(FloatingBar.self) { if !shown { $0 = 0 } }
-                    .swipeBack(shown) { model.back() }
                     .transition(.identity)
             }
-            // Screens come and go at once, even in a tap's move (starting or finishing a workout): each shifts in itself (Arrive).
-            if model.workoutOpen, model.training.active != nil { WorkoutScreen().transition(.identity) }
+            // Screens come and go at once, even in a tap's move (starting or finishing a workout): each moves in itself (Stage).
+            if model.workoutOpen, model.training.active != nil { Covering { WorkoutScreen() }.transition(.identity) }
             if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished).transition(.identity) }
             StatusFade()
             if !covered && !keyboard {
@@ -129,94 +125,6 @@ private struct TabData<Content: View>: View {
     }
 }
 
-/// A tab in its own hosting controller, kept built but taken out of the window while hidden: every update of the app
-/// (a set typed, a toast, a card opened) then skips it, where hidden at opacity 0 in the app's own tree it cost each one
-/// ~10-20 ms (build 81's motion check). Its state stays, so showing it again is as quick as before. Hidden, it gets
-/// `shown` false and settles once (it's ready to come back from the left, at the top) before it leaves the window.
-private struct TabHost<Content: View>: UIViewControllerRepresentable {
-    let shown: Bool
-    @ViewBuilder let content: Content
-
-    func makeUIViewController(context: Context) -> Holder {
-        let holder = Holder(UIHostingController(rootView: content))
-        holder.show(shown)
-        // Built once in the window as the app starts, as all four were before, so the first tap on it isn't the build.
-        if !shown { DispatchQueue.main.async { holder.prebuild() } }
-        return holder
-    }
-
-    func updateUIViewController(_ holder: Holder, context: Context) {
-        // A hidden tab isn't given each new version: TabData keeps the training it last showed anyway.
-        guard shown || holder.shown else { return }
-        let start = CACurrentMediaTime(), was = holder.shown
-        holder.host.rootView = content
-        let given = CACurrentMediaTime()
-        holder.show(shown)
-        if shown != was {
-            Sampler.note("tab \(shown ? "shown" : "hidden"): content \(Int((given - start) * 1000)) ms, show \(Int((CACurrentMediaTime() - given) * 1000)) ms")
-        }
-    }
-
-    final class Holder: UIViewController {
-        let host: UIHostingController<Content>
-        private(set) var shown = false
-
-        init(_ host: UIHostingController<Content>) {
-            self.host = host
-            super.init(nibName: nil, bundle: nil)
-        }
-
-        required init?(coder: NSCoder) { nil }
-
-        override func viewDidLoad() {
-            super.viewDidLoad()
-            view.backgroundColor = .clear
-            host.view.backgroundColor = .clear
-            addChild(host)
-            host.didMove(toParent: self)
-        }
-
-        /// -ab-ca-tabs: from the left and faded, as Arrive (-ab-ca-raster: flattened to one layer while it moves).
-        private func arrive() {
-            let moving = host.view!
-            moving.layer.rasterizationScale = moving.scale
-            moving.layer.shouldRasterize = AB.caRaster
-            UIView.performWithoutAnimation { moving.transform = CGAffineTransform(translationX: -Space.s6, y: 0); moving.alpha = 0 }
-            Moves.spring({ moving.transform = .identity; moving.alpha = 1 }, completion: { _ in moving.layer.shouldRasterize = false })
-        }
-
-        func prebuild() {
-            guard !shown, host.view.superview == nil || AB.attachedTabs, view.window != nil else { return }
-            show(true)
-            host.view.layoutIfNeeded()
-            show(false)
-        }
-
-        func show(_ on: Bool) {
-            loadViewIfNeeded()
-            if AB.attachedTabs {
-                if host.view.superview == nil {
-                    host.view.frame = view.bounds
-                    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                    view.addSubview(host.view)
-                }
-                host.view.isHidden = !on
-            } else if on, host.view.superview == nil {
-                host.view.frame = view.bounds
-                host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                view.addSubview(host.view)
-            } else if !on, host.view.superview != nil {
-                host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
-                host.view.removeFromSuperview()
-            }
-            if AB.caTabs, on, !shown, !Motion.still { arrive() }
-            // An empty holder over the shown tab mustn't take its touches.
-            view.isUserInteractionEnabled = on
-            shown = on
-        }
-    }
-}
-
 /// A tab's page (the PWA's .page): one scrolling column, 16 from the edges, its last card two page edges clear of
 /// the nav pill. Shown again, it starts from the top, as the PWA's go() does.
 struct TabPage<Content: View>: View {
@@ -233,7 +141,6 @@ struct TabPage<Content: View>: View {
                 .padding(.bottom, Size.nav + floatingGap + Space.s4 * 2 - homeIndicator)
                 .frame(maxWidth: Size.column)
                 .frame(maxWidth: .infinity)
-                .arrives(forward: false, on: !AB.caTabs)
         }
         .scrollPosition($position)
         .scrollDismissesKeyboard(.interactively)
@@ -255,7 +162,6 @@ struct DeepPage<Content: View>: View {
                 .padding(.bottom, Space.s6)
                 .frame(maxWidth: Size.column)
                 .frame(maxWidth: .infinity)
-                .arrives(forward: true)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Backdrop())
