@@ -8,6 +8,7 @@ struct TrackApp: App {
     init() {
         let model = AppModel()
         _model = State(initialValue: model)
+        Refresh.start()
         RestIntent.change = { seconds in
             await MainActor.run { if seconds == 0 { model.skipRest() } else { model.shiftRest(by: seconds) } }
             await RestLive.pending?.value

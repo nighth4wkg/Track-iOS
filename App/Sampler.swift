@@ -194,13 +194,15 @@ enum AB {
     static let shiftOnly = args.contains("-ab-shift-only")
     /// A card's line cross-fades as it opens or closes; -ab-card-morph also glides its name between its places.
     static let cardFade = args.contains("-ab-card-fade")
-    static let cardMorph = args.contains("-ab-card-morph")
+    static let cardMorph = !cardFade && !args.contains("-ab-card-instant") // the owner's pick (build 106)
     /// How many times as long every move of the app's own takes (iOS's own, as the keyboard's, don't change): -ab-pace
     /// 1.5 to judge a length by eye, -ab-slow (10) to see what jumps in a move.
-    static let pace: Double = {
-        if let at = args.firstIndex(of: "-ab-pace"), at + 1 < args.count, let pace = Double(args[at + 1]), pace > 0 { return pace }
-        return args.contains("-ab-slow") ? 10 : 1
-    }()
+    static let pace = number("-ab-pace") ?? (args.contains("-ab-slow") ? 10 : 1)
+    /// -ab-travel60 0.4, -ab-travel120 0.3: Motion.travel's lengths, to judge by eye.
+    static func number(_ name: String) -> Double? {
+        guard let at = args.firstIndex(of: name), at + 1 < args.count, let value = Double(args[at + 1]), value > 0 else { return nil }
+        return value
+    }
     static let fadeOnly = args.contains("-ab-fade-only")
     /// A screen's arrival moved as one piece: SwiftUI's shift of the content stuttered on screen while a Core Animation
     /// shift of the same tab didn't (build 100 recordings). As a compositing group, or a geometry group.

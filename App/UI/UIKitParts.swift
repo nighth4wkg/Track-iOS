@@ -94,6 +94,42 @@ final class Words: UILabel {
     var width: CGFloat { ceil((words as NSString).size(withAttributes: [.font: font as Any]).width) }
 }
 
+/// The screen's real rate, timed by a few of its frames at launch, back in front and when Low Power Mode changes:
+/// iOS gives 120 as the screen's most even with Limit Frame Rate on.
+@MainActor final class Refresh: NSObject {
+    /// At 60 Hz or less. Set on the main thread only; read by Motion.travel from anywhere.
+    nonisolated(unsafe) private(set) static var slow = false
+    private static let shared = Refresh()
+    private var link: CADisplayLink?
+    private var ticks = 0
+
+    static func start() {
+        for name in [UIApplication.didBecomeActiveNotification, Notification.Name.NSProcessInfoPowerStateDidChange] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in MainActor.assumeIsolated { shared.time() } }
+        }
+        shared.time()
+    }
+
+    private func time() {
+        guard link == nil else { return }
+        ticks = 0
+        let link = CADisplayLink(target: self, selector: #selector(tick))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    /// The third frame's length: the first ones come as the screen picks up speed.
+    @objc private func tick(_ link: CADisplayLink) {
+        ticks += 1
+        guard ticks >= 3 else { return }
+        Self.slow = link.targetTimestamp - link.timestamp > 1 / 90.0
+        Sampler.note("refresh \(Self.slow ? 60 : 120) Hz")
+        link.invalidate()
+        self.link = nil
+    }
+}
+
 /// Runs once on the screen's next frame: after the update in progress has been committed (-ab-late-arrive).
 @MainActor final class NextFrame: NSObject {
     private let action: () -> Void
@@ -357,7 +393,14 @@ enum Moves {
     /// The app's move (Motion.move) in UIKit. What's moving still takes touches, as in SwiftUI (UIKit's default
     /// ignores them until it settles, so a quick next tap was lost).
     @MainActor static func spring(_ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
-        UIView.animate(springDuration: Motion.normal, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState], animations: change, completion: completion)
+        spring(Motion.normal, change, completion: completion)
+    }
+
+    /// A card opening or closing, a screen coming or going: as long as the screen's rate needs (Motion.travel).
+    @MainActor static func travel(_ change: @escaping () -> Void) { spring(Motion.travel, change) }
+
+    @MainActor private static func spring(_ length: Double, _ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
+        UIView.animate(springDuration: length, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState], animations: change, completion: completion)
     }
 
     /// The pop (Pop): swells from Pop.from past full size and settles, fading in over its first part.

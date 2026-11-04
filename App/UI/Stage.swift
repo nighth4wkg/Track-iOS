@@ -125,7 +125,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
             NextFrame.run { [weak self] in
                 guard let self, moves == move, shown, !gone else { return }
                 if way == .up { UIView.performWithoutAnimation { moving.transform = below() } }
-                Moves.spring { moving.transform = .identity; moving.alpha = 1; self.dim?.alpha = 1 }
+                Moves.travel { moving.transform = .identity; moving.alpha = 1; self.dim?.alpha = 1 }
             }
         }
 
@@ -140,7 +140,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
             let moving = host.view!
             NextFrame.run { [weak self] in
                 guard let self else { return }
-                Moves.spring { moving.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height); self.dim?.alpha = 0 }
+                Moves.travel { moving.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height); self.dim?.alpha = 0 }
             }
         }
     }

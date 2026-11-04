@@ -129,6 +129,10 @@ enum Motion {
     /// A sheet, a pill or a screen's content coming or going: the PWA's --motion. At 0.3 s the spring's gentle start read
     /// as a lag after the tap at 60 Hz (build 102: a card took ~0.4 s to settle, the PWA's 0.24).
     static let normal = 0.24 * AB.pace
+    /// A card opening or closing and a screen coming or going (a tab, a page, the workout, a sheet): as long as the
+    /// screen needs to show it smooth. At 60 Hz 0.24 s read as a stutter though no frame was lost (each frame a big
+    /// step): the owner chose 0.48 by eye (build 106); 0.3 at 120 Hz, as before build 103. The rest stays `normal`.
+    static var travel: Double { (Refresh.slow ? AB.number("-ab-travel60") ?? 0.48 : AB.number("-ab-travel120") ?? 0.3) * AB.pace }
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s bezier put half the way into 3 frames at 60 Hz (up to
     /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This spring, as long, moves ~95 pt a frame at most.
     static let move = Animation.smooth(duration: normal)

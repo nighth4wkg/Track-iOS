@@ -110,7 +110,7 @@ struct CardList: UIViewControllerRepresentable {
             }
             y = min(max(y, lowest), highest)
             guard y != scroll.contentOffset.y else { return }
-            Moves.swap { self.scroll.contentOffset.y = y }
+            if Motion.still { scroll.contentOffset.y = y } else { Moves.travel { self.scroll.contentOffset.y = y } } // in step with the cards
         }
 
         override func viewDidLayoutSubviews() {
@@ -153,7 +153,7 @@ struct CardList: UIViewControllerRepresentable {
                 for id in gone { leave(id) }
                 place()
             }
-            if animate { Moves.spring(change) } else { UIView.performWithoutAnimation(change) }
+            if animate { Moves.travel(change) } else { UIView.performWithoutAnimation(change) }
             Sampler.note("cardlist placed \(changed.count) changed (\(cards.count) made): \(CardList.ms(CACurrentMediaTime() - start)) ms")
             prebuildSoon()
         }
@@ -273,7 +273,7 @@ struct CardList: UIViewControllerRepresentable {
                 host?.removeFromParent()
             }
             if UIView.inheritedAnimationDuration > 0 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Motion.normal) { done() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { done() }
             } else {
                 done()
             }
@@ -288,10 +288,10 @@ struct CardList: UIViewControllerRepresentable {
         /// Once a move has settled, one thing an idle turn while the page isn't scrolling: the cards not made yet,
         /// nearest first, then (-ab-prebuilt-sets) what the cards near sight open.
         private func prebuildSoon() {
-            settled = CACurrentMediaTime() + Motion.normal
+            settled = CACurrentMediaTime() + Motion.travel
             guard !preparing else { return }
             preparing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.normal) { [weak self] in self?.prebuild() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in self?.prebuild() }
         }
 
         /// When the last move settles, and whether idle work is under way (one chain, however many moves).
@@ -301,7 +301,7 @@ struct CardList: UIViewControllerRepresentable {
         private func prebuild() {
             let wait = settled - CACurrentMediaTime()
             guard wait <= 0, !scroll.isTracking, !scroll.isDecelerating else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + max(wait, Motion.normal)) { [weak self] in self?.prebuild() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + max(wait, Motion.travel)) { [weak self] in self?.prebuild() }
                 return
             }
             let start = CACurrentMediaTime()
@@ -427,7 +427,7 @@ struct CardList: UIViewControllerRepresentable {
                 }
                 list.layoutIfNeeded()
             }
-            if animate { Moves.spring(change) } else { UIView.performWithoutAnimation(change) }
+            if animate { Moves.travel(change) } else { UIView.performWithoutAnimation(change) }
             if !hidden.isEmpty {
                 var snapshot = source.snapshot()
                 snapshot.reconfigureItems(hidden)
@@ -439,7 +439,7 @@ struct CardList: UIViewControllerRepresentable {
         /// -ab-prebuilt-sets: once a move has settled, the cards in view build what they open, one a run-loop turn,
         /// while the list isn't scrolling.
         private func prebuildSoon() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.normal) { [weak self] in self?.prebuild() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in self?.prebuild() }
         }
 
         private func prebuild() {
