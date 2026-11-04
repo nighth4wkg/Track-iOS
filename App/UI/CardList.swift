@@ -19,6 +19,9 @@ struct CardList: UIViewControllerRepresentable {
 
     let rows: [Row]
     let model: AppModel
+    /// How tall what floats over the page's bottom is, above the home indicator (the rest timer): the page runs under
+    /// it to the screen's edge, and its last row scrolls clear of it.
+    var dock: CGFloat = 0
 
     func makeUIViewController(context: Context) -> UIViewController {
         AB.ownList && AB.uikitCard ? Placed(model: model) : Controller(model: model)
@@ -26,6 +29,7 @@ struct CardList: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: UIViewController, context: Context) {
         (controller as? CardListShowing)?.show(rows, animated: context.transaction.animation != nil && !Motion.still)
+        (controller as? Placed)?.dock = dock
     }
 
     private static func same(_ a: any Equatable, _ b: any Equatable) -> Bool {
@@ -59,6 +63,7 @@ struct CardList: UIViewControllerRepresentable {
         private lazy var sizer = CardView()
         /// Where to go once the page is laid out (the card it's in may just have opened, the keyboard come up).
         private var going: (id: String, top: Bool)?
+        var dock: CGFloat = 0 { didSet { if dock != oldValue { view.setNeedsLayout() } } }
 
         init(model: AppModel) {
             self.model = model
@@ -110,6 +115,9 @@ struct CardList: UIViewControllerRepresentable {
 
         override func viewDidLayoutSubviews() {
             super.viewDidLayoutSubviews()
+            // The dock over the home indicator, less what of the screen's edge the page's own safe area already keeps clear.
+            let bottom = max(0, dock + (view.window?.safeAreaInsets.bottom ?? 0) - scroll.safeAreaInsets.bottom)
+            if scroll.contentInset.bottom != bottom { scroll.contentInset.bottom = bottom; scroll.verticalScrollIndicatorInsets.bottom = bottom }
             if scroll.bounds.width != width {
                 width = scroll.bounds.width
                 for id in order { measure(id) }

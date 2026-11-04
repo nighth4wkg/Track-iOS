@@ -17,6 +17,8 @@ struct WorkoutScreen: View {
     @Namespace private var rows
     /// The set field being typed in ("<set id>.kg", ".reps" or ".rir"), on the workout's one keyboard (SetKeyboard).
     @State private var focus: String?
+    /// The rest timer's (or the keyboard bar's) height over the page's bottom.
+    @State private var dock: CGFloat = 0
 
     var body: some View {
         if let active = model.training.active {
@@ -30,7 +32,9 @@ struct WorkoutScreen: View {
             ScrollViewReader { proxy in
                 Group {
                     if AB.uikitList && !arranging {
-                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model)
+                        // To the screen's edge under the rest timer, as the PWA's page runs under its floating timer.
+                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model, dock: dock)
+                            .ignoresSafeArea(.container, edges: .bottom)
                             .feedback(active)
                     } else {
                         ScrollView { content(active, expanded: expanded, current: current, previous: previous).arrives(forward: true) }
@@ -42,7 +46,8 @@ struct WorkoutScreen: View {
                     // While typing, one bar over the keyboard (the rest's time, Next, Done) instead of the rest timer.
                     // Without the keyboard the timer sits as far from the screen's edge as the nav pill.
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        if focus != nil { keyboardBar(fields) } else { RestTimer().floatingBottom() }
+                        Group { if focus != nil { keyboardBar(fields) } else { RestTimer().floatingBottom() } }
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { dock = $0 }
                     }
                     .swipeBack(true) { model.workoutOpen = false }
                     // The keyboard's Next reaching a closed card opens it.

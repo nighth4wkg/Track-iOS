@@ -21,13 +21,13 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
     var dim = false
     /// Closed (a sheet): it goes back down and its dim out, taking no touches, before it's taken away.
     var leaving = false
-    /// Where a sheet's top sits, in the window: it comes up from just below the screen's edge, not the screen's height.
-    var top: () -> CGFloat? = { nil }
+    /// A sheet's height: it comes up from just below the screen's edge, its own height away, not the screen's.
+    var height: () -> CGFloat? = { nil }
     @ViewBuilder let content: Content
 
     func makeUIViewController(context: Context) -> Holder {
         let holder = Holder(UIHostingController(rootView: content), dim: dim)
-        holder.top = top
+        holder.height = height
         holder.show(shown, coming: first)
         // Built once in the window as the app starts, so the first time it's shown isn't the build.
         if !shown { DispatchQueue.main.async { holder.prebuild() } }
@@ -39,7 +39,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         guard shown || holder.shown else { return }
         let start = CACurrentMediaTime(), was = holder.shown
         holder.host.rootView = content
-        holder.top = top
+        holder.height = height
         let given = CACurrentMediaTime()
         holder.show(shown, coming: again)
         if leaving { holder.leave() }
@@ -50,7 +50,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
 
     final class Holder: UIViewController {
         let host: UIHostingController<Content>
-        var top: () -> CGFloat? = { nil }
+        var height: () -> CGFloat? = { nil }
         private(set) var shown = false
         private let dim: UIView?
         /// Each move's number: a move waiting for its next frame doesn't start if another has come since.
@@ -110,8 +110,9 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 UIView.performWithoutAnimation { moving.transform = .identity; moving.alpha = 1; dim?.alpha = 1 }
                 return
             }
-            // Before it's laid out its height isn't known: the window's takes it off the screen.
-            let below = { [unowned self] in CGAffineTransform(translationX: 0, y: self.view.bounds.height - (self.top() ?? 0)) }
+            // Before it's laid out its height isn't known: the window's takes it off the screen. (Its place in the window
+            // came out moved by this very shift, so a sheet started above its place and dropped in: build 102.)
+            let below = { [unowned self] in CGAffineTransform(translationX: 0, y: self.height() ?? self.view.bounds.height) }
             UIView.performWithoutAnimation {
                 switch way {
                 case .right: moving.transform = CGAffineTransform(translationX: Space.s6, y: 0); moving.alpha = 0
@@ -128,14 +129,19 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
             }
         }
 
-        /// A closed sheet: down past the screen's edge from wherever it is, its dim out.
+        /// A closed sheet: down past the screen's edge from wherever it is, its dim out, from the next frame. Started
+        /// in the close's own frame (the app redrawn around it: 30-50 ms at 120 Hz), the picker's went down with a hitch
+        /// (build 102 recordings).
         func leave() {
             guard !gone else { return }
             gone = true
             moves += 1
             view.isUserInteractionEnabled = false
             let moving = host.view!
-            Moves.spring { moving.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height); self.dim?.alpha = 0 }
+            NextFrame.run { [weak self] in
+                guard let self else { return }
+                Moves.spring { moving.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height); self.dim?.alpha = 0 }
+            }
         }
     }
 }
@@ -150,15 +156,34 @@ struct Covering<Content: View>: View {
 
     var body: some View {
         Stage(shown: shown, first: .right, again: model.swapping ? .none : .left) {
-            content
-                .environment(\.shown, shown)
-                .environment(model)
-                .tint(Palette.accent)
-                .contentTransition(.identity)
-                .transaction { $0.disablesAnimations = true }
+            Calm(model: model) { content.environment(\.shown, shown) }
                 .onPreferenceChange(FloatingBar.self) { bar = $0 }
         }
         .ignoresSafeArea()
         .floatingBar(shown ? bar : 0)
     }
+}
+
+/// The app's way inside a screen of its own, as Shell's: words and numbers change in place, and a change shows at once
+/// unless it says how it moves. It reads what Shell reads, so each change passes through it on the way down, as it
+/// did through Shell; without that, a change drawn only below it (the rest's ±15s) took a part's own animation (the
+/// rest timer rose in again: build 102).
+struct Calm<Content: View>: View {
+    /// Given, not from the environment: this is the top of its screen, where the environment starts empty.
+    let model: AppModel
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        _ = (model.training, model.tab, model.pages, model.sheets.count, model.confirm?.id, model.toast?.id, model.workoutOpen, model.finished?.id, model.bench)
+        return content
+            .environment(model)
+            .tint(Palette.accent)
+            .contentTransition(.identity)
+            .transaction { $0.disablesAnimations = true }
+    }
+}
+
+extension View {
+    /// This as a screen of its own (Calm).
+    func calm(_ model: AppModel) -> some View { Calm(model: model) { self } }
 }

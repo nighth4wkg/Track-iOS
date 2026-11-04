@@ -18,9 +18,9 @@ struct SheetLayer: View {
     /// The sheets drawn: the model's, and the ones closed but still going down (`leaving`).
     @State private var shown: [Presented] = []
     @State private var leaving: [UUID] = []
-    /// Each sheet's top in the window, where it comes up to. Not observed: it's read as a sheet starts to move.
-    @State private var tops = Tops()
-    private final class Tops { var of: [UUID: CGFloat] = [:] }
+    /// Each sheet's height, how far below it starts. Not observed: it's read as a sheet starts to move.
+    @State private var heights = Heights()
+    private final class Heights { var of: [UUID: CGFloat] = [:] }
 
     var body: some View {
         let moving = !still && !AB.stillSheets
@@ -29,19 +29,18 @@ struct SheetLayer: View {
                 // A closed sheet goes down as a live view that takes no taps: removed at once, it still took them as
                 // it went, whatever was put on it or over it.
                 let gone = leaving.contains(sheet.id)
-                Stage(first: moving ? .up : .none, dim: true, leaving: gone && moving, top: { [tops] in tops.of[sheet.id] }) {
+                Stage(first: moving ? .up : .none, dim: true, leaving: gone && moving, height: { [heights] in heights.of[sheet.id] }) {
                     ZStack(alignment: .bottom) {
                         // Above the sheet is its dim: a tap there closes it.
                         Color.clear.contentShape(Rectangle()).onTapGesture { close(sheet) }.accessibilityHidden(true)
                         SheetBox(tall: sheet.tall, close: { close(sheet) }) { if AB.emptySheets { Color.clear.frame(height: Size.column / 2) } else { sheet.view } }
                             .environment(\.closeSheet, { close(sheet) })
-                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { [tops] in tops.of[sheet.id] = $0 }
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { [heights] in heights.of[sheet.id] = $0 }
                     }
                     // It reaches the screen's bottom edge (not the home indicator's), so a sheet sits 8 above it; the
                     // keyboard still lifts it.
                     .ignoresSafeArea(.container, edges: .bottom)
-                    .environment(model)
-                    .tint(Palette.accent)
+                    .calm(model)
                 }
                 .ignoresSafeArea()
                 .allowsHitTesting(!gone)
@@ -64,7 +63,7 @@ struct SheetLayer: View {
             try? await Task.sleep(for: .seconds(Motion.normal))
             shown.removeAll { closed.contains($0.id) }
             leaving.removeAll { closed.contains($0) }
-            for id in closed { tops.of[id] = nil }
+            for id in closed { heights.of[id] = nil }
         }
     }
 
