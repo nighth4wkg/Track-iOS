@@ -22,20 +22,26 @@ struct RestTimer: View {
         let moving = !compact && !still && !AB.stillRest
         ZStack {
             if let until, resting {
-                TimelineView(.periodic(from: .now, by: Self.tick)) { context in
-                    let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
-                    let total = Double(max(1, model.training.settings.restSeconds))
-                    if left > 0 {
-                        if compact {
-                            ring(left, total).accessibilityLabel("Rest, \(time(left)) left").padding(.horizontal, Space.s2)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            full(left, total)
+                // The rise is on this holder, which stays through a ±: on the clock it went with each new clock (its
+                // .id), so a ± slid the timer out and up again (build 103).
+                ZStack {
+                    TimelineView(.periodic(from: .now, by: Self.tick)) { context in
+                        let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
+                        let total = Double(max(1, model.training.settings.restSeconds))
+                        if left > 0 {
+                            if compact {
+                                ring(left, total).accessibilityLabel("Rest, \(time(left)) left").padding(.horizontal, Space.s2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                full(left, total)
+                            }
                         }
                     }
+                    // A new or shifted rest gets a fresh clock, swapped in place; the old one's last tick would show a
+                    // second too many.
+                    .id(until)
+                    .transition(.identity)
                 }
-                // A new or shifted rest gets a fresh clock; the old one's last tick would show a second too many.
-                .id(until)
                 .task(id: until) {
                     let wait = Double(until) / 1000 - Date.now.timeIntervalSince1970
                     guard wait > 0 else { over = until; return }
@@ -44,7 +50,6 @@ struct RestTimer: View {
                     ended += 1
                     over = until
                 }
-                // Here, outside the clock's .id (it turns over with each ±, and those just show).
                 .transition(.rise(Size.nav + floatingGap, moving))
             }
         }

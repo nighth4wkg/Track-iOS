@@ -192,6 +192,9 @@ enum AB {
     /// Measuring only: a screen's arrival only shifts (no fade), or only fades (no shift): which one the screen
     /// recording's stutter comes from.
     static let shiftOnly = args.contains("-ab-shift-only")
+    /// A card's line cross-fades as it opens or closes; -ab-card-morph also glides its name between its places.
+    static let cardFade = args.contains("-ab-card-fade")
+    static let cardMorph = args.contains("-ab-card-morph")
     static let fadeOnly = args.contains("-ab-fade-only")
     /// A screen's arrival moved as one piece: SwiftUI's shift of the content stuttered on screen while a Core Animation
     /// shift of the same tab didn't (build 100 recordings). As a compositing group, or a geometry group.

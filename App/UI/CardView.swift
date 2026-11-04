@@ -77,6 +77,10 @@ final class CardView: UIView {
         card = next
         let fresh = previous?.exercise.id != next.exercise.id
         let toggled = fresh || previous?.open != next.open
+        // Opened or closed in the list's move: the line it shows and the one it hides cross-fade (-ab-card-fade), and
+        // the name also glides between its two places (-ab-card-morph). Swapped at once, the line read as a jump in
+        // the move's first frame (build 103, a real tap filmed).
+        let blend = !fresh && toggled && (AB.cardFade || AB.cardMorph) && !Motion.still
         if fresh { sets?.removeFromSuperview(); sets = nil }
         UIView.performWithoutAnimation {
             number.show("\(next.number)")
@@ -92,8 +96,17 @@ final class CardView: UIView {
             muscle.show(next.muscle + dot + "Rest \(clock(next.restSeconds))")
             options.accessibilityLabel = "\(next.exercise.name) options"
             remove.accessibilityLabel = "Remove \(next.exercise.name)"
-            closed.isHidden = next.open
-            heading.isHidden = !next.open
+            closed.isHidden = next.open && !blend
+            heading.isHidden = !next.open && !blend
+            closed.alpha = 1
+            heading.alpha = 1
+            if blend { (next.open ? heading : closed).alpha = 0 } // what it shows now fades in from clear
+            closed.isAccessibilityElement = !next.open
+            heading.accessibilityElementsHidden = !next.open
+            closed.isUserInteractionEnabled = !next.open
+            heading.isUserInteractionEnabled = next.open
+            name.transform = .identity
+            closedName.transform = .identity
             if !next.open { arm(false) }
             if next.open, sets == nil { makeSets() }
             sets?.isUserInteractionEnabled = next.open
@@ -105,6 +118,25 @@ final class CardView: UIView {
         if next.open { sets?.update(next, model: model) }
         // Its line and what it opens are where they go at once; set rows added or removed in an open card move.
         if toggled { UIView.performWithoutAnimation { place(bounds.width, apply: true) } } else { place(bounds.width, apply: true) }
+        guard blend else { return }
+        let (coming, going) = next.open ? (name, closedName) : (closedName, name)
+        if AB.cardMorph {
+            let start = Self.onto(coming, going, in: clip), end = Self.onto(going, coming, in: clip)
+            UIView.performWithoutAnimation { coming.transform = start }
+            coming.transform = .identity
+            going.transform = end
+        }
+        // In the list's move (CardList's spring), so in step with the card's own height.
+        closed.alpha = next.open ? 0 : 1
+        heading.alpha = next.open ? 1 : 0
+    }
+
+    /// Moves and scales `label` onto where `other` is drawn, their first lines' starts together (-ab-card-morph).
+    private static func onto(_ label: Words, _ other: Words, in space: UIView) -> CGAffineTransform {
+        let to = other.convert(other.bounds, to: space), from = label.convert(label.bounds, to: space)
+        let scale = other.font.pointSize / label.font.pointSize
+        return CGAffineTransform(translationX: to.minX - (from.midX - from.width * scale / 2), y: to.minY - (from.midY - from.height * scale / 2))
+            .scaledBy(x: scale, y: scale)
     }
 
     /// Its height changed by itself (typing showed an error or a new best).
