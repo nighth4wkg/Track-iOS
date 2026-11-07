@@ -125,17 +125,14 @@ enum IconSize {
 /// nothing moves (the PWA's prefers-reduced-motion).
 enum Motion {
     /// --motion-fast (s): a dragged thing let go short of its goal slides back this long.
-    static let fast = 0.16 * AB.pace
+    static var fast: Double { 0.16 * AB.pace / speed }
     /// A sheet, a pill or a screen's content coming or going: the PWA's --motion. At 0.3 s the spring's gentle start read
     /// as a lag after the tap at 60 Hz (build 102: a card took ~0.4 s to settle, the PWA's 0.24).
-    static let normal = 0.24 * AB.pace
+    static var normal: Double { 0.24 * AB.pace / speed }
     /// A screen or sheet coming or going (a tab, a page, the workout, a sheet), one length whatever it covers: what moves
     /// a distance takes `length`. At 60 Hz 0.24 s read as a stutter though no frame was lost (each frame a big step):
-    /// the owner chose 0.48 by eye (build 106). A faster screen takes `fastShare` of it, as `length` (half read as a
-    /// jump at 120 Hz). The PWA's --travel.
-    static var travel: Double {
-        (Refresh.rate > paceRate ? AB.number("-ab-travel120") ?? travelAt60 * fastShare : AB.number("-ab-travel60") ?? travelAt60) * AB.pace
-    }
+    /// the owner chose 0.48 by eye (build 106). The PWA's --motion-travel.
+    static var travel: Double { (AB.number("-ab-travel60") ?? travelAt60) * AB.pace / speed }
     static let travelAt60 = 0.48
     /// The app's pace: the most anything moving a distance (a card, the page's scroll) goes in one frame at its
     /// fastest, in points. A move as long whatever its distance stepped further a frame the further it went, so a
@@ -146,26 +143,28 @@ enum Motion {
     static let paceStep = 12.75
     /// The rate the pace was picked at: a slower screen takes longer rather than stepping further.
     static let paceRate = 60.0
-    /// A faster screen (90, 120 Hz) takes this share of the 60 Hz time, in smaller steps: half read as too fast, as a
-    /// jump (owner, build 110); a little faster than at 60 Hz is the owner's ask.
-    static let fastShare = 0.85
+    /// On a screen faster than `paceRate` (90, 120 Hz) every move is this much faster than at 60 Hz, in smaller steps
+    /// (the owner's pick after build 111). The PWA's --motion-speedup.
+    static let fastSpeedup = 1.75
+    /// How much faster than at 60 Hz every length is on this screen: `fastSpeedup` above `paceRate`, else 1.
+    static var speed: Double { Refresh.rate > paceRate ? fastSpeedup : 1 }
     /// The one length the owner liked for a card at 60 Hz on build 109 (the Fixed test, to compare with the pace).
     static let picked = 0.6
     /// However far it goes, a move takes no longer than this.
-    static let longest = 0.8 * AB.pace
+    static var longest: Double { 0.8 * AB.pace / speed }
     /// How long a move of `distance` points takes at the app's pace, at the screen's rate: no shorter than `normal`
     /// (a small move still eases), no longer than `longest`. -ab-fixed: as long as `travel`, as before build 110.
     static func length(_ distance: CGFloat) -> Double {
         guard !AB.fixedPace else { return travel }
         // iOS's spring without bounce over d seconds peaks at 2π/(e·d) of its distance a second.
-        let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * min(Refresh.rate, paceRate / fastShare))
-        return min(max(even * AB.pace, normal), longest)
+        let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * min(Refresh.rate, paceRate))
+        return min(max(even * AB.pace / speed, normal), longest)
     }
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s bezier put half the way into 3 frames at 60 Hz (up to
     /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This spring, as long, moves ~95 pt a frame at most.
-    static let move = Animation.smooth(duration: normal)
+    static var move: Animation { .smooth(duration: normal) }
     /// What goes away by fading alone: --motion-fast on an even curve (the PWA's --ease-fade), so it never snaps.
-    static let fade = Animation.easeInOut(duration: fast)
+    static var fade: Animation { .easeInOut(duration: fast) }
     /// The PWA's --ease on the iPhone: most of the way in its first frames, then settling. A pop runs on it, so what
     /// just happened shows at once (on `move`'s gentle start a ✓ stayed hidden ~150 ms).
     static let ease = UnitCurve.bezier(startControlPoint: UnitPoint(x: 0.3, y: 0.45), endControlPoint: UnitPoint(x: 0.1, y: 1))

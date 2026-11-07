@@ -73,7 +73,7 @@ struct CompleteScreen: View {
     }
 
     /// The badges pop once their parts have risen (the PWA's --motion + --motion-fast).
-    private static let badgeDelay = Motion.normal + Motion.fast
+    private static var badgeDelay: Double { Motion.normal + Motion.fast }
 
     /// Back to Home, done with the recap: Home comes back as a page does (owner: it cut straight to it).
     private func leave() { model.finished = nil; model.go(.home, swapping: false) }

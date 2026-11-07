@@ -210,7 +210,7 @@ enum AB {
     /// How many times as long every move of the app's own takes (iOS's own, as the keyboard's, don't change): -ab-pace
     /// 1.5 to judge a length by eye, -ab-slow (10) to see what jumps in a move.
     static let pace = number("-ab-pace") ?? (args.contains("-ab-slow") ? 10 : 1)
-    /// -ab-travel60 0.4, -ab-travel120 0.3: Motion.travel's lengths, to judge by eye.
+    /// -ab-travel60 0.4: Motion.travel at 60 Hz, to judge by eye.
     static func number(_ name: String) -> Double? {
         guard let at = args.firstIndex(of: name), at + 1 < args.count, let value = Double(args[at + 1]), value > 0 else { return nil }
         return value
