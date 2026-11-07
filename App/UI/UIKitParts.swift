@@ -397,7 +397,10 @@ enum Moves {
     }
 
     /// A card opening or closing, a screen coming or going: as long as the screen's rate needs (Motion.travel).
-    @MainActor static func travel(_ change: @escaping () -> Void) { spring(Motion.travel, change) }
+    @MainActor static func travel(_ change: @escaping () -> Void) {
+        guard AB.evenCurve else { return spring(Motion.travel, change) }
+        UIView.animate(withDuration: Motion.travel, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut], animations: change)
+    }
 
     @MainActor private static func spring(_ length: Double, _ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
         UIView.animate(springDuration: length, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState], animations: change, completion: completion)

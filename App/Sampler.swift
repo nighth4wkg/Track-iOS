@@ -135,7 +135,17 @@ final class Sampler: Thread, @unchecked Sendable {
 /// Bench-only A/B switches: each turns one kind of motion off (as Reduce Motion does), or one speed-up on, so a part
 /// that drops frames can be checked against the other way on one install.
 enum AB {
-    private static let args = ProcessInfo.processInfo.arguments
+    /// The launch's switches, and the motion test picked in Settings (it takes effect from the next launch).
+    private static let args = ProcessInfo.processInfo.arguments + applied.split(separator: " ").map(String.init)
+    static let testKey = "abTest"
+    static let applied = UserDefaults.standard.string(forKey: testKey) ?? ""
+    /// The motion tests the owner can pick in Settings, to judge by eye without a launch from the computer.
+    static let tests: [(name: String, args: String)] = [
+        ("As is", ""), ("Name fades", "-ab-card-fade"), ("Shorter 0.36 s", "-ab-travel60 0.36"),
+        ("Longer 0.6 s", "-ab-travel60 0.6"), ("No shadow", "-ab-no-shadow"), ("Even curve", "-ab-even-curve"),
+    ]
+    /// Cards and screens move on iOS's ease-in-out (even steps) instead of the spring (a gentle start, then big steps).
+    static let evenCurve = args.contains("-ab-even-curve")
     /// The workout's cards built as they scroll into view (Start workout spent ~165 ms in SwiftUI on 22 cards).
     static let lazyCards = args.contains("-ab-lazy")
     /// iOS's keyboard loaded once, out of sight, after launch, so the first field tapped doesn't wait for it (Keyboard

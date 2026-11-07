@@ -15,6 +15,7 @@ struct SettingsScreen: View {
     @State private var restored = 0
     @State private var copied = false
     @State private var part = Part.training
+    @AppStorage(AB.testKey) private var test = ""
     private static let contact = "n1ghthawq"
     /// How long "Copied" shows before the row reads as before (the PWA's COPIED_MS).
     private static let copiedFor = Duration.seconds(2)
@@ -129,6 +130,13 @@ struct SettingsScreen: View {
                 // Inside Track, as iOS apps show a web page, rather than switching to Safari.
                 Button { if let url = Self.privacy { showWebPage(url) } } label: { Row(title: "Privacy", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
+                // For now: the motion tests, picked here and applied when Track is opened again.
+                Menu {
+                    Picker("Motion test", selection: $test) { ForEach(AB.tests.indices, id: \.self) { Text(AB.tests[$0].name).tag(AB.tests[$0].args) } }
+                } label: {
+                    Row(title: "Motion test", value: (AB.tests.first { $0.args == test }?.name ?? "") + (test == AB.applied ? "" : " · reopen"), chevron: true)
+                }
+                .buttonStyle(RowStyle())
                 Row(title: "Version", value: Self.version)
                     // Hidden, for checking motion on this iPhone: every motion run by itself on a copy that's never saved.
                     .onLongPressGesture(minimumDuration: Self.holdForCheck) { MotionCheck.run(model) }
