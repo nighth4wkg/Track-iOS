@@ -97,13 +97,18 @@ final class Words: UILabel {
 /// The screen's real rate, timed by a few of its frames at launch, back in front and when Low Power Mode changes:
 /// iOS gives 120 as the screen's most even with Limit Frame Rate on.
 @MainActor final class Refresh: NSObject {
-    /// At 60 Hz or less. Set on the main thread only; read by Motion.travel from anywhere.
-    nonisolated(unsafe) private(set) static var slow = false
+    /// Frames a second. Set on the main thread only; read by Motion from anywhere.
+    nonisolated(unsafe) private(set) static var rate = 0.0
+    nonisolated(unsafe) private static var most = 0.0
+    /// Below what the screen can do (Limit Frame Rate, Low Power Mode).
+    nonisolated static var slow: Bool { rate < most }
     private static let shared = Refresh()
     private var link: CADisplayLink?
     private var ticks = 0
 
     static func start() {
+        most = Double(UIScreen.main.maximumFramesPerSecond)
+        rate = most
         for name in [UIApplication.didBecomeActiveNotification, Notification.Name.NSProcessInfoPowerStateDidChange] {
             NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in MainActor.assumeIsolated { shared.time() } }
         }
@@ -123,8 +128,8 @@ final class Words: UILabel {
     @objc private func tick(_ link: CADisplayLink) {
         ticks += 1
         guard ticks >= 3 else { return }
-        Self.slow = link.targetTimestamp - link.timestamp > 1 / 90.0
-        Sampler.note("refresh \(Self.slow ? 60 : 120) Hz")
+        Self.rate = (1 / (link.targetTimestamp - link.timestamp)).rounded()
+        Sampler.note("refresh \(Int(Self.rate)) Hz")
         link.invalidate()
         self.link = nil
     }
@@ -396,10 +401,19 @@ enum Moves {
         spring(Motion.normal, change, completion: completion)
     }
 
-    /// A card opening or closing, a screen coming or going: as long as the screen's rate needs (Motion.travel).
-    @MainActor static func travel(_ change: @escaping () -> Void) {
-        guard AB.evenCurve else { return spring(Motion.travel, change) }
-        UIView.animate(withDuration: Motion.travel, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut], animations: change)
+    /// A screen fading in or out (a tab, a page, the workout): Motion.travel.
+    @MainActor static func travel(_ change: @escaping () -> Void) { move(Motion.travel, change) }
+
+    /// Something going `distance` points (a card, the page, a sheet), at the app's pace (Motion.length): how long it takes.
+    @discardableResult @MainActor static func travel(over distance: CGFloat, _ change: @escaping () -> Void) -> Double {
+        let length = Motion.length(distance)
+        move(length, change)
+        return length
+    }
+
+    @MainActor private static func move(_ length: Double, _ change: @escaping () -> Void) {
+        guard AB.evenCurve else { return spring(length, change) }
+        UIView.animate(withDuration: length, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut], animations: change)
     }
 
     @MainActor private static func spring(_ length: Double, _ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {

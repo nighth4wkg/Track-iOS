@@ -141,9 +141,11 @@ enum AB {
     static let applied = UserDefaults.standard.string(forKey: testKey) ?? ""
     /// The motion tests the owner can pick in Settings, to judge by eye without a launch from the computer.
     static let tests: [(name: String, args: String)] = [
-        ("As is", ""), ("Name fades", "-ab-card-fade"), ("Shorter 0.36 s", "-ab-travel60 0.36"),
-        ("Longer 0.6 s", "-ab-travel60 0.6"), ("No shadow", "-ab-no-shadow"), ("Even curve", "-ab-even-curve"),
+        ("As is", ""), ("Finer steps", "-ab-step \(Motion.paceStep * 3 / 4)"), ("Coarser steps", "-ab-step \(Motion.paceStep * 5 / 4)"), ("Fixed \(Motion.picked) s", "-ab-fixed -ab-travel60 \(Motion.picked)"),
+        ("Name fades", "-ab-card-fade"), ("No shadow", "-ab-no-shadow"), ("Even curve", "-ab-even-curve"),
     ]
+    /// Every move as long as Motion.travel, whatever its distance (before build 110).
+    static let fixedPace = args.contains("-ab-fixed")
     /// Cards and screens move on iOS's ease-in-out (even steps) instead of the spring (a gentle start, then big steps).
     static let evenCurve = args.contains("-ab-even-curve")
     /// The workout's cards built as they scroll into view (Start workout spent ~165 ms in SwiftUI on 22 cards).

@@ -132,7 +132,26 @@ enum Motion {
     /// A card opening or closing and a screen coming or going (a tab, a page, the workout, a sheet): as long as the
     /// screen needs to show it smooth. At 60 Hz 0.24 s read as a stutter though no frame was lost (each frame a big
     /// step): the owner chose 0.48 by eye (build 106); 0.3 at 120 Hz, as before build 103. The rest stays `normal`.
+    /// Now a screen's fade in or out (a tab, a page, the workout), which goes nowhere far: what moves a distance takes `length`.
     static var travel: Double { (Refresh.slow ? AB.number("-ab-travel60") ?? 0.48 : AB.number("-ab-travel120") ?? 0.3) * AB.pace }
+    /// The app's pace: the most anything moving a distance (a card, the page, a sheet) goes in one frame at its
+    /// fastest, in points. A move as long whatever its distance stepped further a frame the further it went, so a
+    /// card opening on many sets read as a stutter at 60 Hz while a set added didn't (build 109). Set from the owner's
+    /// pick by eye (0.6 s for a card at 60 Hz); -ab-step to judge another.
+    static let step = AB.number("-ab-step") ?? paceStep
+    static let paceStep = 17.0
+    /// The one length the owner liked for a card at 60 Hz on build 109 (the Fixed test, to compare with the pace).
+    static let picked = 0.6
+    /// However far it goes, a move takes no longer than this.
+    static let longest = 0.8 * AB.pace
+    /// How long a move of `distance` points takes at the app's pace, at the screen's rate: no shorter than `normal`
+    /// (a small move still eases), no longer than `longest`. -ab-fixed: as long as `travel`, as before build 110.
+    static func length(_ distance: CGFloat) -> Double {
+        guard !AB.fixedPace else { return travel }
+        // iOS's spring without bounce over d seconds peaks at 2π/(e·d) of its distance a second.
+        let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * Refresh.rate)
+        return min(max(even * AB.pace, normal), longest)
+    }
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s bezier put half the way into 3 frames at 60 Hz (up to
     /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This spring, as long, moves ~95 pt a frame at most.
     static let move = Animation.smooth(duration: normal)

@@ -179,6 +179,17 @@ final class CardView: UIView {
 
     func height(for width: CGFloat) -> CGFloat { place(width, apply: false) }
 
+    /// Its height once it shows `next`, worked out before it does (CardList times its move by how far it goes); its
+    /// set rows not made yet are counted as tall as one it has.
+    func height(for width: CGFloat, as next: ExerciseCard) -> CGFloat {
+        let now = card
+        card = next
+        defer { card = now }
+        let height = place(width, apply: false)
+        guard next.open, let sets else { return height }
+        return height + sets.change(to: AB.noRows ? 0 : next.exercise.sets.count, width - Space.s4 * 2)
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         place(bounds.width, apply: true)
@@ -316,6 +327,11 @@ private final class SetsView: UIView {
 
     func flush() { rows.values.forEach { $0.flush() } }
     func row(_ id: String) -> UIView? { rows[id] }
+    /// How much taller (or shorter) `count` rows make it than the rows it has, each as tall as its first.
+    func change(to count: Int, _ width: CGFloat) -> CGFloat {
+        let each = (order.first.flatMap { rows[$0] }?.height(for: width) ?? Size.row) + Space.s2
+        return CGFloat(count - order.count) * each
+    }
     /// Opened again: its rows show the sets' numbers, as rows built anew did.
     func reload() { rows.values.forEach { $0.reload() } }
 

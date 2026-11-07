@@ -118,7 +118,7 @@ struct CardList: UIViewControllerRepresentable {
             }
             y = min(max(y, lowest), highest)
             guard y != scroll.contentOffset.y else { return }
-            if Motion.still { scroll.contentOffset.y = y } else { Moves.travel { self.scroll.contentOffset.y = y } } // in step with the cards
+            if Motion.still { scroll.contentOffset.y = y } else { Moves.travel(over: y - scroll.contentOffset.y) { self.scroll.contentOffset.y = y } }
         }
 
         override func viewDidLayoutSubviews() {
@@ -149,21 +149,32 @@ struct CardList: UIViewControllerRepresentable {
             let fresh = Set(ids.filter { !order.contains($0) })
             rows = Dictionary(next.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
             order = ids
-            // New rows start where they go, closed up and clear, and open out with the rest.
+            let wasTop = tops, wasHeight = heights
+            // New rows start where they go, closed up and clear, and open out with the rest. Cards not made yet are
+            // measured now, out of sight (as they'd be in the move): with the made ones' heights ahead, the move's length.
+            let ahead = changed.filter { cards[$0] == nil && !fresh.contains($0) }
             UIView.performWithoutAnimation {
                 for id in fresh { make(id) }
                 place(only: fresh, shut: true)
+                for id in ahead { measure(id) }
+                for id in changed where cards[id]?.needsSets == true && rows[id]?.card?.open == true { cards[id]?.buildSets() }
             }
             let animate = animated && view.window != nil && !AB.stillList
             let change = { [self] in
                 for id in changed where !fresh.contains(id) { refresh(id) }
-                for id in changed { measure(id) }
+                for id in changed where !ahead.contains(id) { measure(id) }
                 for id in gone { leave(id) }
                 place()
             }
-            if animate { Moves.travel(change) } else { UIView.performWithoutAnimation(change) }
-            Sampler.note("cardlist placed \(changed.count) changed (\(cards.count) made): \(CardList.ms(CACurrentMediaTime() - start)) ms")
-            prebuildSoon()
+            var length = 0.0, distance: CGFloat = 0
+            if animate {
+                distance = farthest(from: wasTop, wasHeight, to: changed.subtracting(ahead).reduce(into: heights) { $0[$1] = predicted($1) }, gone: gone)
+                length = Moves.travel(over: distance, change)
+            } else {
+                UIView.performWithoutAnimation(change)
+            }
+            Sampler.note("cardlist placed \(changed.count) changed (\(cards.count) made): \(CardList.ms(CACurrentMediaTime() - start)) ms, \(Int(distance)) pt in \(CardList.ms(length)) ms")
+            prebuildSoon(after: length)
         }
 
         private func make(_ id: String) {
@@ -209,6 +220,25 @@ struct CardList: UIViewControllerRepresentable {
                 .transaction { $0.disablesAnimations = true }
         }
 
+        /// How far the move goes: the most any row's top or bottom moves (a row coming or going: its height).
+        private func farthest(from wasTop: [String: CGFloat], _ wasHeight: [String: CGFloat], to height: [String: CGFloat], gone: [String]) -> CGFloat {
+            var y: CGFloat = 0, most: CGFloat = 0
+            for id in order {
+                let now = height[id] ?? 0
+                if let top = wasTop[id], let was = wasHeight[id] { most = max(most, abs(y - top), abs(y + now - top - was)) } else { most = max(most, now) }
+                y += now
+            }
+            return gone.reduce(most) { max($0, wasHeight[$1] ?? 0) }
+        }
+
+        /// A made card's row height once it shows its new row, worked out before it does; any other row's as it is.
+        private func predicted(_ id: String) -> CGFloat {
+            guard let card = rows[id]?.card, let made = cards[id] else { return heights[id] ?? 0 }
+            return rowHeight(made.height(for: inner, as: card))
+        }
+
+        private func rowHeight(_ card: CGFloat) -> CGFloat { Space.s1 + card.pixelUp(view.scale) + Space.s3 - Space.s1 }
+
         /// A row's height at the page's width (a card's with its share of the gaps, as CardCell's).
         private func measure(_ id: String) {
             guard width > 0 else { return }
@@ -221,7 +251,7 @@ struct CardList: UIViewControllerRepresentable {
                     UIView.performWithoutAnimation { sizer.update(card, model: model) }
                     shown = sizer
                 }
-                heights[id] = Space.s1 + shown.height(for: inner).pixelUp(view.scale) + Space.s3 - Space.s1
+                heights[id] = rowHeight(shown.height(for: inner))
             } else if let host = hosts[id] {
                 heights[id] = host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height
             }
@@ -281,7 +311,7 @@ struct CardList: UIViewControllerRepresentable {
                 host?.removeFromParent()
             }
             if UIView.inheritedAnimationDuration > 0 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { done() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + UIView.inheritedAnimationDuration) { done() } // the move it's in
             } else {
                 done()
             }
@@ -289,17 +319,18 @@ struct CardList: UIViewControllerRepresentable {
 
         /// A card's height changed by itself (typing showed an error or a new best).
         private func resized(_ id: String) {
+            let was = heights[id] ?? 0
             measure(id)
-            Moves.spring { self.place() }
+            Moves.travel(over: (heights[id] ?? 0) - was) { self.place() }
         }
 
         /// Once a move has settled, one thing an idle turn while the page isn't scrolling: the cards not made yet,
         /// nearest first, then (-ab-prebuilt-sets) what the cards near sight open.
-        private func prebuildSoon() {
-            settled = CACurrentMediaTime() + Motion.travel
+        private func prebuildSoon(after length: Double = Motion.normal) {
+            settled = max(settled, CACurrentMediaTime() + length)
             guard !preparing else { return }
             preparing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in self?.prebuild() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in self?.prebuild() }
         }
 
         /// When the last move settles, and whether idle work is under way (one chain, however many moves).
@@ -309,7 +340,7 @@ struct CardList: UIViewControllerRepresentable {
         private func prebuild() {
             let wait = settled - CACurrentMediaTime()
             guard wait <= 0, !scroll.isTracking, !scroll.isDecelerating else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + max(wait, Motion.travel)) { [weak self] in self?.prebuild() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + max(wait, Motion.normal)) { [weak self] in self?.prebuild() }
                 return
             }
             let start = CACurrentMediaTime()
