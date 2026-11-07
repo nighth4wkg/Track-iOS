@@ -106,10 +106,7 @@ final class AppModel {
     }
     /// When a sheet last closed: a question coming up while its dim still fades out takes over that dim (AskLayer).
     @ObservationIgnored private var sheetClosedAt: TimeInterval = 0
-    @ObservationIgnored private var sheetGoing = Motion.normal
-    var sheetClosing: Bool { ProcessInfo.processInfo.systemUptime - sheetClosedAt < sheetGoing }
-    /// How long the closed sheet takes to go (SheetLayer, from its height).
-    func sheetGoes(for length: Double) { sheetGoing = length }
+    var sheetClosing: Bool { ProcessInfo.processInfo.systemUptime - sheetClosedAt < Motion.travel }
 
     private let file: TrainingFile?
     @ObservationIgnored private var canSave = true

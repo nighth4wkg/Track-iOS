@@ -129,17 +129,26 @@ enum Motion {
     /// A sheet, a pill or a screen's content coming or going: the PWA's --motion. At 0.3 s the spring's gentle start read
     /// as a lag after the tap at 60 Hz (build 102: a card took ~0.4 s to settle, the PWA's 0.24).
     static let normal = 0.24 * AB.pace
-    /// A card opening or closing and a screen coming or going (a tab, a page, the workout, a sheet): as long as the
-    /// screen needs to show it smooth. At 60 Hz 0.24 s read as a stutter though no frame was lost (each frame a big
-    /// step): the owner chose 0.48 by eye (build 106); 0.3 at 120 Hz, as before build 103. The rest stays `normal`.
-    /// Now a screen's fade in or out (a tab, a page, the workout), which goes nowhere far: what moves a distance takes `length`.
-    static var travel: Double { (Refresh.slow ? AB.number("-ab-travel60") ?? 0.48 : AB.number("-ab-travel120") ?? 0.3) * AB.pace }
-    /// The app's pace: the most anything moving a distance (a card, the page, a sheet) goes in one frame at its
+    /// A screen or sheet coming or going (a tab, a page, the workout, a sheet), one length whatever it covers: what moves
+    /// a distance takes `length`. At 60 Hz 0.24 s read as a stutter though no frame was lost (each frame a big step):
+    /// the owner chose 0.48 by eye (build 106). A faster screen takes `fastShare` of it, as `length` (half read as a
+    /// jump at 120 Hz). The PWA's --travel.
+    static var travel: Double {
+        (Refresh.rate > paceRate ? AB.number("-ab-travel120") ?? travelAt60 * fastShare : AB.number("-ab-travel60") ?? travelAt60) * AB.pace
+    }
+    static let travelAt60 = 0.48
+    /// The app's pace: the most anything moving a distance (a card, the page's scroll) goes in one frame at its
     /// fastest, in points. A move as long whatever its distance stepped further a frame the further it went, so a
-    /// card opening on many sets read as a stutter at 60 Hz while a set added didn't (build 109). Set from the owner's
-    /// pick by eye (0.6 s for a card at 60 Hz); -ab-step to judge another.
+    /// card opening on many sets read as a stutter at 60 Hz while a set added didn't (build 109). The owner's pick by
+    /// eye on build 110 (its Finer steps, three quarters of 17); -ab-step to judge another. Sheets keep `travel`: at
+    /// this pace their height read as too slow (build 110).
     static let step = AB.number("-ab-step") ?? paceStep
-    static let paceStep = 17.0
+    static let paceStep = 12.75
+    /// The rate the pace was picked at: a slower screen takes longer rather than stepping further.
+    static let paceRate = 60.0
+    /// A faster screen (90, 120 Hz) takes this share of the 60 Hz time, in smaller steps: half read as too fast, as a
+    /// jump (owner, build 110); a little faster than at 60 Hz is the owner's ask.
+    static let fastShare = 0.85
     /// The one length the owner liked for a card at 60 Hz on build 109 (the Fixed test, to compare with the pace).
     static let picked = 0.6
     /// However far it goes, a move takes no longer than this.
@@ -149,7 +158,7 @@ enum Motion {
     static func length(_ distance: CGFloat) -> Double {
         guard !AB.fixedPace else { return travel }
         // iOS's spring without bounce over d seconds peaks at 2π/(e·d) of its distance a second.
-        let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * Refresh.rate)
+        let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * min(Refresh.rate, paceRate / fastShare))
         return min(max(even * AB.pace, normal), longest)
     }
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s bezier put half the way into 3 frames at 60 Hz (up to

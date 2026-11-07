@@ -59,11 +59,8 @@ struct SheetLayer: View {
         guard !closed.isEmpty else { return }
         guard moving else { shown.removeAll { closed.contains($0.id) }; return }
         leaving += closed
-        // As long as the tallest one's way down (Stage.leave): its own height at the app's pace.
-        let length = Motion.length(closed.compactMap { heights.of[$0] }.max() ?? UIScreen.main.bounds.height)
-        model.sheetGoes(for: length)
         Task {
-            try? await Task.sleep(for: .seconds(length))
+            try? await Task.sleep(for: .seconds(Motion.travel))
             shown.removeAll { closed.contains($0.id) }
             leaving.removeAll { closed.contains($0) }
             for id in closed { heights.of[id] = nil }

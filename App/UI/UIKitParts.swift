@@ -99,16 +99,12 @@ final class Words: UILabel {
 @MainActor final class Refresh: NSObject {
     /// Frames a second. Set on the main thread only; read by Motion from anywhere.
     nonisolated(unsafe) private(set) static var rate = 0.0
-    nonisolated(unsafe) private static var most = 0.0
-    /// Below what the screen can do (Limit Frame Rate, Low Power Mode).
-    nonisolated static var slow: Bool { rate < most }
     private static let shared = Refresh()
     private var link: CADisplayLink?
     private var ticks = 0
 
     static func start() {
-        most = Double(UIScreen.main.maximumFramesPerSecond)
-        rate = most
+        rate = Double(UIScreen.main.maximumFramesPerSecond)
         for name in [UIApplication.didBecomeActiveNotification, Notification.Name.NSProcessInfoPowerStateDidChange] {
             NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in MainActor.assumeIsolated { shared.time() } }
         }
@@ -401,10 +397,10 @@ enum Moves {
         spring(Motion.normal, change, completion: completion)
     }
 
-    /// A screen fading in or out (a tab, a page, the workout): Motion.travel.
+    /// A screen fading in or out (a tab, a page, the workout, a sheet): Motion.travel.
     @MainActor static func travel(_ change: @escaping () -> Void) { move(Motion.travel, change) }
 
-    /// Something going `distance` points (a card, the page, a sheet), at the app's pace (Motion.length): how long it takes.
+    /// Something going `distance` points (a card, the page), at the app's pace (Motion.length): how long it takes.
     @discardableResult @MainActor static func travel(over distance: CGFloat, _ change: @escaping () -> Void) -> Double {
         let length = Motion.length(distance)
         move(length, change)
