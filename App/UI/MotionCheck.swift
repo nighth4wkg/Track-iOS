@@ -24,6 +24,12 @@ final class MotionCheck {
     /// Added to each motion's name (", empty" in the empty pass).
     private var suffix = ""
     private var rows: [MotionRow] = []
+    /// The training as the check began: every run opens the same split, past workout and lift (each run adds a workout).
+    private var base: Training?
+    /// ms from the process starting to the first screen, at this launch (TrackApp).
+    static var launch: Int?
+    /// The plain check runs every motion this many times and keeps the middle run: one run's numbers vary.
+    private static let runs = 3
 
     private init(_ model: AppModel, causes: Bool) { (self.model, self.causes) = (model, causes) }
 
@@ -35,8 +41,17 @@ final class MotionCheck {
         Task { @MainActor in
             let check = MotionCheck(model, causes: causes)
             let kept = model.beginBench()
-            await check.all()
-            if causes {
+            if !causes {
+                var passes: [[MotionRow]] = []
+                for _ in 0..<runs {
+                    check.rows = []
+                    await check.all()
+                    check.reset()
+                    passes.append(check.rows)
+                }
+                check.rows = middle(passes)
+            } else {
+                await check.all()
                 check.reset()
                 await check.plainKeyboard()
                 check.suffix = ", empty"
@@ -60,6 +75,19 @@ final class MotionCheck {
             let rate = keyWindow?.screen.maximumFramesPerSecond ?? 60
             log.log("motion done: \(check.rows.count) steps at \(rate) Hz")
             model.present(MotionResults(rows: check.rows, rate: rate, causes: causes), tall: true)
+        }
+    }
+
+    /// Each motion's middle run by its worst late frame, with every run's worst (motions in the order first seen).
+    private static func middle(_ passes: [[MotionRow]]) -> [MotionRow] {
+        var names: [String] = []
+        for row in passes.joined() where !names.contains(row.name) { names.append(row.name) }
+        return names.compactMap { name in
+            let runs = passes.compactMap { $0.first { $0.name == name } }
+            let worst = { (row: MotionRow) in row.late.max() ?? 0 }
+            guard var row = runs.sorted(by: { worst($0) < worst($1) }).dropFirst(runs.count / 2).first else { return nil }
+            row.runs = runs.map(worst)
+            return row
         }
     }
 
@@ -90,17 +118,18 @@ final class MotionCheck {
         Sampler.begin("motion \(name)", for: causes ? settle : Self.sampled)
         Self.log.log("start \(name, privacy: .public)") // when the change happened, for lining up a screen recording
         let start = CACurrentMediaTime()
+        meter.since = start
         change()
         await Self.pause(settle)
         let frames = meter.take()
-        let late = frames.map(\.late)
+        let late = frames.filter(\.moving).map(\.late), after = frames.filter { !$0.moving }.map(\.late)
         // When each late frame and each note came, from the change (ms): which work landed in which frame.
         let since = { (t: CFTimeInterval) in Int(((t - start) * 1000).rounded()) }
-        let timeline = (frames.map { (since($0.at), "late \($0.late)") } + Sampler.takeMarks().map { (since($0.at), $0.text) })
+        let timeline = (frames.map { (since($0.at), "late \($0.late)" + ($0.moving ? "" : " settled")) } + Sampler.takeMarks().map { (since($0.at), $0.text) })
             .sorted { $0.0 < $1.0 }.map { "\($0.0) \($0.1)" }
         // The sampler's report comes in once its window has closed, a moment after.
         if causes { await Self.pause(Self.reported) }
-        rows.append(MotionRow(name: name, late: late, found: Sampler.found.removeValue(forKey: "motion \(name)"), timeline: causes ? timeline : []))
+        rows.append(MotionRow(name: name, late: late, after: after, found: Sampler.found.removeValue(forKey: "motion \(name)"), timeline: causes ? timeline : []))
         Self.log.log("motion \(name, privacy: .public): \(late.map { "\($0)" }.joined(separator: " "), privacy: .public)")
     }
 
@@ -118,11 +147,12 @@ final class MotionCheck {
 
     private func all() async {
         model.workoutOpen = false
+        let training = base ?? model.training
+        base = training
         let tabs: [(String, AppTab)] = [("History", .history), ("Progress", .progress), ("Rank", .rank), ("Home", .home)]
         for (name, tab) in tabs {
             await step("Tab \(name)") { model.go(tab) }
         }
-        let training = model.training
         await step("Settings page") { model.open(.settings) }
         await step("Settings back") { model.back() }
         if let split = training.splits.first {
@@ -165,6 +195,11 @@ final class MotionCheck {
         guard let cards = model.training.active?.exercises.map(\.id), let first = cards.first else { return }
         for (index, id) in cards.enumerated().prefix(8) { await step("Open card \(index + 1)") { model.bench = .card(id) } }
         await step("Open card 1 again") { model.bench = .card(first) }
+        // The page by finger: down (header away, the jump key up), the key back to the set, down again, back to the top.
+        await step("Scroll down", settle: 1.5) { model.bench = .scroll(down: true) }
+        await step("Jump key", settle: 1.5) { model.bench = .jump }
+        await step("Scroll down again", settle: 1.5) { model.bench = .scroll(down: true) }
+        await step("Scroll to top", settle: 1.5) { model.bench = .scroll(down: false) }
 
         await step("Add set") { model.update { $0.updateActive(exercise: first) { $0 = $0.addingSet() } } }
         if let set = model.training.active?.exercises.first?.sets.last {
@@ -197,6 +232,12 @@ final class MotionCheck {
         await sheet("Workout options") { model.present(WorkoutOptions(arrange: {})) }
         if cards.count > 1, let last = model.training.active?.exercises.last {
             await step("Arrange exercises") { model.bench = .arrange(true) }
+            await step("Arrange: a card moved") {
+                model.update(moving: false) { training in
+                    guard let moved = training.active?.exercises.moved(0, to: 1) else { return }
+                    training.active?.exercises = moved
+                }
+            }
             await step("Done arranging") { model.bench = .arrange(false) }
             await step("Remove exercise (toast)") { model.removeExercise(last) }
             await step("Undo remove exercise") { model.toast?.undo?(); model.toast = nil }
@@ -228,21 +269,32 @@ struct MotionRow: Identifiable {
     let id = UUID()
     let name: String
     let late: [Int]
+    /// Late frames once nothing moved any more (work after the motion): not seen, but the main thread was busy.
+    var after: [Int] = []
+    /// The plain check runs every motion three times: each run's worst late frame (0 smooth); this row is the middle run.
+    var runs: [Int] = []
     /// Finding causes: where the main thread's time went.
     var found: Sampler.Found?
     /// Finding causes: each late frame and note, ms from the change.
     var timeline: [String] = []
     var summary: String { late.isEmpty ? "Smooth" : "\(late.count) late, worst \(late.max() ?? 0) ms" }
     /// The main thread's busy time and the libraries that took most of it, in short.
+    /// Under the motion, in small type: each run's worst, late frames after it settled, the busy time and its libraries.
     var cause: String? {
-        guard let found else { return nil }
-        return "Busy \(found.busy) ms" + (found.libraries.isEmpty ? "" : ": ") + Self.list(found.libraries.prefix(Self.shown), ", ")
+        let parts = [
+            runs.count > 1 ? "Runs " + runs.map { "\($0)" }.joined(separator: " / ") + " ms" : nil,
+            after.isEmpty ? nil : "\(after.count) late after it settled",
+            found.map { "Busy \($0.busy) ms" + ($0.libraries.isEmpty ? "" : ": ") + Self.list($0.libraries.prefix(Self.shown), ", ") },
+        ].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
     private static let shown = 3
 
     /// Everything, for sharing.
     var text: String {
-        var lines = ["\(name): " + (late.isEmpty ? "smooth" : late.map { "\($0)" }.joined(separator: " ") + " ms late")]
+        var lines = ["\(name): " + (late.isEmpty ? "smooth" : late.map { "\($0)" }.joined(separator: " ") + " ms late")
+            + (runs.count > 1 ? ", runs' worst " + runs.map { "\($0)" }.joined(separator: "/") : "")
+            + (after.isEmpty ? "" : ", after it settled " + after.map { "\($0)" }.joined(separator: " ") + " ms")]
         if let found {
             lines.append("  busy \(found.busy) ms")
             for (title, list) in [("by library", found.libraries), ("Track's own", found.ours), ("innermost", found.leaves)] where !list.isEmpty {
@@ -263,8 +315,10 @@ struct MotionRow: Identifiable {
 private final class Meter: NSObject {
     private var link: CADisplayLink?
     private var last: CFTimeInterval = 0
-    /// Each late frame: ms past its time, and when it came.
-    private var late: [(late: Int, at: CFTimeInterval)] = []
+    /// Each late frame: ms past its time, when it came, and whether something was still moving (seen) or not.
+    private var late: [(late: Int, at: CFTimeInterval, moving: Bool)] = []
+    /// When the motion's change was made.
+    var since: CFTimeInterval = 0
 
     override init() {
         super.init()
@@ -277,10 +331,17 @@ private final class Meter: NSObject {
     @objc private func tick(_ link: CADisplayLink) {
         defer { last = link.timestamp }
         let gap = link.timestamp - last, slot = link.targetTimestamp - link.timestamp
-        if last > 0, gap > slot * 1.5 { late.append((Int(((gap - slot) * 1000).rounded()), link.timestamp)) }
+        if last > 0, gap > slot * 1.5 { late.append((Int(((gap - slot) * 1000).rounded()), link.timestamp, link.timestamp - since < Motion.travel * 1.5 || Self.animating())) }
     }
 
-    func take() -> [(late: Int, at: CFTimeInterval)] {
+    /// A Core Animation move still running in any of the app's windows (looked at only when a frame was late). SwiftUI's
+    /// own moves don't show here: the motion's first Motion.travel × 1.5 counts as moving whatever runs.
+    private static func animating() -> Bool {
+        func moving(_ layer: CALayer) -> Bool { layer.animationKeys()?.isEmpty == false || (layer.sublayers ?? []).contains(where: moving) }
+        return UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).contains { moving($0.layer) }
+    }
+
+    func take() -> [(late: Int, at: CFTimeInterval, moving: Bool)] {
         defer { late = [] }
         return late
     }
@@ -337,6 +398,7 @@ struct MotionResults: View {
         let device = withUnsafeBytes(of: system.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
         let head = "Track \(SettingsScreen.version) motion check" + (causes ? ", causes" : "")
             + " · \(device) iOS \(UIDevice.current.systemVersion) · \(rate) Hz"
+            + (MotionCheck.launch.map { " · launch \($0) ms to first screen" } ?? "")
         return ([head] + rows.map(\.text)).joined(separator: "\n")
     }
 }

@@ -38,6 +38,8 @@ struct Confirm: Identifiable {
 /// What the motion check does on the workout screen, whose state is its own.
 enum BenchMove: Equatable {
     case card(String), focus(String?), arrange(Bool)
+    /// The workout's page: scrolled down (or back to its top) as a finger would, the jump key tapped.
+    case scroll(down: Bool), jump
 }
 
 /// A short note at the bottom ("Set removed"), with Undo when there's something to bring back.

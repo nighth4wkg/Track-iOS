@@ -107,6 +107,8 @@ struct WorkoutScreen: View {
                 case .focus(let id)?: focus = id
                 case .arrange(true)?: focus = nil; Motion.tap { opened = nil; arranging = true }
                 case .arrange(false)?: Motion.tap { arranging = false }
+                case .scroll(let down)?: CardList.bench(down ? .scrollDown : .scrollUp)
+                case .jump?: CardList.bench(.jump)
                 case nil: break
                 }
             }

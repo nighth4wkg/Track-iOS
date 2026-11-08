@@ -44,6 +44,8 @@ struct TrackApp: App {
                 // The library's search words too: made on the first search, they were most of the picker's first
                 // opening (~30 ms, build 107).
                 Task.detached(priority: .utility) { LiftTable.warm(names); _ = Catalog.search("", usage: [:]) }
+                // The next turn, once the first screen has been handed over: what launching took, for the motion check.
+                DispatchQueue.main.async { MotionCheck.launch = FrameLog.sinceLaunch() }
                 if MotionCheck.onLaunch { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MotionCheck.run(model) } }
                 if AB.warmKeyboard { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { Self.warmKeyboard(model) } }
             }

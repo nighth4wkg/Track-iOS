@@ -58,6 +58,11 @@ struct CardList: UIViewControllerRepresentable {
     static let revealed = Notification.Name("CardList.revealed")
     static func reveal(_ id: String, top: Bool) { NotificationCenter.default.post(name: revealed, object: (id, top)) }
 
+    /// The motion check's page moves: what a finger's scroll and the jump key's tap do.
+    enum BenchMove { case scrollDown, scrollUp, jump }
+    static let benched = Notification.Name("CardList.benched")
+    static func bench(_ move: BenchMove) { NotificationCenter.default.post(name: benched, object: move) }
+
     private static func ms(_ seconds: CFTimeInterval) -> Int { Int((seconds * 1000).rounded()) }
 
     /// -ab-own-list: the page as one scroll view that places every row itself, so a card that opens updates itself
@@ -139,12 +144,27 @@ struct CardList: UIViewControllerRepresentable {
             jump.addTarget(self, action: #selector(jumped), for: .touchUpInside)
             view.addSubview(jumpHolder)
             NotificationCenter.default.addObserver(self, selector: #selector(revealed), name: CardList.revealed, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(benched), name: CardList.benched, object: nil)
         }
 
         @objc private func revealed(_ note: Notification) {
             guard let to = note.object as? (String, Bool) else { return }
             going = to
             view.setNeedsLayout()
+        }
+
+        /// Two screens down (as far as the page goes) or back to the top, through didScroll each frame as a fling is:
+        /// the cards made coming into sight, the header following, the jump key shown.
+        @objc private func benched(_ note: Notification) {
+            guard let move = note.object as? CardList.BenchMove, view.window != nil else { return }
+            let inset = scroll.adjustedContentInset, top = -inset.top
+            let bottom = max(top, scroll.contentSize.height + inset.bottom - scroll.bounds.height)
+            switch move {
+            case .scrollDown: scroll.setContentOffset(CGPoint(x: 0, y: min(bottom, scroll.contentOffset.y + scroll.bounds.height * 2)), animated: true)
+            case .scrollUp: scroll.setContentOffset(CGPoint(x: 0, y: top), animated: true)
+            case .jump: if pointing != nil { jumped() }
+            }
+            Sampler.note("bench \(move): from \(Int(scroll.contentOffset.y)) pt, jump key \(pointing == nil ? "hidden" : "shown")")
         }
 
         private func go(_ id: String, top: Bool) {

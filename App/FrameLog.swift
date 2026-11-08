@@ -49,7 +49,7 @@ import os
     }
 
     /// Milliseconds since the kernel started this process (the launch, including what runs before main).
-    private static func sinceLaunch() -> Int {
+    static func sinceLaunch() -> Int {
         var info = kinfo_proc(), size = MemoryLayout<kinfo_proc>.stride, mib = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
         guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return -1 }
         let start = info.kp_proc.p_starttime
