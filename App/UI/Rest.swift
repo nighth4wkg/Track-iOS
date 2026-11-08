@@ -25,8 +25,8 @@ struct RestTimer: View {
                 // The rise is on this holder, which stays through a ±: on the clock it went with each new clock (its
                 // .id), so a ± slid the timer out and up again (build 103).
                 ZStack {
-                    TimelineView(.periodic(from: .now, by: Self.tick)) { context in
-                        let left = max(0, Double(until) / 1000 - context.date.timeIntervalSince1970)
+                    Ticking(every: Self.tick) { now in
+                        let left = max(0, Double(until) / 1000 - now.timeIntervalSince1970)
                         let total = Double(max(1, model.training.settings.restSeconds))
                         if left > 0 {
                             if compact {

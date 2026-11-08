@@ -257,8 +257,8 @@ struct WorkoutScreen: View {
                         Text(active.name).type(.t16).foregroundStyle(Palette.text).multilineTextAlignment(.center)
                         Icon.down.image(IconSize.small).foregroundStyle(Palette.muted)
                     }
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        Text(elapsed(active.startedAt, context.date) + dot + "\(done)/\(planned) sets").type(.t14).monospacedDigit()
+                    Ticking(every: 1) { now in
+                        Text(elapsed(active.startedAt, now) + dot + "\(done)/\(planned) sets").type(.t14).monospacedDigit()
                             .foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                     }
                 }

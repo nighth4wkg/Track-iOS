@@ -50,6 +50,7 @@ final class MotionCheck {
                     passes.append(check.rows)
                 }
                 check.rows = middle(passes)
+                await check.tabsOut()
             } else {
                 await check.all()
                 check.reset()
@@ -64,6 +65,8 @@ final class MotionCheck {
                 }
                 await check.all()
                 AB.emptyScreens = false
+                check.suffix = ""
+                await check.tabsOut()
                 Sampler.uninstall()
                 Sampler.found = [:]
             }
@@ -75,6 +78,29 @@ final class MotionCheck {
             let rate = keyWindow?.screen.maximumFramesPerSecond ?? 60
             log.log("motion done: \(check.rows.count) steps at \(rate) Hz")
             model.present(MotionResults(rows: check.rows, rate: rate, causes: causes), tall: true)
+        }
+    }
+
+    /// Every motion once more with hidden tabs taken out of the window (as before build 124): what keeping them saves
+    /// a tab change and costs every other change.
+    private func tabsOut() async {
+        await Self.cycleTabs(model)
+        AB.keepTabs = false
+        await Self.cycleTabs(model) // each kept tab taken out, unmeasured
+        suffix = ", tabs out"
+        await all()
+        reset()
+        suffix = ""
+        AB.keepTabs = true
+        await Self.cycleTabs(model)
+    }
+
+    /// Each tab shown once, unmeasured.
+    private static func cycleTabs(_ model: AppModel) async {
+        model.workoutOpen = false
+        for tab in AppTab.allCases {
+            model.go(tab)
+            await pause(Motion.travel)
         }
     }
 
@@ -154,6 +180,7 @@ final class MotionCheck {
         let tabs: [(String, AppTab)] = [("History", .history), ("Progress", .progress), ("Rank", .rank), ("Home", .home)]
         for (name, tab) in tabs {
             await step("Tab \(name)") { model.go(tab) }
+            if tab == .history { await calendar() }
         }
         await step("Settings page") { model.open(.settings) }
         await step("Settings back") { model.back() }
@@ -178,13 +205,25 @@ final class MotionCheck {
         await sheet("Privacy") { model.present(PrivacyPage()) }
         await sheet("Badges") { model.present(QuestList(), tall: true) }
         await sheet("Level help") { model.present(XpHelp()) }
-        await sheet("Date picker") { model.present(DateSheet(label: "Date", key: .constant(dayKey(nowMillis())), range: Date.distantPast...Date())) }
+        await step("Date picker opens") { model.present(DateSheet(label: "Date", key: .constant(dayKey(nowMillis())), range: Date.distantPast...Date())) }
+        await step("Date picker: previous month") { MonthGrid.bench("Date", .month(-1)) }
+        await step("Date picker: next month") { MonthGrid.bench("Date", .month(1)) }
+        await step("Date picker: a day picked (closes)") { MonthGrid.bench("Date", .day(1)) }
         if let counted = training.sessions.countedNames().first { await sheet("Counts for") { model.present(CountsFor(row: counted)) } }
         await step("Question opens") { model.confirm = Confirm(title: "Motion check", message: "Nothing changes.", label: "OK") {} }
         await step("Question closes") { model.confirm = nil }
         await step("Toast shows") { model.show("Motion check.") }
         await step("Toast goes") { model.toast = nil }
         await workout()
+    }
+
+    /// History's calendar, on the History tab: a month back and forward, a day picked (the list shows only it) and
+    /// picked again (all of them).
+    private func calendar() async {
+        await step("Calendar: previous month") { MonthGrid.bench("History", .month(-1)) }
+        await step("Calendar: next month") { MonthGrid.bench("History", .month(1)) }
+        await step("Calendar: a day picked") { MonthGrid.bench("History", .day(1)) }
+        await step("Calendar: the day again (all)") { MonthGrid.bench("History", .day(1)) }
     }
 
     private func workout() async {

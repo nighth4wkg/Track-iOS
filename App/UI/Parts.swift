@@ -102,6 +102,23 @@ struct PillTabs<Value: Hashable>: View {
     }
 }
 
+/// A clock's text, drawn again every `every` seconds while its screen is shown. Hidden (a tab, the workout kept for
+/// later) it stops: a hidden workout's clocks redrew and laid out its whole page each tick, inside other screens' first
+/// frames (build 122: 26 of Badges' 42 ms).
+struct Ticking<Content: View>: View {
+    @Environment(\.shown) private var shown
+    let every: TimeInterval
+    @ViewBuilder let content: (Date) -> Content
+
+    var body: some View {
+        if shown {
+            TimelineView(.periodic(from: .now, by: every)) { content($0.date) }
+        } else {
+            content(Date())
+        }
+    }
+}
+
 /// The raised knob under a row's chosen choice, shared by every Seg, PillTabs and the nav pill (the PWA's knob: owner,
 /// every bar works the same). It slides to a new choice; it comes to a pressed one at once (not waiting on the lift);
 /// dragged sideways it follows the finger freely in a row (a grid's goes to the nearest), the choice nearest it lit (a

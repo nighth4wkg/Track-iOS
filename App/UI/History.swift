@@ -105,7 +105,8 @@ private struct DateField: View {
 }
 
 /// The calendar for a From or To day: History's own month (iOS's graphical picker was another look, Sunday first, and
-/// the slowest sheet to open, 71-83 ms), the day picked under the title. Choosing a day, Any day or Today closes it.
+/// the slowest sheet to open, 71-83 ms), the day picked under the title, nothing under the month (owner). Choosing a
+/// day closes it; the picked day again empties it (Any day), as History's calendar does.
 struct DateSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
@@ -119,14 +120,9 @@ struct DateSheet: View {
         let picked = dayStart(key)
         SheetFrame(title: label, subtitle: picked?.formatted(.gregorian.weekday(.abbreviated).month(.abbreviated).day().year()) ?? "Any day") {
             MonthGrid(month: Binding(get: { month ?? HistoryCalendar.monthStart(picked ?? min(today, range.upperBound)) }, set: { month = $0 }),
-                      range: range, trained: model.derived("trained days") { HistoryCalendar.trainedDays($0) },
-                      picked: { $0 == key }) { choose($0) }
+                      range: range, trained: model.derived("trained days") { HistoryCalendar.trainedDays($0) }, bench: label,
+                      picked: { $0 == key }) { choose($0 == key ? "" : $0) }
                 .padding(.top, Space.s4)
-            HStack(spacing: Space.s3) {
-                Button("Any day") { choose("") }.buttonStyle(SecondaryStyle())
-                Button("Today") { choose(dayKey(millis(today))) }.buttonStyle(SecondaryStyle()).disabled(!MonthGrid.allows(range, today))
-            }
-            .padding(.top, Space.s4)
         }
     }
 
@@ -177,7 +173,7 @@ struct HistoryCalendar: View {
 
     var body: some View {
         // A day still ahead has nothing to show.
-        MonthGrid(month: $month, range: Date.distantPast...Date(), trained: trained, picked: { from == $0 && to == $0 }) { key in
+        MonthGrid(month: $month, range: Date.distantPast...Date(), trained: trained, bench: "History", picked: { from == $0 && to == $0 }) { key in
             let again = from == key && to == key
             from = again ? "" : key; to = again ? "" : key
         }
@@ -194,11 +190,19 @@ struct HistoryCalendar: View {
 /// date sheet. Today sits on a raised tile in green; a dot under a day means you trained; the picked day is washed
 /// green. Days outside `range` are greyed and take no tap, and the arrows stop at its months.
 struct MonthGrid: View {
+    @Environment(\.shown) private var shown
     @Binding var month: Date
     let range: ClosedRange<Date>
     let trained: Set<String>
+    /// Its name for the motion check's moves (MonthGrid.bench): "History", or the date sheet's label.
+    let bench: String
     let picked: (String) -> Bool
     let choose: (String) -> Void
+
+    /// The motion check's moves, as the taps that make them: an arrow, or the month's `day` (1 is never ahead).
+    enum BenchMove { case month(Int), day(Int) }
+    static let benched = Notification.Name("MonthGrid.benched")
+    static func bench(_ name: String, _ move: BenchMove) { NotificationCenter.default.post(name: benched, object: (name, move)) }
 
     var body: some View {
         let calendar = Calendars.local
@@ -248,6 +252,15 @@ struct MonthGrid: View {
                     .accessibilityAddTraits(on ? .isSelected : [])
                     .accessibilityRemoveTraits(open ? [] : .isButton) // a day outside the range does nothing on tap
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Self.benched)) { note in
+            guard shown, let (name, move) = note.object as? (String, BenchMove), name == bench else { return }
+            switch move {
+            case .month(let months): step(months)
+            case .day(let day):
+                guard let date = Calendars.local.date(byAdding: .day, value: day - 1, to: month), Self.allows(range, date) else { return }
+                choose(dayKey(millis(date)))
             }
         }
     }

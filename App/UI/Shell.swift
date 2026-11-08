@@ -28,7 +28,7 @@ struct Shell: View {
                         .allowsHitTesting(shown)
                         .accessibilityHidden(!shown || behind)
                 } else {
-                    Stage(shown: shown, again: model.swapping ? .none : .left) {
+                    Stage(shown: shown, again: model.swapping ? .none : .left, keep: { AB.keepTabs }) {
                         TabData(shown: shown, live: model.training) { page(tab) }
                             .environment(\.shown, shown)
                             .environment(model)
