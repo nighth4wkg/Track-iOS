@@ -128,8 +128,13 @@ final class MotionCheck {
     }
 
     /// One motion: what was late from the change until it settled.
-    private func step(_ title: String, settle given: Double? = nil, _ change: () -> Void) async {
+    private func step(_ title: String, settle given: Double? = nil, ready: (() -> Void)? = nil, _ change: () -> Void) async {
         let name = title + suffix
+        // As a finger does: what the button opens is readied as it's held, a tap's time before the tap (Readies).
+        if let ready, !AB.oldWay {
+            ready()
+            await Self.pause(Self.held)
+        }
         // The move and a moment after it: late frames come in its first frames, a settled one just after it ends.
         let settle = given ?? Motion.travel + Self.tail
         await Self.pause(Self.tail)
@@ -156,8 +161,9 @@ final class MotionCheck {
         Self.log.log("motion \(name, privacy: .public): \(late.map { "\($0)" }.joined(separator: " "), privacy: .public)")
     }
 
-    private func sheet(_ name: String, _ open: () -> Void) async {
-        await step("\(name) opens", open)
+    /// `readied` where the app's button readies it (Readies).
+    private func sheet<V: View>(_ name: String, tall: Bool = false, readied: Bool = true, _ make: @escaping () -> V) async {
+        await step("\(name) opens", ready: readied ? { self.model.ready(make(), tall: tall) } : nil) { model.present(make(), tall: tall) }
         await step("\(name) closes") { if let id = model.sheets.last?.id { model.dismiss(id) } }
     }
 
@@ -165,6 +171,8 @@ final class MotionCheck {
     private static let sampled = 0.25
     /// Before each step and after its move: what the one before left settles (was 0.3 s before and 1 s a step).
     private static let tail = 0.2
+    /// A tap's time from finger down to up (~100-150 ms), with a readied page or sheet.
+    private static let held = 0.12
     /// How long the sampler takes to report a window.
     private static let reported = 0.25
 
@@ -179,34 +187,34 @@ final class MotionCheck {
             await step("Tab \(name)") { model.go(tab) }
             if tab == .history { await calendar() }
         }
-        await step("Settings page") { model.open(.settings) }
+        await step("Settings page", ready: { model.ready(.settings) }) { model.open(.settings) }
         await step("Settings back") { model.back() }
         if let split = training.splits.first {
-            await step("Split page") { model.open(.split(split.id)) }
+            await step("Split page", ready: { model.ready(.split(split.id)) }) { model.open(.split(split.id)) }
             await step("Split back") { model.back() }
         }
         if let session = training.sessions.first {
-            await step("Past workout page") { model.open(.session(session.id)) }
+            await step("Past workout page", ready: { model.ready(.session(session.id)) }) { model.open(.session(session.id)) }
             await step("Past workout back") { model.back() }
             if let lift = session.exercises.first?.name {
-                await step("Lift page") { model.open(.lift(lift)) }
+                await step("Lift page", ready: { model.ready(.lift(lift)) }) { model.open(.lift(lift)) }
                 await step("Lift back") { model.back() }
             }
         }
-        await sheet("New split sheet") { model.present(NewSplitSheet()) }
-        await sheet("Exercise picker") { model.present(ExercisePicker { _ in }, tall: true) }
+        await sheet("New split sheet") { NewSplitSheet() }
+        await sheet("Exercise picker", tall: true) { ExercisePicker { _ in } }
         let settings = training.settings
-        await sheet("Rest timer list") { model.present(RestList()) }
-        await sheet("Custom rest") { model.present(CustomRest(seconds: settings.restSeconds)) }
-        await sheet("Motion list") { model.present(MotionList()) }
-        await sheet("Privacy") { model.present(PrivacyPage()) }
-        await sheet("Badges") { model.present(QuestList(), tall: true) }
-        await sheet("Level help") { model.present(XpHelp()) }
+        await sheet("Rest timer list") { RestList() }
+        await sheet("Custom rest") { CustomRest(seconds: settings.restSeconds) }
+        await sheet("Motion list") { MotionList() }
+        await sheet("Privacy") { PrivacyPage() }
+        await sheet("Badges", tall: true) { QuestList() }
+        await sheet("Level help") { XpHelp() }
         await step("Date picker opens") { model.present(DateSheet(label: "Date", key: .constant(dayKey(nowMillis())), range: Date.distantPast...Date())) }
         await step("Date picker: previous month") { MonthGrid.bench("Date", .month(-1)) }
         await step("Date picker: next month") { MonthGrid.bench("Date", .month(1)) }
         await step("Date picker: a day picked (closes)") { MonthGrid.bench("Date", .day(1)) }
-        if let counted = training.sessions.countedNames().first { await sheet("Counts for") { model.present(CountsFor(row: counted)) } }
+        if let counted = training.sessions.countedNames().first { await sheet("Counts for") { CountsFor(row: counted) } }
         await step("Question opens") { model.confirm = Confirm(title: "Motion check", message: "Nothing changes.", label: "OK") {} }
         await step("Question closes") { model.confirm = nil }
         await step("Toast shows") { model.show("Motion check.") }
@@ -254,7 +262,7 @@ final class MotionCheck {
         await step("Rest −15 s") { model.shiftRest(by: -15) }
         // With no rest running, Skip only puts the Live Activity right, which the check leaves alone.
         if model.training.restUntil != nil { await step("Rest skip") { model.skipRest() } }
-        await sheet("Rename workout") { model.present(RenameWorkout(name: model.training.active?.name ?? "")) }
+        await sheet("Rename workout") { RenameWorkout(name: self.model.training.active?.name ?? "") }
         // A card's last set done: its ✓, a beat, then the next card opens and the page glides to it.
         if cards.count > 1, let last = model.training.active?.exercises.first?.sets.last(where: { !$0.done }) {
             model.update(moving: false) { training in
@@ -266,8 +274,8 @@ final class MotionCheck {
             await Self.pause(0.7)
             await step("Card's last set done (next opens)", settle: 2) { model.toggle(set: last.id, in: first) }
         }
-        await sheet("Exercise options") { model.present(ExerciseOptions(exerciseId: first)) }
-        await sheet("Workout options") { model.present(WorkoutOptions(arrange: {})) }
+        await sheet("Exercise options", readied: false) { ExerciseOptions(exerciseId: first) }
+        await sheet("Workout options", readied: false) { WorkoutOptions(arrange: {}) }
         if cards.count > 1, let last = model.training.active?.exercises.last {
             await step("Arrange exercises") { model.bench = .arrange(true) }
             await step("Arrange: a card moved") {

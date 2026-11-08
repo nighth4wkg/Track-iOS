@@ -33,6 +33,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         holder.height = height
         holder.keep = keep
         holder.show(shown, coming: first)
+        holder.everShown = shown
         // Built once in the window as the app starts, so the first time it's shown isn't the build.
         if !shown { DispatchQueue.main.async { holder.prebuild() } }
         return holder
@@ -46,7 +47,9 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         if !leaving { holder.host.rootView = content }
         holder.height = height
         let given = CACurrentMediaTime()
-        holder.show(shown, coming: again)
+        // Built hidden (readied as its button was held), its first showing is still its first way in.
+        holder.show(shown, coming: holder.everShown || first == .none ? again : first)
+        if shown { holder.everShown = true }
         if leaving { holder.leave() }
         if shown != was {
             Sampler.note("stage \(shown ? "shown" : "hidden"): content \(Int((given - start) * 1000)) ms, show \(Int((CACurrentMediaTime() - given) * 1000)) ms")
@@ -58,6 +61,8 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         var height: () -> CGFloat? = { nil }
         var keep: () -> Bool = { false }
         private(set) var shown = false
+        /// Shown by its screen at least once (not just built while hidden).
+        var everShown = false
         private let dim: UIView?
         /// Each move's number: a move waiting for its next frame doesn't start if another has come since.
         private var moves = 0
@@ -104,7 +109,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
                 host.view.removeFromSuperview()
             }
-            if on { host.view.isHidden = false }
+            if on { host.view.isHidden = false } else { dim?.alpha = 0 }
             if on, !shown { arrive(way) }
             // An empty holder over the shown screen mustn't take its touches.
             view.isUserInteractionEnabled = on
@@ -166,7 +171,9 @@ struct Covering<Content: View>: View {
     @State private var bar: CGFloat = 0
 
     var body: some View {
-        Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left) {
+        // Kept in the window while hidden (a page under another, the workout kept for later): put back, it re-attached
+        // all of itself first (the tabs' 15-42 ms: build 126 measured keeping them better).
+        Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left, keep: { !AB.oldWay }) {
             Calm(model: model, live: shown) { content.environment(\.shown, shown) }
                 .onPreferenceChange(FloatingBar.self) { bar = $0 }
         }

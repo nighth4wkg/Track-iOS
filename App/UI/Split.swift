@@ -66,7 +66,9 @@ struct SplitScreen: View {
                     Button {
                         model.present(ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }, tall: true)
                     } label: { Label { Text("Add exercise") } icon: { Icon.plus.image(IconSize.medium) } }
-                    .buttonStyle(SecondaryStyle()).padding(.top, Space.s3)
+                    .buttonStyle(SecondaryStyle())
+                    .readies { model.ready(ExercisePicker { name in model.update { $0.edit(splitId) { $0.exercises.append(Exercise.new(named: name)) } } }, tall: true) }
+                    .padding(.top, Space.s3)
                 }
                 if editing {
                     Button("Delete split") { model.deleteSplit(split) }.buttonStyle(SecondaryStyle(danger: true)).padding(.top, Space.s6)

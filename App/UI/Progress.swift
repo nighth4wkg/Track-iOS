@@ -28,10 +28,10 @@ struct ProgressScreen: View {
                 StatTile(label: "Streak", value: "\(model.derived("streak", of: training.sessions, at: dayKey(now)) { $0.weeklyStreak(at: now) })", unit: "wk")
                 let level = model.derived("xp", of: training.sessions) { Experience.progress(of: $0) }.level
                 Button { model.present(XpHelp()) } label: { StatTile(label: "Level", value: "\(level)") }
-                    .buttonStyle(CardStyle()).accessibilityLabel("Level \(level). How XP works")
+                    .buttonStyle(CardStyle()).readies { model.ready(XpHelp()) }.accessibilityLabel("Level \(level). How XP works")
                 let earned = model.derived("award count", of: training.sessions) { $0.questAwards.count }
                 Button { model.present(QuestList(), tall: true) } label: { StatTile(label: "Badges", value: "\(earned)", unit: "/\(Quest.all.count)", tight: true) }
-                    .buttonStyle(CardStyle()).accessibilityLabel("Badges: \(earned) of \(Quest.all.count). Show all")
+                    .buttonStyle(CardStyle()).readies { model.ready(QuestList(), tall: true) }.accessibilityLabel("Badges: \(earned) of \(Quest.all.count). Show all")
             }
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, Space.s3)
@@ -65,6 +65,7 @@ struct ProgressScreen: View {
                 ForEach(rows, id: \.key) { item in
                     Button { model.open(.lift(item.lift.name)) } label: { row(item.lift, unit: unit, now: now) }
                         .buttonStyle(CardStyle())
+                        .readies { model.ready(.lift(item.lift.name)) }
                         .transition(.swap)
                 }
                 if !all && lifts.count > Self.shown {

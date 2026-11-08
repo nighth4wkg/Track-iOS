@@ -24,12 +24,18 @@ struct SheetLayer: View {
 
     var body: some View {
         let moving = !still && !AB.stillSheets
+        // The sheet being readied as its button is held comes last, hidden; presented, it's the same view (by id), so
+        // it only comes up. Ones just presented are drawn at once, before `follow` adds them, so it never drops out.
+        let waiting = model.sheets.filter { sheet in !shown.contains { $0.id == sheet.id } }
+        let all = shown + waiting + [model.readySheet].compactMap { $0 }
         ZStack {
-            ForEach(shown) { sheet in
+            ForEach(all) { sheet in
                 // A closed sheet goes down as a live view that takes no taps: removed at once, it still took them as
                 // it went, whatever was put on it or over it.
                 let gone = leaving.contains(sheet.id)
-                Stage(first: moving ? .up : .none, dim: true, leaving: gone && moving, height: { [heights] in heights.of[sheet.id] }) {
+                let ready = sheet.id == model.readySheet?.id
+                Stage(shown: !ready, first: moving ? .up : .none, dim: true, leaving: gone && moving, height: { [heights] in heights.of[sheet.id] },
+                      keep: { true }) {
                     ZStack(alignment: .bottom) {
                         // Above the sheet is its dim: a tap there closes it.
                         Color.clear.contentShape(Rectangle()).onTapGesture { close(sheet) }.accessibilityHidden(true)
@@ -43,8 +49,8 @@ struct SheetLayer: View {
                     .calm(model)
                 }
                 .ignoresSafeArea()
-                .allowsHitTesting(!gone)
-                .accessibilityHidden(gone)
+                .allowsHitTesting(!gone && !ready)
+                .accessibilityHidden(gone || ready)
                 .transition(.identity)
             }
         }

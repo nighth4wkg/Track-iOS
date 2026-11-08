@@ -23,6 +23,8 @@ struct Presented: Identifiable {
     let view: AnyView
     /// As tall as the screen whatever it holds (the picker, whose list grows and shrinks as you search).
     let tall: Bool
+    /// Its view's type: a sheet built as its button was held is used only by a present of the same kind.
+    var kind: ObjectIdentifier
 }
 
 /// A question before something that can't be taken back, shown in Track's own dialog (as the website's).
@@ -99,10 +101,31 @@ final class AppModel {
     /// When go() last ran: a screen shown just after was swapped to (it just shows), not come back to (it shifts in).
     @ObservationIgnored private var swapAt: TimeInterval = 0
     var swapping: Bool { ProcessInfo.processInfo.systemUptime - swapAt < Motion.fast }
-    func open(_ route: Route) { pages.append(route) }
+    /// A page being built as its button is held (Shell builds it hidden, where it goes); opened, it just shows.
+    var readyPage: Route?
+    /// A sheet being built as its button is held; presented (as the same kind of sheet), it just comes up.
+    var readySheet: Presented?
+    func open(_ route: Route) {
+        pages.append(route)
+        if readyPage != nil { readyPage = nil }
+    }
+    func ready(_ route: Route) { if pages.last != route { readyPage = route } }
+    func ready(_ view: some View, tall: Bool = false) { readySheet = Presented(view: AnyView(view), tall: tall, kind: ObjectIdentifier(type(of: view))) }
+    /// What was built for a button let go without opening it.
+    func unready() {
+        if readyPage != nil { readyPage = nil }
+        if readySheet != nil { readySheet = nil }
+    }
     func back() { if !pages.isEmpty { pages.removeLast() } }
     /// Shows a sheet (it closes itself through closeSheet).
-    func present(_ view: some View, tall: Bool = false) { sheets.append(Presented(view: AnyView(view), tall: tall)) }
+    func present(_ view: some View, tall: Bool = false) {
+        if let ready = readySheet, ready.kind == ObjectIdentifier(type(of: view)) {
+            sheets.append(ready)
+        } else {
+            sheets.append(Presented(view: AnyView(view), tall: tall, kind: ObjectIdentifier(type(of: view))))
+        }
+        if readySheet != nil { readySheet = nil }
+    }
     func dismiss(_ id: UUID) {
         guard let index = sheets.firstIndex(where: { $0.id == id }) else { return }
         sheets.remove(at: index)

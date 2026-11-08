@@ -211,6 +211,7 @@ private struct Chips: View {
                             .frame(minHeight: Size.compact).raised(.control, .pill)
                     }
                     .buttonStyle(CardStyle())
+                    .readies { model.ready(CountsFor(row: row)) }
                     .accessibilityLabel("\(row.name): choose where it counts")
                 }
             }

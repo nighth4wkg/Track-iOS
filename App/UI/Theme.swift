@@ -463,7 +463,37 @@ extension View {
 /// How a pressed button answers, at once (no motion yet): a little darker. Disabled ones don't answer.
 private struct Pressed: ViewModifier {
     let on: Bool
-    func body(content: Content) -> some View { content.opacity(on ? Press.dim : 1) }
+    func body(content: Content) -> some View { content.opacity(on ? Press.dim : 1).modifier(Readies(on: on)) }
+}
+
+extension EnvironmentValues {
+    /// What a button opens, built while it's held (`readies`).
+    @Entry var ready: (() -> Void)? = nil
+}
+
+extension View {
+    /// Builds what this button opens while the finger is still down (a tap is ~100-150 ms from down to up), so the
+    /// tap itself only shows it: built in the tap's frame, a page or sheet waited 30-50 ms to move (builds 124-126).
+    /// Only for a button whose action opens just that.
+    func readies(_ ready: @escaping () -> Void) -> some View { environment(\.ready, ready) }
+}
+
+/// A held button builds what it opens (see readies); let go without opening it, it's thrown away. A button in a list
+/// is held only once the list knows it isn't a scroll, so a scroll builds nothing.
+private struct Readies: ViewModifier {
+    @Environment(\.ready) private var ready
+    @Environment(AppModel.self) private var model: AppModel?
+    let on: Bool
+    func body(content: Content) -> some View {
+        if let ready, let model, !AB.oldWay {
+            content.onChange(of: on) { _, now in
+                // The tap runs as the finger lifts, in the same pass: by the next one what wasn't opened is unused.
+                if now { ready() } else { DispatchQueue.main.async { model.unready() } }
+            }
+        } else {
+            content
+        }
+    }
 }
 
 /// A disabled control, card or row fades, as the PWA's button:disabled (the main button has its own look).
@@ -522,6 +552,7 @@ struct RowStyle: ButtonStyle {
     var still = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.background(configuration.isPressed ? Palette.wash : .clear).modifier(Faded(keep: still))
+            .modifier(Readies(on: configuration.isPressed))
     }
 }
 

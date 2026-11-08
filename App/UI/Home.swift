@@ -23,7 +23,7 @@ struct HomeScreen: View {
                 }
                 .accessibilityElement(children: .combine)
                 Spacer(minLength: 0)
-                RoundButton(icon: .settings, label: "Settings") { model.open(.settings) }
+                RoundButton(icon: .settings, label: "Settings") { model.open(.settings) }.readies { model.ready(.settings) }
             }
             .frame(minHeight: Size.control)
             VStack(alignment: .leading, spacing: 0) {
@@ -52,7 +52,7 @@ struct HomeScreen: View {
                     if training.splits.count > 1 {
                         RoundButton(icon: arranging ? .check : .arrange, label: arranging ? "Done arranging splits" : "Arrange splits") { Motion.tap { arranging.toggle() } }
                     }
-                    if !arranging { RoundButton(icon: .plus, label: "New split") { model.present(NewSplitSheet()) } }
+                    if !arranging { RoundButton(icon: .plus, label: "New split") { model.present(NewSplitSheet()) }.readies { model.ready(NewSplitSheet()) } }
                 }
             }
             if arranging {
@@ -135,6 +135,7 @@ private struct UpNextCard: View {
         } else {
             Button { model.present(NewSplitSheet()) } label: { Label { Text("New split") } icon: { Icon.plus.image(IconSize.small) } }
                 .buttonStyle(PrimaryStyle())
+                .readies { model.ready(NewSplitSheet()) }
         }
     }
 }
@@ -273,6 +274,7 @@ private struct SplitCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowStyle())
+            .readies { if !armed { model.ready(.split(split.id)) } }
             if armed {
                 RoundButton(icon: .trash, label: "Delete \(split.name)", tint: Palette.danger) { armed = false; model.deleteSplit(split) }
                     .padding(.trailing, Space.s4)

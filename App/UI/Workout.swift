@@ -240,6 +240,7 @@ struct WorkoutScreen: View {
             model.present(ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }, tall: true)
         } label: { Label { Text("Add exercise") } icon: { Icon.plus.image(IconSize.medium) } }
         .buttonStyle(SecondaryStyle())
+        .readies { model.ready(ExercisePicker { name in model.update { $0.active?.exercises.append(Exercise.new(named: name)) } }, tall: true) }
     }
 
     /// ‹, the name over the time and sets (it opens the options), Finish (Done while arranging).

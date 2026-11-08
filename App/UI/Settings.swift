@@ -53,6 +53,7 @@ struct SettingsScreen: View {
             }
             Button { model.present(RestList()) } label: { Row(title: "Rest timer", value: "\(clock(settings.restSeconds)) min", chevron: true) }
                 .buttonStyle(RowStyle())
+                .readies { model.ready(RestList()) }
             Row(title: "Log sets") {
                 Seg(label: "Log sets", options: [(value: TrackCore.Settings.LogSets.auto, text: "Auto"), (value: .manual, text: "Tap")],
                     value: Binding(get: { settings.logSets ?? .auto }, set: { mode in model.update { $0.settings.logSets = mode } }), compact: true)
@@ -127,10 +128,12 @@ struct SettingsScreen: View {
                 .task(id: copied) { if copied { try? await Task.sleep(for: Self.copiedFor); copied = false } }
                 Button { model.present(PrivacyPage()) } label: { Row(title: "Privacy", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
+                    .readies { model.ready(PrivacyPage()) }
                 Button { model.present(MotionList()) } label: {
                     Row(title: "Motion", value: Motion.speeds.first { $0.scale == motion }?.name ?? "", chevron: true)
                 }
                 .buttonStyle(RowStyle())
+                .readies { model.ready(MotionList()) }
                 Row(title: "Version", value: Self.version)
                     // Hidden, for checking motion on this iPhone: every motion run by itself on a copy that's never saved.
                     .onLongPressGesture(minimumDuration: Self.holdForCheck) { MotionCheck.run(model) }
@@ -256,6 +259,7 @@ struct RestList: View {
                     }
                 }
                 .buttonStyle(RowStyle())
+                .readies { model.ready(CustomRest(seconds: current)) }
                 .accessibilityAddTraits(Self.presets.contains(current) ? [] : .isSelected)
             }
             .padding(.top, Space.s3)

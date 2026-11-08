@@ -41,7 +41,8 @@ struct Shell: View {
                     .accessibilityHidden(!shown || behind)
                 }
             }
-            ForEach(Array(model.pages.enumerated()), id: \.offset) { index, route in
+            // The page being readied comes last, hidden: opened, it's the same view in the same place, so it only shows.
+            ForEach(Array((model.pages + [model.readyPage].compactMap { $0 }).enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
                 Covering(shown: shown) { deeper(route).swipeBack(shown) { model.back() } }
                     .id(route)

@@ -15,6 +15,7 @@ struct WorkoutOptions: View {
                     .buttonStyle(RowStyle()).disabled((active?.exercises.count ?? 0) < 2)
                 Button { close(); model.present(RenameWorkout(name: model.training.active?.name ?? "")) } label: { Row(title: "Rename workout", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
+                    .readies { model.ready(RenameWorkout(name: model.training.active?.name ?? "")) }
                 Row(title: "Weight unit") {
                     Seg(label: "Weight unit", options: [(value: TrackCore.Settings.Unit.kg, text: "kg"), (value: .lb, text: "lb")],
                         value: Binding(get: { model.training.settings.unit }, set: { unit in model.update { $0.settings.unit = unit } }), compact: true)

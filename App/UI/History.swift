@@ -63,6 +63,7 @@ struct HistoryScreen: View {
                     ForEach(rows, id: \.key) { item in
                         Button { model.open(.session(item.session.id)) } label: { HistoryRow(session: item.session, unit: unit) }
                             .buttonStyle(CardStyle())
+                            .readies { model.ready(.session(item.session.id)) }
                             .transition(.swap)
                     }
                 }
