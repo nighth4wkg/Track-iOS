@@ -266,7 +266,10 @@ struct AskLayer: View {
 /// off the fields and the sheet's buttons.
 struct ToastLayer: View {
     @Environment(AppModel.self) private var model
-    let above: CGFloat
+    /// Under a page or the workout: above its floating bar if it has one, else at the bottom; on a tab, above the pill.
+    let onPage: Bool
+    /// The floating bar's height the old way (Shell's preference); else model.bars, read only here.
+    let oldBar: CGFloat
     let keyboard: Bool
     /// Whether the showing toast is over a sheet or question: chosen as it appears, and set when one opens under it
     /// (owner: shown first, it covered the question's buttons); kept as they close, so it doesn't drop.
@@ -277,6 +280,8 @@ struct ToastLayer: View {
 
     var body: some View {
         let toast = model.toast
+        let bar = AB.oldWay ? oldBar : model.bars.values.max() ?? 0
+        let above = onPage ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3
         let covered = !model.sheets.isEmpty || model.confirm != nil
         let top = toast.map { toast in keyboard || (placed?.id == toast.id ? placed!.overSheet : covered) } ?? false
         let moving = !still && !AB.stillToast

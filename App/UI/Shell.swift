@@ -62,9 +62,9 @@ struct Shell: View {
             }
             SheetLayer()
             AskLayer()
-            ToastLayer(above: covered ? (bar > 0 ? bar + Space.s3 : 0) : Size.nav + Space.s3, keyboard: keyboard)
+            ToastLayer(onPage: covered, oldBar: bar, keyboard: keyboard)
         }
-        .onPreferenceChange(FloatingBar.self) { bar = $0 }
+        .readsBar($bar)
         .background(Backdrop())
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }

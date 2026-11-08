@@ -621,10 +621,37 @@ extension View {
 
     /// Marks this as the bar floating at the bottom of a covering screen (the rest timer, a page's docked button), so
     /// the pill sits above it as the PWA's does over .nav and .dock.
-    func floatingBar(_ height: CGFloat) -> some View { preference(key: FloatingBar.self, value: height) }
+    func floatingBar(_ height: CGFloat) -> some View { modifier(Docked(height: height)) }
 }
 
-/// The tallest bar floating at the bottom of what shows (see floatingBar); 0 when none.
+/// floatingBar: put in model.bars while its screen shows. Passed up as a preference (the old way), SwiftUI combined it
+/// over every view of the page on each move: 6-12 ms of each page's open and back (build 128).
+private struct Docked: ViewModifier {
+    @Environment(AppModel.self) private var model
+    @Environment(\.shown) private var shown
+    @State private var id = UUID()
+    let height: CGFloat
+    func body(content: Content) -> some View {
+        if AB.oldWay { content.preference(key: FloatingBar.self, value: height) } else {
+            content
+                .onChange(of: shown, initial: true) { _, now in model.bars[id] = now ? height : nil }
+                .onDisappear { model.bars[id] = nil }
+        }
+    }
+}
+
+extension View {
+    /// The old way only: the floating bar under this, read as a preference (see Docked).
+    func readsBar(_ bar: Binding<CGFloat>) -> some View { modifier(ReadsBar(bar: bar)) }
+}
+private struct ReadsBar: ViewModifier {
+    @Binding var bar: CGFloat
+    func body(content: Content) -> some View {
+        if AB.oldWay { content.onPreferenceChange(FloatingBar.self) { bar = $0 } } else { content }
+    }
+}
+
+/// The tallest bar floating at the bottom of what shows (see floatingBar, the old way); 0 when none.
 struct FloatingBar: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }

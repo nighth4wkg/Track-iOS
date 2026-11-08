@@ -105,6 +105,9 @@ final class AppModel {
     var readyPage: Route?
     /// A sheet being built as its button is held; presented (as the same kind of sheet), it just comes up.
     var readySheet: Presented?
+    /// The bars floating at the bottom of what shows (a page's docked button, the rest timer), by the view docking
+    /// each: the toast sits above the tallest. Only ToastLayer reads it, so a page showing redraws nothing else.
+    var bars: [UUID: CGFloat] = [:]
     func open(_ route: Route) {
         pages.append(route)
         if readyPage != nil { readyPage = nil }

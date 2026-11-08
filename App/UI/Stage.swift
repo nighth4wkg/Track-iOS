@@ -184,10 +184,10 @@ struct Covering<Content: View>: View {
         // all of itself first (the tabs' 15-42 ms: build 126 measured keeping them better).
         Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left, keep: { !AB.oldWay }) {
             Calm(model: model, live: shown) { content.environment(\.shown, shown) }
-                .onPreferenceChange(FloatingBar.self) { bar = $0 }
+                .readsBar($bar)
         }
         .ignoresSafeArea()
-        .floatingBar(shown ? bar : 0)
+        .preference(key: FloatingBar.self, value: shown ? bar : 0)
     }
 }
 
