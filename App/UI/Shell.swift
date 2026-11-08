@@ -52,7 +52,9 @@ struct Shell: View {
             // Screens come and go at once, even in a tap's move (starting or finishing a workout): each moves in itself (Stage).
             // Kept made while it's kept for later: Continue workout only shows it (made anew it cost ~30 ms: build 107).
             if model.training.active != nil { Covering(shown: model.workoutOpen, anew: true) { WorkoutScreen() }.transition(.identity) }
-            if let finished = model.finished, !model.workoutOpen { CompleteScreen(finished: finished).transition(.identity) }
+            if let finished = model.finished, !model.workoutOpen {
+                Group { if AB.emptyScreens { DeepPage { EmptyView() } } else { CompleteScreen(finished: finished) } }.transition(.identity)
+            }
             StatusFade()
             if !covered && !keyboard {
                 NavPill().frame(maxHeight: .infinity, alignment: .bottom).floatingBottom().transition(.identity)
@@ -81,6 +83,10 @@ struct Shell: View {
     }
 
     @ViewBuilder private func page(_ tab: AppTab) -> some View {
+        if AB.emptyScreens { Color.clear } else { tabScreen(tab) }
+    }
+
+    @ViewBuilder private func tabScreen(_ tab: AppTab) -> some View {
         switch tab {
         case .home: HomeScreen()
         case .history: HistoryScreen()
@@ -90,7 +96,7 @@ struct Shell: View {
     }
 
     @ViewBuilder private func deeper(_ route: Route) -> some View {
-        if AB.emptyPages { DeepPage { EmptyView() } } else { screen(route) }
+        if AB.emptyPages || AB.emptyScreens { DeepPage { EmptyView() } } else { screen(route) }
     }
 
     @ViewBuilder private func screen(_ route: Route) -> some View {

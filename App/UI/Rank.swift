@@ -219,7 +219,7 @@ private struct Chips: View {
 }
 
 /// Where an exercise counts, on a sheet: automatic (what its name says), one muscle, or nowhere.
-private struct CountsFor: View {
+struct CountsFor: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     let row: CountedName

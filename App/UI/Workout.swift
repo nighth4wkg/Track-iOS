@@ -160,7 +160,7 @@ struct WorkoutScreen: View {
                 .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
         }
         var rows = [CardList.Row(id: Self.top, value: "\(active.name) \(done) \(planned)", view: column(heading, Space.s4, Space.s4 - Space.s1), pinned: true)]
-        for (index, exercise) in active.exercises.enumerated() {
+        for (index, exercise) in active.exercises.enumerated() where !AB.emptyScreens {
             let card = card(index, exercise, active, expanded: expanded, current: current, previous: previous, unit: unit)
             if AB.uikitCard {
                 rows.append(CardList.Row(id: exercise.id, value: card, view: AnyView(EmptyView()), card: card))

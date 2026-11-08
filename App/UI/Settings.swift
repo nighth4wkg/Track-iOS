@@ -193,7 +193,7 @@ struct SettingsScreen: View {
 }
 
 /// What the iPhone app keeps and where it goes, in Track's own sheet (the website's page is the web app's own).
-private struct PrivacyPage: View {
+struct PrivacyPage: View {
     private static let sections = [
         (title: "What Track keeps", body: "The workouts, splits, settings and bodyweight you enter. There is no account: no name, email or password."),
         (title: "Where it goes", body: "Nowhere: it stays on this iPhone and in its iCloud or computer backups. It is never sold, shared for advertising, or used to train AI."),
@@ -234,7 +234,7 @@ struct BackupFile: Transferable {
 }
 
 /// The rest presets, and Custom for any other time (checked once it's set).
-private struct RestList: View {
+struct RestList: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     private static let presets = [60, 90, 120, 150, 180, 240, 300]
@@ -266,7 +266,7 @@ private struct RestList: View {
 }
 
 /// How fast the app moves: Default, or a step slower or faster (Motion.speeds), as the rest presets are picked.
-private struct MotionList: View {
+struct MotionList: View {
     @Environment(\.closeSheet) private var close
     @AppStorage(Motion.speedKey) private var motion = 1.0
 
@@ -288,7 +288,7 @@ private struct MotionList: View {
 }
 
 /// Any rest time in the allowed range, as minutes and seconds.
-private struct CustomRest: View {
+struct CustomRest: View {
     @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     /// Filled from the first frame (SetRow's init says why).

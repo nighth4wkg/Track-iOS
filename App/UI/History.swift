@@ -105,7 +105,7 @@ private struct DateField: View {
 }
 
 /// The calendar for a From or To day.
-private struct DateSheet: View {
+struct DateSheet: View {
     @Environment(\.closeSheet) private var close
     let label: String
     @Binding var key: String

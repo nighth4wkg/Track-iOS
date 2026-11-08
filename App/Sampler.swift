@@ -5,7 +5,7 @@ import os
 
 /// Bench-only, for finding what makes a touch slow on the phone (~/.pmd3/bench/stress.py): -probe samples the main
 /// thread's stack every millisecond while TouchLog watches a touch and logs where its busy time went. Without the
-/// argument nothing here runs.
+/// argument nothing here runs, except while the motion check finds causes (install(always:) to uninstall()).
 final class Sampler: Thread, @unchecked Sendable {
     static var shared: Sampler?
     private let target: thread_act_t
@@ -19,10 +19,22 @@ final class Sampler: Thread, @unchecked Sendable {
     fileprivate var waiting = false
     private var idle = 0
     private let log = Logger(subsystem: "Track", category: "probe")
+    private var observers: [CFRunLoopObserver] = []
+    private var stopped = false
+    /// Each sampled window's short report, by its name, for the motion check's results (main thread only).
+    @MainActor static var found: [String: Found] = [:]
+
+    /// Where one window's busy time went: in all, by library, and in Track's own functions (ms, a sample each).
+    struct Found {
+        let busy: Int
+        let libraries: [(String, Int)]
+        let ours: [(String, Int)]
+        let leaves: [(String, Int)]
+    }
 
     /// From the main thread.
-    static func install() {
-        guard shared == nil, ProcessInfo.processInfo.arguments.contains("-probe") else { return }
+    static func install(always: Bool = false) {
+        guard shared == nil, always || ProcessInfo.processInfo.arguments.contains("-probe") else { return }
         let sampler = Sampler(target: pthread_mach_thread_np(pthread_self()))
         sampler.qualityOfService = .userInteractive
         sampler.start()
@@ -30,10 +42,22 @@ final class Sampler: Thread, @unchecked Sendable {
         for (activity, order) in [(CFRunLoopActivity.beforeWaiting, CFIndex.max), (.afterWaiting, CFIndex.min)] {
             let observer = CFRunLoopObserverCreateWithHandler(nil, activity.rawValue, true, order) { _, _ in sampler.waiting = activity == .beforeWaiting }
             CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
+            sampler.observers.append(observer!)
         }
     }
 
+    /// From the main thread: the sampling thread ends and the run loop is left as it was.
+    static func uninstall() {
+        guard let s = shared else { return }
+        for observer in s.observers { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
+        s.lock.lock(); s.stopped = true; s.lock.unlock()
+        shared = nil
+    }
+
     private init(target: thread_act_t) { self.target = target }
+
+    /// How many of each list the motion check keeps.
+    private static let kept = 8
 
     /// A measured line in the probe log (nothing without -probe).
     static func note(_ text: @autoclosure () -> String) {
@@ -49,7 +73,8 @@ final class Sampler: Thread, @unchecked Sendable {
 
     override func main() {
         while true {
-            lock.lock(); let w = window; lock.unlock()
+            lock.lock(); let (w, end) = (window, stopped); lock.unlock()
+            if end { return }
             guard let w else { usleep(5000); continue }
             if CACurrentMediaTime() > w.until {
                 lock.lock(); window = nil; lock.unlock()
@@ -124,6 +149,9 @@ final class Sampler: Thread, @unchecked Sendable {
             for frame in Set(stack.filter { $0.image == "Track" }.map(\.symbol)) { ours[frame, default: 0] += 1 }
         }
         let top = { (d: [String: Int], k: Int) in d.sorted { $0.value > $1.value }.prefix(k) }
+        let kept = { (d: [String: Int]) in top(d, Self.kept).map { ($0.key, $0.value) } }
+        let found = Found(busy: named.count, libraries: kept(images), ours: kept(ours), leaves: kept(leaves))
+        Task { @MainActor in Sampler.found[action] = found }
         log.log("probe \(action, privacy: .public): \(named.count) busy samples, \(self.idle) idle")
         for (k, v) in top(images, 6) { log.log("probe \(action, privacy: .public) self \(v) \(k, privacy: .public)") }
         for (k, v) in top(leaves, 20) { log.log("probe \(action, privacy: .public) leaf \(v) \(String(k.prefix(200)), privacy: .public)") }
@@ -194,6 +222,8 @@ enum AB {
     /// screen's own content against what's around it).
     static let emptyPages = args.contains("-ab-empty-pages")
     static let emptySheets = args.contains("-ab-empty-sheets")
+    /// The motion check's second causes pass: every tab, page, sheet and the recap empty, and the workout with no cards.
+    nonisolated(unsafe) static var emptyScreens = false
     /// Measuring only: a screen's arrival only shifts (no fade), or only fades (no shift): which one the screen
     /// recording's stutter comes from.
     static let shiftOnly = args.contains("-ab-shift-only")
