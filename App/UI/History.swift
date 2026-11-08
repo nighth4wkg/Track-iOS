@@ -34,7 +34,7 @@ struct HistoryScreen: View {
             }
             // While a search is typed, its results take the calendar's place: under it they sat behind the keyboard.
             if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days", of: training.sessions) { Set($0.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) })
+                HistoryCalendar(month: $month, from: $from, to: $to, trained: model.derived("trained days", of: training.sessions) { HistoryCalendar.trainedDays($0) })
                     .padding(.top, Space.s3)
             }
             list(results, filtering: filtering, unit: training.settings.unit).padding(.top, Space.s6)
@@ -104,24 +104,35 @@ private struct DateField: View {
     }
 }
 
-/// The calendar for a From or To day.
+/// The calendar for a From or To day: History's own month (iOS's graphical picker was another look, Sunday first, and
+/// the slowest sheet to open, 71-83 ms), the day picked under the title. Choosing a day, Any day or Today closes it.
 struct DateSheet: View {
+    @Environment(AppModel.self) private var model
     @Environment(\.closeSheet) private var close
     let label: String
     @Binding var key: String
     let range: ClosedRange<Date>
+    @State private var month: Date?
 
     var body: some View {
-        SheetFrame(title: label) {
-            DatePicker(label, selection: Binding(get: { dayStart(key) ?? min(max(range.lowerBound, .now), range.upperBound) },
-                                                 set: { key = dayKey(millis($0)); close() }),
-                       in: range, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .tint(Palette.accent)
-                .environment(\.calendar, Calendars.local)
-                .padding(.top, Space.s3)
+        let today = Date()
+        let picked = dayStart(key)
+        SheetFrame(title: label, subtitle: picked?.formatted(.gregorian.weekday(.abbreviated).month(.abbreviated).day().year()) ?? "Any day") {
+            MonthGrid(month: Binding(get: { month ?? HistoryCalendar.monthStart(picked ?? min(today, range.upperBound)) }, set: { month = $0 }),
+                      range: range, trained: model.derived("trained days") { HistoryCalendar.trainedDays($0) },
+                      picked: { $0 == key }) { choose($0) }
+                .padding(.top, Space.s4)
+            HStack(spacing: Space.s3) {
+                Button("Any day") { choose("") }.buttonStyle(SecondaryStyle())
+                Button("Today") { choose(dayKey(millis(today))) }.buttonStyle(SecondaryStyle()).disabled(!MonthGrid.allows(range, today))
+            }
+            .padding(.top, Space.s4)
         }
+    }
+
+    private func choose(_ day: String) {
+        key = day
+        close()
     }
 }
 
@@ -156,14 +167,38 @@ private struct HistoryRow: View {
     }
 }
 
-/// The training calendar: the month over a Monday-first grid with the neighbouring months' days greyed. Today sits on
-/// a raised tile in green; a dot under a day means you trained. Tap a day to see only it; again, all.
+/// The training calendar: a month (MonthGrid) on its card. Tap a day to see only it; again, all.
 struct HistoryCalendar: View {
     @Binding var month: Date
     @Binding var from: String
     @Binding var to: String
     /// The days with a finished workout ("2026-10-25").
     let trained: Set<String>
+
+    var body: some View {
+        // A day still ahead has nothing to show.
+        MonthGrid(month: $month, range: Date.distantPast...Date(), trained: trained, picked: { from == $0 && to == $0 }) { key in
+            let again = from == key && to == key
+            from = again ? "" : key; to = again ? "" : key
+        }
+        .pad()
+        .raised()
+    }
+
+    static func monthStart(_ date: Date) -> Date { Calendars.local.dateInterval(of: .month, for: date)?.start ?? date }
+    /// The days with a finished workout, for the dots.
+    static func trainedDays(_ sessions: [Session]) -> Set<String> { Set(sessions.finished.compactMap { $0.finishedAt.map { dayKey($0) } }) }
+}
+
+/// A month over a Monday-first grid with the neighbouring months' days greyed, shared by History's calendar and the
+/// date sheet. Today sits on a raised tile in green; a dot under a day means you trained; the picked day is washed
+/// green. Days outside `range` are greyed and take no tap, and the arrows stop at its months.
+struct MonthGrid: View {
+    @Binding var month: Date
+    let range: ClosedRange<Date>
+    let trained: Set<String>
+    let picked: (String) -> Bool
+    let choose: (String) -> Void
 
     var body: some View {
         let calendar = Calendars.local
@@ -177,8 +212,9 @@ struct HistoryCalendar: View {
                 Text(month.formatted(.gregorian.month(.wide).year())).type(.t16).foregroundStyle(Palette.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 RoundButton(icon: .back, label: "Previous month", size: IconSize.medium) { step(-1) }
+                    .disabled(month <= HistoryCalendar.monthStart(range.lowerBound))
                 RoundButton(icon: .next, label: "Next month", size: IconSize.medium) { step(1) }
-                    .disabled(month >= Self.monthStart(Date())) // no workouts ahead of this month
+                    .disabled(month >= HistoryCalendar.monthStart(range.upperBound))
             }
             Cells(columns: columns) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, letter in
@@ -190,35 +226,36 @@ struct HistoryCalendar: View {
                 ForEach(0..<(lead + length + 6) / 7 * 7, id: \.self) { offset in
                     let date = calendar.date(byAdding: .day, value: offset, to: start) ?? start
                     let key = dayKey(millis(date))
-                    let picked = from == key && to == key
+                    let on = picked(key)
                     let isToday = key == today
+                    let open = Self.allows(range, date)
                     let inMonth = calendar.isDate(date, equalTo: month, toGranularity: .month)
                     Button {
-                        guard key <= today else { return } // a day still ahead has nothing to show
-                        from = picked ? "" : key; to = picked ? "" : key
+                        if open { choose(key) }
                     } label: {
                         VStack(spacing: Space.s1) {
                             Text(date.formatted(.gregorian.day())).type(.t14).fontWeight(isToday ? .bold : nil).monospacedDigit()
-                                .foregroundStyle(!inMonth || key > today ? Palette.faint : isToday ? Palette.accent : Palette.text)
+                                .foregroundStyle(!inMonth || !open ? Palette.faint : isToday ? Palette.accent : Palette.text)
                             Circle().fill(trained.contains(key) ? Palette.accent : .clear).frame(width: Size.dot, height: Size.dot)
                         }
                         .frame(width: Size.tile, height: Size.tile)
-                        .background { if picked { Corner.inner.shape.fill(Palette.greenPick) } }
-                        .modifier(TodayTile(on: isToday && !picked))
+                        .background { if on { Corner.inner.shape.fill(Palette.greenPick) } }
+                        .modifier(TodayTile(on: isToday && !on))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(date.formatted(.gregorian.month(.wide).day()) + (trained.contains(key) ? ", trained" : ""))
-                    .accessibilityAddTraits(picked ? .isSelected : [])
-                    .accessibilityRemoveTraits(key > today ? .isButton : []) // a day ahead does nothing on tap
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                    .accessibilityRemoveTraits(open ? [] : .isButton) // a day outside the range does nothing on tap
                 }
             }
         }
-        .pad()
-        .raised()
     }
 
-    static func monthStart(_ date: Date) -> Date { Calendars.local.dateInterval(of: .month, for: date)?.start ?? date }
+    /// The day (its start) is in `range`: from the lower bound's day through the upper bound.
+    static func allows(_ range: ClosedRange<Date>, _ date: Date) -> Bool {
+        date >= Calendars.local.startOfDay(for: range.lowerBound) && date <= range.upperBound
+    }
 
     private func step(_ months: Int) {
         month = Calendars.local.date(byAdding: .month, value: months, to: month) ?? month
