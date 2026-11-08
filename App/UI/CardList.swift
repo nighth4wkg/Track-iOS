@@ -96,6 +96,9 @@ struct CardList: UIViewControllerRepresentable {
 
         // The jump key (the PWA's .jump): shown only while the current set is off the screen, pointing to it.
         private let jump = RoundControl(.up, surface: .float)
+        /// Fades and swells the key: the key's own alpha is its press look, set back as a finger lifts (it undid the
+        /// fade out: owner, the key shrank on a tap and stayed).
+        private let jumpHolder = UIView(frame: CGRect(x: 0, y: 0, width: Size.control, height: Size.control))
         /// nil hidden, else whether it points down.
         private var pointing: Bool?
         var quiet = false {
@@ -126,14 +129,15 @@ struct CardList: UIViewControllerRepresentable {
             pin.backgroundColor = .background
             pin.layer.zPosition = 1
             scroll.addSubview(pin)
-            jump.alpha = 0
-            jump.transform = CGAffineTransform(scaleX: Pop.from, y: Pop.from)
+            jumpHolder.alpha = 0
+            jumpHolder.transform = CGAffineTransform(scaleX: Pop.from, y: Pop.from)
+            jumpHolder.addSubview(jump)
             jump.isUserInteractionEnabled = false
             jump.isAccessibilityElement = false
             jump.accessibilityLabel = "Go to the current set"
             jump.accessibilityTraits = .button
             jump.addTarget(self, action: #selector(jumped), for: .touchUpInside)
-            view.addSubview(jump)
+            view.addSubview(jumpHolder)
             NotificationCenter.default.addObserver(self, selector: #selector(revealed), name: CardList.revealed, object: nil)
         }
 
@@ -419,7 +423,7 @@ struct CardList: UIViewControllerRepresentable {
             let screen = window.bounds, pill = min(Size.navWidth, screen.width - Space.s4 * 2)
             let center = CGPoint(x: (screen.width + pill) / 2 - Space.s2 - Size.control / 2,
                                  y: screen.height - floatingGap - Size.nav - Space.s6 - Size.control / 2)
-            jump.center = view.convert(center, from: window)
+            jumpHolder.center = view.convert(center, from: window)
         }
 
         /// The current card's next set (or the card, while it's closed), on the page.
@@ -457,7 +461,7 @@ struct CardList: UIViewControllerRepresentable {
             }
             guard (was == nil) != (down == nil) else { return }
             let on = down != nil
-            let look = { self.jump.alpha = on ? 1 : 0 }, size = { self.jump.transform = on ? .identity : CGAffineTransform(scaleX: Pop.from, y: Pop.from) }
+            let look = { self.jumpHolder.alpha = on ? 1 : 0 }, size = { self.jumpHolder.transform = on ? .identity : CGAffineTransform(scaleX: Pop.from, y: Pop.from) }
             if Motion.still { look(); size(); return }
             // The fade on its own even curve, quick; the swell on the app's move (the PWA's .jump transition).
             UIView.animate(withDuration: Motion.fast, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState, .allowUserInteraction], animations: look)
