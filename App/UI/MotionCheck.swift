@@ -41,6 +41,9 @@ final class MotionCheck {
         Task { @MainActor in
             let check = MotionCheck(model, causes: causes)
             let kept = model.beginBench()
+            // Each tab drawn once first, unmeasured: else the first pass alone timed a tab's first build (build 125's
+            // History 54 ms, 17 in the old-way pass, same code), and passes compared unfairly.
+            await Self.cycleTabs(model)
             if !causes {
                 var passes: [[MotionRow]] = []
                 for _ in 0..<runs {
