@@ -50,7 +50,7 @@ final class MotionCheck {
                     passes.append(check.rows)
                 }
                 check.rows = middle(passes)
-                await check.tabsOut()
+                await check.tabsKept()
             } else {
                 await check.all()
                 check.reset()
@@ -66,7 +66,7 @@ final class MotionCheck {
                 await check.all()
                 AB.emptyScreens = false
                 check.suffix = ""
-                await check.tabsOut()
+                await check.tabsKept()
                 Sampler.uninstall()
                 Sampler.found = [:]
             }
@@ -81,18 +81,17 @@ final class MotionCheck {
         }
     }
 
-    /// Every motion once more with hidden tabs taken out of the window (as before build 124): what keeping them saves
-    /// a tab change and costs every other change.
-    private func tabsOut() async {
-        await Self.cycleTabs(model)
-        AB.keepTabs = false
-        await Self.cycleTabs(model) // each kept tab taken out, unmeasured
-        suffix = ", tabs out"
+    /// Every motion once more with hidden tabs kept in the window (AB.keepTabs, off by default): what keeping them
+    /// saves a tab change and costs every other change.
+    private func tabsKept() async {
+        AB.keepTabs = true
+        await Self.cycleTabs(model) // each tab put back kept, unmeasured
+        suffix = ", tabs kept"
         await all()
         reset()
         suffix = ""
-        AB.keepTabs = true
-        await Self.cycleTabs(model)
+        AB.keepTabs = false
+        await Self.cycleTabs(model) // and taken out again
     }
 
     /// Each tab shown once, unmeasured.

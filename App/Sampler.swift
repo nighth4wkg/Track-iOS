@@ -249,9 +249,9 @@ enum AB {
     static let emptySheets = args.contains("-ab-empty-sheets")
     /// The motion check's second causes pass: every tab, page, sheet and the recap empty, and the workout with no cards.
     nonisolated(unsafe) static var emptyScreens = false
-    /// Hidden tabs stay in the window, only hidden (Stage.keep). The motion check runs a pass without, to compare
-    /// both the tab changes and what keeping them costs every other change.
-    nonisolated(unsafe) static var keepTabs = true
+    /// Hidden tabs stay in the window, only hidden (Stage.keep). Off: build 124 measured it worse (History 48 ms kept,
+    /// 17 taken out). The motion check's ", tabs kept" pass measures it again.
+    nonisolated(unsafe) static var keepTabs = false
     /// Measuring only: a screen's arrival only shifts (no fade), or only fades (no shift): which one the screen
     /// recording's stutter comes from.
     static let shiftOnly = args.contains("-ab-shift-only")
