@@ -144,6 +144,9 @@ struct CardList: UIViewControllerRepresentable {
         }
 
         private func go(_ id: String, top: Bool) {
+            // A page still coasting from a fling stops where it is: the jump key isn't on the page, so its tap didn't
+            // stop it, and the coast carried on under the glide (owner: it stopped short of the set, then drifted).
+            if scroll.isDecelerating { scroll.setContentOffset(scroll.contentOffset, animated: false) }
             let rect: CGRect
             if let y = tops[id] {
                 rect = CGRect(x: 0, y: y, width: width, height: heights[id] ?? 0)
@@ -563,7 +566,10 @@ struct CardList: UIViewControllerRepresentable {
             DispatchQueue.main.async { [weak self] in self?.prebuild() }
         }
 
-        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { prebuildSoon() }
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            prebuildSoon()
+            aim(showing: true)
+        }
         func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
             if !decelerate { prebuildSoon(); settleSoon() }
         }
