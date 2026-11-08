@@ -38,7 +38,8 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         // Hidden, it isn't given each new version: it gets the latest when it's shown again.
         guard shown || holder.shown else { return }
         let start = CACurrentMediaTime(), was = holder.shown
-        holder.host.rootView = content
+        // Going away it keeps what it showed: drawn again as it went, the picker searched its whole library (build 117).
+        if !leaving { holder.host.rootView = content }
         holder.height = height
         let given = CACurrentMediaTime()
         holder.show(shown, coming: again)

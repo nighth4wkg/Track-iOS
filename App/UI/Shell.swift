@@ -51,7 +51,7 @@ struct Shell: View {
             }
             // Screens come and go at once, even in a tap's move (starting or finishing a workout): each moves in itself (Stage).
             // Kept made while it's kept for later: Continue workout only shows it (made anew it cost ~30 ms: build 107).
-            if model.training.active != nil { Covering(shown: model.workoutOpen, anew: true) { WorkoutScreen() }.transition(.identity) }
+            if model.training.active != nil || model.leaving != nil { Covering(shown: model.workoutOpen, anew: true) { WorkoutScreen() }.transition(.identity) }
             if let finished = model.finished, !model.workoutOpen {
                 Group { if AB.emptyScreens { DeepPage { EmptyView() } } else { CompleteScreen(finished: finished) } }.transition(.identity)
             }

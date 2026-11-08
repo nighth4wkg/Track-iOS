@@ -239,7 +239,8 @@ struct CardList: UIViewControllerRepresentable {
                 UIView.performWithoutAnimation(change)
             }
             Sampler.note("cardlist placed \(changed.count) changed (\(cards.count) made): \(CardList.ms(CACurrentMediaTime() - start)) ms, \(Int(distance)) pt in \(CardList.ms(length)) ms")
-            prebuildSoon(after: length)
+            // Filled at once (the workout arriving): the cards ahead wait until the screen has come, not into its slide.
+            prebuildSoon(after: animate ? length : Motion.travel)
             // The key shows once the rows have moved and any glide the change asks for (posted after it) has begun.
             DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in self?.aim(showing: true) }
         }

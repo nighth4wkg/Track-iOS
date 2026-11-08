@@ -80,6 +80,8 @@ final class AppModel {
     /// Today, refreshed when Track comes back on a new day, so Home's date, "Done today" and the week move on.
     private(set) var day = dayKey(nowMillis())
     var finished: Finished?
+    /// The workout just finished or discarded, while its screen is taken away (AppActions.leave).
+    var leaving: Session?
     /// The motion check's move on the workout screen (MotionCheck), as a tap there would make it.
     var bench: BenchMove?
 

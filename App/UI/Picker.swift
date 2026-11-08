@@ -45,6 +45,8 @@ struct ExercisePicker: View {
     @State private var usage: [String: Int]?
     /// Each name's muscles, worked out once per opening (a reference, so filling it redraws nothing).
     @State private var groups = Groups()
+    /// The last search's matches (a reference): the sheet drawn again for anything else (closing it) doesn't search again.
+    @State private var searched = Searched()
     var replacing: String? = nil
     let onPick: (String) -> Void
     private static let page = 30
@@ -57,7 +59,7 @@ struct ExercisePicker: View {
                 .filter { seen.insert($0).inserted }.prefix(3).map { $0 }
         }
         let choices = model.training.settings.lifts ?? [:]
-        let matches = Catalog.search(query, usage: usage)
+        let matches = searched.matches(query, usage)
         let results = group == "All" ? matches : matches.filter { groups.of($0, choices).contains(group) }
         let typed = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Limits.name))
         let custom = !typed.isEmpty && !matches.contains { $0.caseInsensitiveCompare(typed) == .orderedSame }
@@ -140,6 +142,17 @@ struct ExercisePicker: View {
 }
 
 /// Names' muscles, looked up once each.
+private final class Searched {
+    private var last: (query: String, usage: [String: Int], matches: [String])?
+
+    func matches(_ query: String, _ usage: [String: Int]) -> [String] {
+        if let last, last.query == query, last.usage == usage { return last.matches }
+        let matches = Catalog.search(query, usage: usage)
+        last = (query, usage, matches)
+        return matches
+    }
+}
+
 private final class Groups {
     private var map: [String: [String]] = [:]
 

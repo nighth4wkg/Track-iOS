@@ -96,20 +96,32 @@ extension AppModel {
         let bodyweight = training.settings.bodyweight
         let choices = training.settings.lifts ?? [:]
         let ranked = { [self] in bodyweight.map { self.ranks(of: training.sessions, bodyweight: $0, choices: choices) } ?? [] }
-        let before = xp(), ranksBefore = ranked()
+        let before = xp(), ranksBefore = ranked(), kept = training.active
         update { try $0.finish(); $0.awardLatestQuests() }
         guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
         let after = xp(), ranksAfter = ranked()
+        leave(kept)
         workoutOpen = false
         go(.progress)
         finished = Finished(id: session.id, xp: after.total - before.total, level: after.level, leveledUp: after.level > before.level,
                             rankUps: zip(ranksBefore, ranksAfter).filter { $1.best != nil && $1.rank > $0.rank }.map { "\($1.muscle.rawValue) → \($1.name)" })
     }
 
+    /// The workout's screen stays made, out of sight, until what replaces it has arrived: taking its cards down was
+    /// part of the recap's first frame (Finish 49 ms late, CardView deinit in its samples: build 117).
+    private func leave(_ workout: Session?) {
+        leaving = workout
+        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in
+            self?.leaving = nil
+            self?.prepareHome()
+        }
+    }
+
     func discard() {
         confirm = Confirm(title: "Discard this workout?", message: "Its sets won’t be saved. Your split stays.", label: "Discard workout", destructive: true) { [weak self] in
             guard let self, let kept = training.active else { return }
             update { $0.discard() }
+            leave(kept)
             workoutOpen = false
             show("Workout discarded.") { [weak self] in
                 guard let self, training.active == nil else { return }

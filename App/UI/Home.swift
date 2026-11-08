@@ -86,7 +86,7 @@ private struct UpNextCard: View {
         VStack(spacing: Space.s4) {
             HStack(spacing: Space.s4) {
                 VStack(spacing: Space.s1) {
-                    WeekRing(done: model.derived("days", of: training.sessions, at: dayKey(now)) { $0.trainingDays(inWeekOf: now).count }, goal: training.settings.weeklyGoal)
+                    WeekRing(done: model.weekDays(training.sessions, now), goal: training.settings.weeklyGoal)
                     Text("This week").type(.t12).foregroundStyle(Palette.muted).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 0) {
@@ -179,6 +179,20 @@ private struct WeekRing: View {
     }
 }
 
+/// Home's figures from the workouts, kept as the tabs keep theirs (derived).
+extension AppModel {
+    func weekDays(_ sessions: [Session], _ now: Int) -> Int { derived("days", of: sessions, at: dayKey(now)) { $0.trainingDays(inWeekOf: now).count } }
+    func weekVolume(_ sessions: [Session], _ now: Int) -> (value: Double, change: Int?) { derived("volume W", of: sessions, at: minuteStamp(now)) { $0.change(of: .volume, per: .week, at: now) } }
+    func nearestQuest(_ sessions: [Session]) -> (quest: Quest, value: Int)? { derived("nearest quest", of: sessions) { $0.nearestQuest() } }
+
+    /// Worked out ahead, while the recap stands still: closing it brought Home back with all three to redo, the
+    /// achievements walking every workout (build 117).
+    func prepareHome() {
+        let (sessions, now) = (training.sessions, nowMillis())
+        _ = (weekDays(sessions, now), weekVolume(sessions, now), nearestQuest(sessions))
+    }
+}
+
 /// This week's volume against last week up to the same moment, and the achievement you're nearest.
 private struct HomeTiles: View {
     @Environment(AppModel.self) private var model
@@ -190,7 +204,7 @@ private struct HomeTiles: View {
     }
 
     private var volume: some View {
-        let week = model.derived("volume W", of: training.sessions, at: minuteStamp(now)) { $0.change(of: .volume, per: .week, at: now) }
+        let week = model.weekVolume(training.sessions, now)
         return VStack(alignment: .leading, spacing: 0) {
             Text("Volume this week").type(.t14).foregroundStyle(Palette.muted)
             HStack(alignment: .firstTextBaseline, spacing: Space.s1) {
@@ -209,7 +223,7 @@ private struct HomeTiles: View {
     private var achievement: some View {
         VStack(alignment: .leading, spacing: Space.s2) {
             Text("Next achievement").type(.t14).foregroundStyle(Palette.muted)
-            if let next = model.derived("nearest quest", of: training.sessions, { $0.nearestQuest() }) {
+            if let next = model.nearestQuest(training.sessions) {
                 let ratio = Double(next.value) / Double(max(1, next.quest.threshold))
                 Text(next.quest.title).type(.t16).foregroundStyle(Palette.text)
                 Bar(value: ratio).accessibilityLabel("\(next.quest.title): \(Int((ratio * 100).rounded()))%")

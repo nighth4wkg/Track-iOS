@@ -41,6 +41,12 @@ final class MotionCheck {
                 await check.plainKeyboard()
                 check.suffix = ", empty"
                 AB.emptyScreens = true
+                // Each tab kept from the first pass takes its empty page now, unmeasured: else its empty run timed the
+                // full page being taken down (build 117's Progress, empty, still sampled its rows).
+                for tab in AppTab.allCases {
+                    model.go(tab)
+                    await Self.pause(Motion.travel)
+                }
                 await check.all()
                 AB.emptyScreens = false
                 Sampler.uninstall()

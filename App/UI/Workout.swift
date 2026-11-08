@@ -22,7 +22,7 @@ struct WorkoutScreen: View {
     @State private var dock: CGFloat = 0
 
     var body: some View {
-        if let active = model.training.active {
+        if let active = model.training.active ?? model.leaving {
             let fields: [String] = active.exercises.flatMap { exercise in exercise.sets.flatMap { ["\($0.id).kg", "\($0.id).reps", "\($0.id).rir"] } }
             // Once every set is done none opens by itself: the page goes up to Finish instead.
             let current = active.exercises.first { $0.doneCount < $0.setCount }?.id
