@@ -250,7 +250,7 @@ enum AB {
     /// The motion check's second causes pass: every tab, page, sheet and the recap empty, and the workout with no cards.
     nonisolated(unsafe) static var emptyScreens = false
     /// Each change of this batch done the way before it (the motion check's ", old way" pass), so each is kept only
-    /// if it measures better. Build 124's kept tabs measured worse (History 48 ms kept, 17 taken out) and are gone.
+    /// if it measures better. Kept tabs are back to be measured fairly: 124's first pass alone timed each tab's first build.
     nonisolated(unsafe) static var oldWay = false
     /// Measuring only: a screen's arrival only shifts (no fade), or only fades (no shift): which one the screen
     /// recording's stutter comes from.
