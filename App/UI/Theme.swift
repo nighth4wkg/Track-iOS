@@ -125,14 +125,14 @@ enum IconSize {
 /// nothing moves (the PWA's prefers-reduced-motion).
 enum Motion {
     /// --motion-fast (s): a dragged thing let go short of its goal slides back this long.
-    static var fast: Double { 0.16 * AB.pace / speed }
+    static var fast: Double { 0.16 * pace / speed }
     /// A sheet, a pill or a screen's content coming or going: the PWA's --motion. At 0.3 s the spring's gentle start read
     /// as a lag after the tap at 60 Hz (build 102: a card took ~0.4 s to settle, the PWA's 0.24).
-    static var normal: Double { 0.24 * AB.pace / speed }
+    static var normal: Double { 0.24 * pace / speed }
     /// A screen or sheet coming or going (a tab, a page, the workout, a sheet), one length whatever it covers: what moves
     /// a distance takes `length`. At 60 Hz 0.24 s read as a stutter though no frame was lost (each frame a big step):
     /// the owner chose 0.48 by eye (build 106). The PWA's --motion-travel.
-    static var travel: Double { (AB.number("-ab-travel60") ?? travelAt60) * AB.pace / speed }
+    static var travel: Double { (AB.number("-ab-travel60") ?? travelAt60) * pace / speed }
     static let travelAt60 = 0.48
     /// The app's pace: the most anything moving a distance (a card, the page's scroll) goes in one frame at its
     /// fastest, in points. A move as long whatever its distance stepped further a frame the further it went, so a
@@ -148,17 +148,20 @@ enum Motion {
     static let fastSpeedup = 1.75
     /// How much faster than at 60 Hz every length is on this screen: `fastSpeedup` above `paceRate`, else 1.
     static var speed: Double { Refresh.rate > paceRate ? fastSpeedup : 1 }
-    /// The one length the owner liked for a card at 60 Hz on build 109 (the Fixed test, to compare with the pace).
-    static let picked = 0.6
+    /// Settings › Motion: every length of the app's own times the one picked (Default, 1, is the baseline and never
+    /// changes; each step either side is a little slower or faster). Read on each move, so a pick shows at once.
+    static let speedKey = "motionSpeed"
+    static let speeds: [(name: String, scale: Double)] = [("Slower", 1.3), ("Slow", 1.15), ("Default", 1), ("Fast", 0.87), ("Faster", 0.77)]
+    static var pace: Double { AB.pace * (UserDefaults.standard.object(forKey: speedKey) as? Double ?? 1) }
     /// However far it goes, a move takes no longer than this.
-    static var longest: Double { 0.8 * AB.pace / speed }
+    static var longest: Double { 0.8 * pace / speed }
     /// How long a move of `distance` points takes at the app's pace, at the screen's rate: no shorter than `normal`
     /// (a small move still eases), no longer than `longest`. -ab-fixed: as long as `travel`, as before build 110.
     static func length(_ distance: CGFloat) -> Double {
         guard !AB.fixedPace else { return travel }
         // iOS's spring without bounce over d seconds peaks at 2π/(e·d) of its distance a second.
         let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * min(Refresh.rate, paceRate))
-        return min(max(even * AB.pace / speed, normal), longest)
+        return min(max(even * pace / speed, normal), longest)
     }
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s bezier put half the way into 3 frames at 60 Hz (up to
     /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This spring, as long, moves ~95 pt a frame at most.

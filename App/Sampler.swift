@@ -135,15 +135,8 @@ final class Sampler: Thread, @unchecked Sendable {
 /// Bench-only A/B switches: each turns one kind of motion off (as Reduce Motion does), or one speed-up on, so a part
 /// that drops frames can be checked against the other way on one install.
 enum AB {
-    /// The launch's switches, and the motion test picked in Settings (it takes effect from the next launch).
-    private static let args = ProcessInfo.processInfo.arguments + applied.split(separator: " ").map(String.init)
-    static let testKey = "abTest"
-    static let applied = UserDefaults.standard.string(forKey: testKey) ?? ""
-    /// The motion tests the owner can pick in Settings, to judge by eye without a launch from the computer.
-    static let tests: [(name: String, args: String)] = [
-        ("As is", ""), ("Finer steps", "-ab-step \(Motion.paceStep * 3 / 4)"), ("Coarser steps", "-ab-step \(Motion.paceStep * 5 / 4)"), ("Fixed \(Motion.picked) s", "-ab-fixed -ab-travel60 \(Motion.picked)"),
-        ("Name fades", "-ab-card-fade"), ("No shadow", "-ab-no-shadow"), ("Even curve", "-ab-even-curve"),
-    ]
+    /// The launch's switches.
+    private static let args = ProcessInfo.processInfo.arguments
     /// Every move as long as Motion.travel, whatever its distance (before build 110).
     static let fixedPace = args.contains("-ab-fixed")
     /// Cards and screens move on iOS's ease-in-out (even steps) instead of the spring (a gentle start, then big steps).

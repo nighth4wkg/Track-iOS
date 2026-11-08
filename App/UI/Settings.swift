@@ -1,5 +1,4 @@
 import CoreTransferable
-import SafariServices
 import SwiftUI
 import TrackCore
 import UniformTypeIdentifiers
@@ -15,11 +14,10 @@ struct SettingsScreen: View {
     @State private var restored = 0
     @State private var copied = false
     @State private var part = Part.training
-    @AppStorage(AB.testKey) private var test = ""
-    private static let contact = "n1ghthawq"
+    @AppStorage(Motion.speedKey) private var motion = 1.0
+    static let contact = "n1ghthawq"
     /// How long "Copied" shows before the row reads as before (the PWA's COPIED_MS).
     private static let copiedFor = Duration.seconds(2)
-    private static let privacy = URL(string: "https://trackk.pages.dev/privacy#iphone")
 
     var body: some View {
         let settings = model.training.settings
@@ -127,14 +125,10 @@ struct SettingsScreen: View {
                 .accessibilityLabel("Found a problem? " + (copied ? "Discord username copied" : "Copy Discord username \(Self.contact)"))
                 .sensoryFeedback(.success, trigger: copied) { _, now in now }
                 .task(id: copied) { if copied { try? await Task.sleep(for: Self.copiedFor); copied = false } }
-                // Inside Track, as iOS apps show a web page, rather than switching to Safari.
-                Button { if let url = Self.privacy { showWebPage(url) } } label: { Row(title: "Privacy", value: "", chevron: true) }
+                Button { model.present(PrivacyPage()) } label: { Row(title: "Privacy", value: "", chevron: true) }
                     .buttonStyle(RowStyle())
-                // For now: the motion tests, picked here and applied when Track is opened again.
-                Menu {
-                    Picker("Motion test", selection: $test) { ForEach(AB.tests.indices, id: \.self) { Text(AB.tests[$0].name).tag(AB.tests[$0].args) } }
-                } label: {
-                    Row(title: "Motion test", value: (AB.tests.first { $0.args == test }?.name ?? "") + (test == AB.applied ? "" : " · reopen"), chevron: true)
+                Button { model.present(MotionList()) } label: {
+                    Row(title: "Motion", value: Motion.speeds.first { $0.scale == motion }?.name ?? "", chevron: true)
                 }
                 .buttonStyle(RowStyle())
                 Row(title: "Version", value: Self.version)
@@ -198,12 +192,32 @@ struct SettingsScreen: View {
     }
 }
 
-/// A web page over Track, as iOS apps show one (Safari's own view).
-@MainActor private func showWebPage(_ url: URL) {
-    let root = keyWindow?.rootViewController
-    var top = root
-    while let shown = top?.presentedViewController { top = shown }
-    top?.present(SFSafariViewController(url: url), animated: true)
+/// What the iPhone app keeps and where it goes, in Track's own sheet (the website's page is the web app's own).
+private struct PrivacyPage: View {
+    private static let sections = [
+        (title: "What Track keeps", body: "The workouts, splits, settings and bodyweight you enter. There is no account: no name, email or password."),
+        (title: "Where it goes", body: "Nowhere: it stays on this iPhone and in its iCloud or computer backups. It is never sold, shared for advertising, or used to train AI."),
+        (title: "Your control", body: "Export a full backup any time in Settings › Data. Deleting the app deletes its data."),
+        (title: "Questions", body: "Message \(SettingsScreen.contact) on Discord."),
+    ]
+
+    var body: some View {
+        SheetFrame(title: "Privacy", subtitle: "Your data, plainly") {
+            VStack(alignment: .leading, spacing: Space.s3) {
+                ForEach(Self.sections.indices, id: \.self) { at in
+                    let section = Self.sections[at]
+                    VStack(alignment: .leading, spacing: Space.s2) {
+                        Text(section.title).type(.t16).foregroundStyle(Palette.text).accessibilityAddTraits(.isHeader)
+                        Text(section.body).type(.t14).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .pad()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .raised()
+                }
+            }
+            .padding(.top, Space.s3)
+        }
+    }
 }
 
 /// The training data as a backup file: the same JSON the website exports and restores ("track-backup-<day>.json").
@@ -249,6 +263,28 @@ private struct RestList: View {
     }
 
     private var tick: some View { Icon.check.image(IconSize.medium).foregroundStyle(Palette.accent) }
+}
+
+/// How fast the app moves: Default, or a step slower or faster (Motion.speeds), as the rest presets are picked.
+private struct MotionList: View {
+    @Environment(\.closeSheet) private var close
+    @AppStorage(Motion.speedKey) private var motion = 1.0
+
+    var body: some View {
+        SheetFrame(title: "Motion", subtitle: "How fast Track moves") {
+            RowCard {
+                ForEach(Motion.speeds.indices, id: \.self) { at in
+                    let speed = Motion.speeds[at]
+                    Button { motion = speed.scale; close() } label: {
+                        Row(title: speed.name) { if speed.scale == motion { Icon.check.image(IconSize.medium).foregroundStyle(Palette.accent) } }
+                    }
+                    .buttonStyle(RowStyle())
+                    .accessibilityAddTraits(speed.scale == motion ? .isSelected : [])
+                }
+            }
+            .padding(.top, Space.s3)
+        }
+    }
 }
 
 /// Any rest time in the allowed range, as minutes and seconds.
