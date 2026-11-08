@@ -125,7 +125,9 @@ final class MotionCheck {
         let late = frames.filter(\.moving).map(\.late), after = frames.filter { !$0.moving }.map(\.late)
         // When each late frame and each note came, from the change (ms): which work landed in which frame.
         let since = { (t: CFTimeInterval) in Int(((t - start) * 1000).rounded()) }
-        let timeline = (frames.map { (since($0.at), "late \($0.late)" + ($0.moving ? "" : " settled")) } + Sampler.takeMarks().map { (since($0.at), $0.text) })
+        let lates: [(Int, String)] = frames.map { (since($0.at), $0.moving ? "late \($0.late)" : "late \($0.late) settled") }
+        let notes: [(Int, String)] = Sampler.takeMarks().map { (since($0.at), $0.text) }
+        let timeline = (lates + notes)
             .sorted { $0.0 < $1.0 }.map { "\($0.0) \($0.1)" }
         // The sampler's report comes in once its window has closed, a moment after.
         if causes { await Self.pause(Self.reported) }
@@ -278,23 +280,29 @@ struct MotionRow: Identifiable {
     /// Finding causes: each late frame and note, ms from the change.
     var timeline: [String] = []
     var summary: String { late.isEmpty ? "Smooth" : "\(late.count) late, worst \(late.max() ?? 0) ms" }
-    /// The main thread's busy time and the libraries that took most of it, in short.
     /// Under the motion, in small type: each run's worst, late frames after it settled, the busy time and its libraries.
     var cause: String? {
-        let parts = [
-            runs.count > 1 ? "Runs " + runs.map { "\($0)" }.joined(separator: " / ") + " ms" : nil,
-            after.isEmpty ? nil : "\(after.count) late after it settled",
-            found.map { "Busy \($0.busy) ms" + ($0.libraries.isEmpty ? "" : ": ") + Self.list($0.libraries.prefix(Self.shown), ", ") },
-        ].compactMap { $0 }
+        var parts: [String] = []
+        if runs.count > 1 { parts.append("Runs \(Self.numbers(runs, " / ")) ms") }
+        if !after.isEmpty { parts.append("\(after.count) late after it settled") }
+        if let found {
+            let libraries: String = Self.list(found.libraries.prefix(Self.shown), ", ")
+            parts.append(found.libraries.isEmpty ? "Busy \(found.busy) ms" : "Busy \(found.busy) ms: \(libraries)")
+        }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private static func numbers(_ values: [Int], _ separator: String) -> String {
+        values.map { String($0) }.joined(separator: separator)
     }
     private static let shown = 3
 
     /// Everything, for sharing.
     var text: String {
-        var lines = ["\(name): " + (late.isEmpty ? "smooth" : late.map { "\($0)" }.joined(separator: " ") + " ms late")
-            + (runs.count > 1 ? ", runs' worst " + runs.map { "\($0)" }.joined(separator: "/") : "")
-            + (after.isEmpty ? "" : ", after it settled " + after.map { "\($0)" }.joined(separator: " ") + " ms")]
+        var head: String = late.isEmpty ? "\(name): smooth" : "\(name): \(Self.numbers(late, " ")) ms late"
+        if runs.count > 1 { head += ", runs' worst \(Self.numbers(runs, "/"))" }
+        if !after.isEmpty { head += ", after it settled \(Self.numbers(after, " ")) ms" }
+        var lines = [head]
         if let found {
             lines.append("  busy \(found.busy) ms")
             for (title, list) in [("by library", found.libraries), ("Track's own", found.ours), ("innermost", found.leaves)] where !list.isEmpty {
@@ -396,9 +404,9 @@ struct MotionResults: View {
         var system = utsname()
         uname(&system)
         let device = withUnsafeBytes(of: system.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
-        let head = "Track \(SettingsScreen.version) motion check" + (causes ? ", causes" : "")
+        var head = "Track \(SettingsScreen.version) motion check" + (causes ? ", causes" : "")
             + " · \(device) iOS \(UIDevice.current.systemVersion) · \(rate) Hz"
-            + (MotionCheck.launch.map { " · launch \($0) ms to first screen" } ?? "")
+        if let launch = MotionCheck.launch { head += " · launch \(launch) ms to first screen" }
         return ([head] + rows.map(\.text)).joined(separator: "\n")
     }
 }
