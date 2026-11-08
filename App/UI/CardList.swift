@@ -164,7 +164,12 @@ struct CardList: UIViewControllerRepresentable {
             case .scrollUp: scroll.setContentOffset(CGPoint(x: 0, y: top), animated: true)
             case .jump: if pointing != nil { jumped() }
             }
-            Sampler.note("bench \(move): from \(Int(scroll.contentOffset.y)) pt, jump key \(pointing == nil ? "hidden" : "shown")")
+            Sampler.note("bench \(move): from \(Int(scroll.contentOffset.y)) pt to \(Int(bottom)) at most, jump key \(pointing == nil ? "hidden" : "shown")")
+            // Where it ended: build 121's first scroll down stayed at 0 pt (or came back there).
+            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel * 2) { [weak self] in
+                guard let self else { return }
+                Sampler.note("bench \(move) ended at \(Int(self.scroll.contentOffset.y)) pt, page \(Int(self.scroll.contentSize.height)) pt")
+            }
         }
 
         private func go(_ id: String, top: Bool) {
@@ -195,6 +200,7 @@ struct CardList: UIViewControllerRepresentable {
             y = min(max(y, lowest), highest)
             guard y != scroll.contentOffset.y else { return }
             if Motion.still { scroll.contentOffset.y = y; return }
+            Sampler.note("cardlist glides \(Int(scroll.contentOffset.y)) → \(Int(y)) pt")
             glideUntil = .infinity // the move's own scroll (below) is the page's glide
             let length = Moves.travel(over: y - scroll.contentOffset.y) { self.scroll.contentOffset.y = y }
             glideUntil = CACurrentMediaTime() + length

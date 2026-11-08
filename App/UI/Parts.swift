@@ -104,7 +104,9 @@ struct PillTabs<Value: Hashable>: View {
 
 /// The raised knob under a row's chosen choice, shared by every Seg, PillTabs and the nav pill (the PWA's knob: owner,
 /// every bar works the same). It slides to a new choice; it comes to a pressed one at once (not waiting on the lift);
-/// dragged sideways it goes to the choice nearest the finger (a tick each) and letting go there chooses it. Only the
+/// dragged sideways it follows the finger freely in a row (a grid's goes to the nearest), the choice nearest it lit (a
+/// tick each), and letting go chooses that one, the knob settling on it (build 70's shared row only hopped; the nav
+/// pill's had followed the finger before, owner). Only the
 /// knob moves: what the choice changes elsewhere shows as its caller decides (`choose`).
 struct KnobRow<Value: Hashable, Cell: View>: View {
     let values: [Value]
@@ -117,6 +119,8 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
     /// shows the old one for a frame between the lift and the change.
     @State private var held: Value?
     @State private var dragging = false
+    /// The finger's x while a row's knob follows it; nil sits the knob on its choice.
+    @State private var finger: CGFloat?
     @State private var ticks = 0
     /// Each choice's frame, for a drag to find the nearest. Not observed: measuring them mustn't redraw the row.
     @State private var spots = Spots()
@@ -132,9 +136,12 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
                 HStack(spacing: Space.s1) { cells(lit) }
             }
         }
+        .background(alignment: .topLeading) { free(lit) }
         .coordinateSpace(.named(Self.area))
         .gesture(SidewaysPan(onMove: { x, y in follow(x, y) }) { _, _ in release() })
-        .motion(on: lit, !Motion.still)
+        // Under the finger the knob moves with it, unanimated; let go, it settles on its choice.
+        .motion(on: lit, !Motion.still && finger == nil)
+        .motion(on: finger == nil, !Motion.still && finger == nil)
         .sensoryFeedback(.selection, trigger: ticks)
         .onChange(of: chosen) { held = nil }
     }
@@ -143,12 +150,23 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
         ForEach(values, id: \.self) { value in
             Button { choose(value) } label: {
                 cell(value, value == lit)
-                    .background { if value == lit { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: 0, in: space) } }
+                    .background { if value == lit, finger == nil { knob } }
                     .contentShape(Rectangle())
             }
             .buttonStyle(Press { pressed in press(value, pressed) })
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.area)) } action: { spots.frames[value] = $0 }
             .accessibilityAddTraits(value == chosen ? [.isSelected] : [])
+        }
+    }
+
+    private var knob: some View { Color.clear.raised(.control, .pill).matchedGeometryEffect(id: 0, in: space) }
+
+    /// The knob under the finger, kept between the first and last choice's middles, as big as the lit one.
+    @ViewBuilder private func free(_ lit: Value) -> some View {
+        let middles = values.compactMap { spots.frames[$0]?.midX }
+        if let finger, let spot = spots.frames[lit], let first = middles.min(), let last = middles.max() {
+            knob.frame(width: spot.width, height: spot.height)
+                .position(x: min(max(finger, first), last), y: spot.midY)
         }
     }
 
@@ -160,6 +178,7 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
 
     private func follow(_ x: CGFloat, _ y: CGFloat) {
         dragging = true
+        if columns == nil { finger = x }
         let near = values.min { a, b in distance(spots.frames[a], x, y) < distance(spots.frames[b], x, y) }
         if let near, near != (held ?? chosen) { held = near; ticks += 1 }
     }
@@ -171,6 +190,7 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
 
     private func release() {
         dragging = false
+        finger = nil
         if let held, held != chosen { choose(held) } else { held = nil }
     }
 }
