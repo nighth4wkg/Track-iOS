@@ -145,8 +145,23 @@ final class Sampler: Thread, @unchecked Sendable {
         let fn = unsafeBitCast(f, to: Fn.self)
         guard let out = symbol.withCString({ fn($0, strlen($0), nil, nil, 0) }) else { return symbol }
         defer { free(out) }
-        return String(cString: out)
+        return Self.short(String(cString: out))
     }
+
+    /// A Swift name without its signature and generic types: one of SwiftUI's ran to thousands of characters, and the
+    /// shared results to 127k words (build 120). A private name keeps its own: `(prebuild in _9DA3…)` → `prebuild`.
+    static func short(_ name: String) -> String {
+        var s = name.replacingOccurrences(of: #"\((\w+) in _[0-9A-F]+\)"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: "->", with: "→")
+        var last = ""
+        while s != last {
+            last = s
+            s = s.replacingOccurrences(of: #"\([^()]*\)|<[^<>]*>"#, with: "", options: .regularExpression)
+        }
+        s = s.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        return s.count > shortest ? String(s.prefix(shortest)) + "…" : s
+    }
+    private static let shortest = 160
 
     /// Busy samples (1 ms each; idle ones only counted): self time by image, then the heaviest frames (inclusive).
     private func report(_ action: String, _ stacks: [[UInt]]) {
