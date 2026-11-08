@@ -1,6 +1,7 @@
 # The unsigned iPhone app, built on macOS (minutes count 10x, so only when the app or the core's sources change),
 # with Track.ipa attached to the run. On main, a new version number is also published as a GitHub Release with
-# Track.ipa and source.json, the SideStore/AltStore source, whose fixed link always points at the newest release:
+# Track.ipa and source.json, the SideStore/AltStore source (recode too: each new build, for updating from SideStore),
+# whose fixed link always points at the newest release:
 # https://github.com/nighth4wkg/Track-iOS/releases/latest/download/source.json
 name: App
 on:
@@ -49,8 +50,8 @@ jobs:
           name: Track-ipa-${{ github.run_number }}
           path: Track.ipa
           retention-days: 14
-      - name: Publish a release for SideStore (main, new version only)
-        if: github.ref == 'refs/heads/main'
+      - name: Publish a release for SideStore (main or recode, new build only)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/recode'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
