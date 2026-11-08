@@ -187,17 +187,17 @@ final class MotionCheck {
             await step("Tab \(name)") { model.go(tab) }
             if tab == .history { await calendar() }
         }
-        await step("Settings page", ready: { model.ready(.settings) }) { model.open(.settings) }
+        await step("Settings page", ready: { self.model.ready(.settings) }) { model.open(.settings) }
         await step("Settings back") { model.back() }
         if let split = training.splits.first {
-            await step("Split page", ready: { model.ready(.split(split.id)) }) { model.open(.split(split.id)) }
+            await step("Split page", ready: { self.model.ready(.split(split.id)) }) { model.open(.split(split.id)) }
             await step("Split back") { model.back() }
         }
         if let session = training.sessions.first {
-            await step("Past workout page", ready: { model.ready(.session(session.id)) }) { model.open(.session(session.id)) }
+            await step("Past workout page", ready: { self.model.ready(.session(session.id)) }) { model.open(.session(session.id)) }
             await step("Past workout back") { model.back() }
             if let lift = session.exercises.first?.name {
-                await step("Lift page", ready: { model.ready(.lift(lift)) }) { model.open(.lift(lift)) }
+                await step("Lift page", ready: { self.model.ready(.lift(lift)) }) { model.open(.lift(lift)) }
                 await step("Lift back") { model.back() }
             }
         }
