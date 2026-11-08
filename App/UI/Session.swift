@@ -14,6 +14,7 @@ struct SessionScreen: View {
     @State private var editing = false
 
     var body: some View {
+        let _ = Sampler.note("past workout body")
         if let current = model.training.sessions.first(where: { $0.id == sessionId }) {
             let unit = model.training.settings.unit
             let sets = current.completedSets
@@ -41,7 +42,7 @@ struct SessionScreen: View {
                 }
                 .padding(.top, Space.s6)
             }
-            .onAppear { note = current.notes ?? "" }
+            .onAppear { Sampler.note("past workout appears"); note = current.notes ?? "" }
             .onChange(of: typing) { _, now in if !now { save(current); editing = false } }
             .onDisappear { save(current) }
         } else {

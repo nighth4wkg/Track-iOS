@@ -222,6 +222,7 @@ struct QuestList: View {
     @Environment(\.closeSheet) private var close
 
     var body: some View {
+        let _ = Sampler.note("badges body")
         let sessions = model.training.sessions
         let awards = model.derived("awards") { $0.questAwards }
         SheetFrame(title: "Achievements") {

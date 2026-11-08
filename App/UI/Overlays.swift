@@ -95,6 +95,7 @@ private struct SheetBox<Content: View>: View {
     private static var closeShare: Double { 0.4 }
 
     var body: some View {
+        let _ = Sampler.note("sheet box body")
         VStack(spacing: 0) {
             Capsule().fill(Palette.handle).frame(width: Size.handle.width, height: Size.handle.height)
                 .frame(maxWidth: .infinity).padding(.top, Size.handleTop).padding(.bottom, Space.s3)

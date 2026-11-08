@@ -12,6 +12,7 @@ struct SplitScreen: View {
     @Namespace private var rows
 
     var body: some View {
+        let _ = Sampler.note("split body")
         if let split = model.training.splits.first(where: { $0.id == splitId }) {
             // Its workout is on: the split follows the workout, so changes belong there (here they'd be undone).
             let live = model.training.active?.splitId == split.id

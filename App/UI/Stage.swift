@@ -105,11 +105,19 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 view.addSubview(host.view)
             } else if !on, host.view.superview != nil, keep() {
                 host.view.isHidden = true
+                // Hidden in the window, the keyboard still laid it out each time it moved (127: keyboard 34 ms with
+                // screens kept, 23 without); shown again, it follows the keyboard (no change while it's down).
+                if host.safeAreaRegions != .container { host.safeAreaRegions = .container }
             } else if !on, host.view.superview != nil {
                 host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
                 host.view.removeFromSuperview()
             }
-            if on { host.view.isHidden = false } else { dim?.alpha = 0 }
+            if on {
+                host.view.isHidden = false
+                if host.safeAreaRegions != .all { host.safeAreaRegions = .all }
+            } else {
+                dim?.alpha = 0
+            }
             if on, !shown { arrive(way) }
             // An empty holder over the shown screen mustn't take its touches.
             view.isUserInteractionEnabled = on
@@ -171,6 +179,7 @@ struct Covering<Content: View>: View {
     @State private var bar: CGFloat = 0
 
     var body: some View {
+        let _ = Sampler.note("covering \(shown ? "shown" : "hidden") body")
         // Kept in the window while hidden (a page under another, the workout kept for later): put back, it re-attached
         // all of itself first (the tabs' 15-42 ms: build 126 measured keeping them better).
         Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left, keep: { !AB.oldWay }) {
@@ -196,6 +205,7 @@ struct Calm<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
+        Sampler.note("calm \(live ? "live" : "hidden")")
         if live {
             _ = (model.training, model.tab, model.pages, model.sheets.count, model.confirm?.id, model.toast?.id, model.workoutOpen, model.finished?.id, model.bench)
         }

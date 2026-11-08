@@ -52,6 +52,7 @@ struct ExercisePicker: View {
     private static let page = 30
 
     var body: some View {
+        let _ = Sampler.note("picker body")
         let usage = usage ?? Self.usage(model.training.sessions)
         let recent = model.derived("recent") { sessions in
             var seen = Set<String>()
