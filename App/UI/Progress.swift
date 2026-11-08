@@ -226,34 +226,45 @@ struct QuestList: View {
         SheetFrame(title: "Achievements") {
             Text("\(awards.count) of \(Quest.all.count) completed. Achievement XP is paid once, outside the \(Experience.dailyCap) XP daily training limit.")
                 .type(.t14).foregroundStyle(Palette.muted).padding(.top, Space.s2)
-            RowCard {
-                ForEach(Quest.all) { quest in
-                    let award = awards[quest.id]
-                    HStack(alignment: .top, spacing: Space.s3) {
-                        Image(systemName: (award == nil ? Icon.badge : Icon.check).rawValue).font(.system(size: IconSize.medium, weight: .bold))
-                            .foregroundStyle(award == nil ? Palette.muted : Palette.onGreen)
-                            .frame(width: Size.tile, height: Size.tile)
-                            .raised(award == nil ? .control : .green, .inner)
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(quest.title).type(.t16).foregroundStyle(Palette.text)
-                            Text(quest.description).type(.t14).foregroundStyle(Palette.muted)
-                            Text("\(Text("\(award == nil ? "" : "+")\(quest.xp) XP").foregroundStyle(award == nil ? Palette.muted : Palette.accent))\(dot)\(quest.difficulty)")
-                                .type(.t12).foregroundStyle(Palette.muted)
-                            if let award, sessions.contains(where: { $0.id == award.sessionId }) {
-                                Button { close(); model.open(.session(award.sessionId)) } label: {
-                                    HStack(spacing: Space.s1) { Text("View the workout"); Icon.next.image(IconSize.small) }
-                                        .type(.t14).foregroundStyle(Palette.accent)
-                                        .frame(minHeight: Size.control).contentShape(Rectangle())
-                                }
-                                .buttonStyle(CardStyle())
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            Group { if AB.oldWay {
+                RowCard { ForEach(Quest.all) { row($0, awards[$0.id], sessions) } }
+            } else {
+                // Only the rows on screen are built (all 24 cost the sheet's first frames ~45 ms: build 124).
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(Quest.all.enumerated()), id: \.element.id) { index, quest in
+                        row(quest, awards[quest.id], sessions)
+                            .overlay(alignment: .top) { if index > 0 { Palette.line.frame(height: Size.hairline) } }
                     }
-                    .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
                 }
-            }
+                .clipShape(Corner.card.shape)
+                .raised()
+            } }
             .padding(.top, Space.s4)
         }
+    }
+
+    private func row(_ quest: Quest, _ award: (sessionId: String, earnedAt: Int)?, _ sessions: [Session]) -> some View {
+        HStack(alignment: .top, spacing: Space.s3) {
+            Image(systemName: (award == nil ? Icon.badge : Icon.check).rawValue).font(.system(size: IconSize.medium, weight: .bold))
+                .foregroundStyle(award == nil ? Palette.muted : Palette.onGreen)
+                .frame(width: Size.tile, height: Size.tile)
+                .raised(award == nil ? .control : .green, .inner)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(quest.title).type(.t16).foregroundStyle(Palette.text)
+                Text(quest.description).type(.t14).foregroundStyle(Palette.muted)
+                Text("\(Text("\(award == nil ? "" : "+")\(quest.xp) XP").foregroundStyle(award == nil ? Palette.muted : Palette.accent))\(dot)\(quest.difficulty)")
+                    .type(.t12).foregroundStyle(Palette.muted)
+                if let award, sessions.contains(where: { $0.id == award.sessionId }) {
+                    Button { close(); model.open(.session(award.sessionId)) } label: {
+                        HStack(spacing: Space.s1) { Text("View the workout"); Icon.next.image(IconSize.small) }
+                            .type(.t14).foregroundStyle(Palette.accent)
+                            .frame(minHeight: Size.control).contentShape(Rectangle())
+                    }
+                    .buttonStyle(CardStyle())
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, Space.s4).padding(.vertical, Space.s3)
     }
 }

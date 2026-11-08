@@ -23,15 +23,11 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
     var leaving = false
     /// A sheet's height: it comes up from just below the screen's edge, its own height away, not the screen's.
     var height: () -> CGFloat? = { nil }
-    /// Hidden, it stays in the window, only hidden (a tab, AB.keepTabs): taken out and put back, a tab's first frame
-    /// was 15-42 ms of SwiftUI re-attaching the whole page (build 121-122), though nothing in it had changed.
-    var keep: () -> Bool = { false }
     @ViewBuilder let content: Content
 
     func makeUIViewController(context: Context) -> Holder {
         let holder = Holder(UIHostingController(rootView: content), dim: dim)
         holder.height = height
-        holder.keep = keep
         holder.show(shown, coming: first)
         // Built once in the window as the app starts, so the first time it's shown isn't the build.
         if !shown { DispatchQueue.main.async { holder.prebuild() } }
@@ -56,7 +52,6 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
     final class Holder: UIViewController {
         let host: UIHostingController<Content>
         var height: () -> CGFloat? = { nil }
-        var keep: () -> Bool = { false }
         private(set) var shown = false
         private let dim: UIView?
         /// Each move's number: a move waiting for its next frame doesn't start if another has come since.
@@ -98,13 +93,10 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 host.view.frame = view.bounds
                 host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
                 view.addSubview(host.view)
-            } else if !on, host.view.superview != nil, keep() {
-                host.view.isHidden = true
             } else if !on, host.view.superview != nil {
                 host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
                 host.view.removeFromSuperview()
             }
-            if on { host.view.isHidden = false }
             if on, !shown { arrive(way) }
             // An empty holder over the shown screen mustn't take its touches.
             view.isUserInteractionEnabled = on

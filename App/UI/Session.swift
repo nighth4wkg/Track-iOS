@@ -10,6 +10,8 @@ struct SessionScreen: View {
     @State private var opened: String?
     @State private var note = ""
     @FocusState private var typing: Bool
+    /// The field is made only once the note is tapped: a many-line field is a text view, the page's slowest part to build.
+    @State private var editing = false
 
     var body: some View {
         if let current = model.training.sessions.first(where: { $0.id == sessionId }) {
@@ -40,7 +42,7 @@ struct SessionScreen: View {
                 .padding(.top, Space.s6)
             }
             .onAppear { note = current.notes ?? "" }
-            .onChange(of: typing) { _, now in if !now { save(current) } }
+            .onChange(of: typing) { _, now in if !now { save(current); editing = false } }
             .onDisappear { save(current) }
         } else {
             DeepPage { TitleBar(title: "Workout", subtitle: "This workout was deleted.") }
@@ -59,18 +61,31 @@ struct SessionScreen: View {
                 }
             }
             .type(.t14)
-            TextField("", text: $note, prompt: Text("How did it go?").foregroundStyle(Palette.placeholder), axis: .vertical)
-                .autocorrectionDisabled() // as every field (Field): no suggestion bar to build
-                .type(.t14).foregroundStyle(Palette.text).lineLimit(2...6)
-                .focused($typing)
-                .onChange(of: note) { _, value in if value.count > Limits.notes { note = String(value.prefix(Limits.notes)) } }
+            if editing || AB.oldWay {
+                TextField("", text: $note, prompt: Text(prompt).foregroundStyle(Palette.placeholder), axis: .vertical)
+                    .autocorrectionDisabled() // as every field (Field): no suggestion bar to build
+                    .type(.t14).foregroundStyle(Palette.text).lineLimit(2...6)
+                    .focused($typing)
+                    .onAppear { if editing { typing = true } }
+                    .onChange(of: note) { _, value in if value.count > Limits.notes { note = String(value.prefix(Limits.notes)) } }
+            } else {
+                // As the field shows it: at least two lines, at most six.
+                ZStack(alignment: .topLeading) {
+                    Text("\n").hidden()
+                    Text(note.isEmpty ? prompt : note).foregroundStyle(note.isEmpty ? Palette.placeholder : Palette.text).lineLimit(6)
+                }
+                .type(.t14)
+                .accessibilityLabel("Note").accessibilityValue(note).accessibilityAddTraits(.isButton)
+            }
         }
         .pad()
         .frame(maxWidth: .infinity, alignment: .leading)
         .raised()
         .contentShape(Rectangle())
-        .onTapGesture { typing = true }
+        .onTapGesture { if editing || AB.oldWay { typing = true } else { editing = true } }
     }
+
+    private var prompt: String { "How did it go?" }
 
     /// The exercise and its set count; open, a line per set: "1L", "60 kg × 8", "RIR 2".
     private func card(_ exercise: Exercise, unit: TrackCore.Settings.Unit) -> some View {
