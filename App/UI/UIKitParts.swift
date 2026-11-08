@@ -7,7 +7,7 @@ import UIKit
 extension UIColor {
     static let text = UIColor(Palette.text), muted = UIColor(Palette.muted), accent = UIColor(Palette.accent)
     static let onGreen = UIColor(Palette.onGreen), danger = UIColor(Palette.danger), well = UIColor(Palette.well)
-    static let greenWash = UIColor(Palette.greenWash)
+    static let greenWash = UIColor(Palette.greenWash), background = UIColor(Palette.background)
 }
 
 extension TextStyle {
@@ -319,10 +319,12 @@ class PressControl: UIControl {
 
 /// A round button holding one icon (RoundButton).
 final class RoundControl: PressControl {
-    private let fill = RaisedView(.control, radius: nil)
-    private let icon = UIImageView()
+    private let fill: RaisedView
+    /// The symbol, turned on its own (the workout's jump key points up or down).
+    let icon = UIImageView()
 
-    init(_ icon: Icon, tint: UIColor = .text) {
+    init(_ icon: Icon, tint: UIColor = .text, surface: Surface = .control) {
+        fill = RaisedView(surface, radius: nil)
         super.init(frame: CGRect(x: 0, y: 0, width: Size.control, height: Size.control))
         fill.frame = bounds
         fill.autoresizingMask = [.flexibleWidth, .flexibleHeight]

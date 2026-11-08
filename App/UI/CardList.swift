@@ -15,6 +15,8 @@ struct CardList: UIViewControllerRepresentable {
         let view: AnyView
         /// A card drawn by UIKit instead of `view`.
         var card: ExerciseCard? = nil
+        /// The page's header: it moves with the page and stays over it (the PWA's .pinned).
+        var pinned = false
     }
 
     let rows: [Row]
@@ -24,6 +26,10 @@ struct CardList: UIViewControllerRepresentable {
     var dock: CGFloat = 0
     /// Out of sight (the cards being arranged): left as it is, and shown as it's become at once, not moved there.
     var frozen = false
+    /// No jump key now (typing, arranging, a done card handing over to the next).
+    var quiet = false
+    /// The jump key tapped while another card is open: the current one opens, and the page goes to it.
+    var onJump: () -> Void = {}
 
     func makeUIViewController(context: Context) -> UIViewController {
         AB.ownList && AB.uikitCard ? Placed(model: model) : Controller(model: model)
@@ -35,6 +41,8 @@ struct CardList: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIViewController, context: Context) {
         let thawed = context.coordinator.was
         context.coordinator.was = frozen
+        (controller as? Placed)?.onJump = onJump
+        (controller as? Placed)?.quiet = quiet || frozen
         guard !frozen else { return }
         (controller as? CardListShowing)?.show(rows, animated: context.transaction.animation != nil && !Motion.still && !thawed)
         (controller as? Placed)?.dock = dock
@@ -73,6 +81,31 @@ struct CardList: UIViewControllerRepresentable {
         private var going: (id: String, top: Bool)?
         var dock: CGFloat = 0 { didSet { if dock != oldValue { view.setNeedsLayout() } } }
 
+        // The header (the PWA's .pinned): on a strip of the page's colour that also covers the status bar, over the
+        // rows. A scroll down takes it away by as much as the page moved, a scroll up brings it back; left part way when
+        // the page stops it settles the way the page last went. Near the top it stays in its place on the page.
+        // It's in the scroll view, so a glide of the page carries it in the same animation (no frame behind).
+        private let pin = UIView()
+        private var pinnedId: String?
+        /// Where it shows: 0 in full under the status bar, -span away above the screen.
+        private var offset: CGFloat = 0
+        private var lastY: CGFloat = 0, turn: CGFloat = 0, wentUp = false
+        private var settling = false, settleTicket = 0
+        /// When the page's own glide (go) ends: the header settles and the jump key shows only after it.
+        private var glideUntil: CFTimeInterval = 0
+
+        // The jump key (the PWA's .jump): shown only while the current set is off the screen, pointing to it.
+        private let jump = RoundControl(.up, surface: .float)
+        /// nil hidden, else whether it points down.
+        private var pointing: Bool?
+        var quiet = false {
+            didSet {
+                guard quiet != oldValue else { return }
+                if quiet { aim(showing: false) } else { DispatchQueue.main.async { [weak self] in self?.aim(showing: true) } }
+            }
+        }
+        var onJump: () -> Void = {}
+
         init(model: AppModel) {
             self.model = model
             super.init(nibName: nil, bundle: nil)
@@ -89,6 +122,18 @@ struct CardList: UIViewControllerRepresentable {
             scroll.frame = view.bounds
             scroll.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.addSubview(scroll)
+            // First of the rows (read first by VoiceOver), drawn over them.
+            pin.backgroundColor = .background
+            pin.layer.zPosition = 1
+            scroll.addSubview(pin)
+            jump.alpha = 0
+            jump.transform = CGAffineTransform(scaleX: Pop.from, y: Pop.from)
+            jump.isUserInteractionEnabled = false
+            jump.isAccessibilityElement = false
+            jump.accessibilityLabel = "Go to the current set"
+            jump.accessibilityTraits = .button
+            jump.addTarget(self, action: #selector(jumped), for: .touchUpInside)
+            view.addSubview(jump)
             NotificationCenter.default.addObserver(self, selector: #selector(revealed), name: CardList.revealed, object: nil)
         }
 
@@ -111,14 +156,23 @@ struct CardList: UIViewControllerRepresentable {
             let shown = scroll.bounds.height - inset.top - inset.bottom
             let lowest = -inset.top, highest = max(lowest, scroll.contentSize.height + inset.bottom - scroll.bounds.height)
             var y = scroll.contentOffset.y
-            if top || rect.height > shown || rect.minY < y + inset.top {
+            // What of the header shows now covers the page's top; going up brings it back in full, so a part goes
+            // under it (the PWA's reveal settling a part below the pinned header).
+            let cover = pinnedId == nil ? 0 : max(0, pin.frame.maxY - (y + inset.top))
+            if top || rect.height > shown || rect.minY < y + inset.top + cover {
                 y = rect.minY - inset.top
+                if y < scroll.contentOffset.y { y -= pinnedId.flatMap { heights[$0] } ?? 0 }
             } else if rect.maxY > y + inset.top + shown {
                 y = rect.maxY - inset.top - shown
             }
             y = min(max(y, lowest), highest)
             guard y != scroll.contentOffset.y else { return }
-            if Motion.still { scroll.contentOffset.y = y } else { Moves.travel(over: y - scroll.contentOffset.y) { self.scroll.contentOffset.y = y } }
+            if Motion.still { scroll.contentOffset.y = y; return }
+            glideUntil = .infinity // the move's own scroll (below) is the page's glide
+            let length = Moves.travel(over: y - scroll.contentOffset.y) { self.scroll.contentOffset.y = y }
+            glideUntil = CACurrentMediaTime() + length
+            settleSoon()
+            DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in self?.aim(showing: true) }
         }
 
         override func viewDidLayoutSubviews() {
@@ -136,7 +190,11 @@ struct CardList: UIViewControllerRepresentable {
             if cards.count != before {
                 Sampler.note("cardlist in sight \(scroll.bounds.debugDescription) of \(Int(scroll.contentSize.height)): \(cards.count) made")
             }
+            if !settling { UIView.performWithoutAnimation { placePin() } }
+            placeJump()
             if let going { self.going = nil; go(going.id, top: going.top) }
+            // A change under it (the rest timer coming, the page's size) only hides the key: it shows from a scroll.
+            aim(showing: false)
         }
 
         func show(_ next: [Row], animated: Bool) {
@@ -175,6 +233,8 @@ struct CardList: UIViewControllerRepresentable {
             }
             Sampler.note("cardlist placed \(changed.count) changed (\(cards.count) made): \(CardList.ms(CACurrentMediaTime() - start)) ms, \(Int(distance)) pt in \(CardList.ms(length)) ms")
             prebuildSoon(after: length)
+            // The key shows once the rows have moved and any glide the change asks for (posted after it) has begun.
+            DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in self?.aim(showing: true) }
         }
 
         private func make(_ id: String) {
@@ -184,7 +244,8 @@ struct CardList: UIViewControllerRepresentable {
                 host.view.backgroundColor = .clear
                 host.safeAreaRegions = []
                 addChild(host)
-                scroll.addSubview(host.view)
+                if row.pinned { pinnedId = id }
+                (row.pinned ? pin : scroll).addSubview(host.view)
                 host.didMove(toParent: self)
                 hosts[id] = host
             }
@@ -274,9 +335,143 @@ struct CardList: UIViewControllerRepresentable {
                     card.frame = CGRect(x: x, y: top + Space.s1, width: inner, height: shut ? 0 : height - Space.s3)
                     card.alpha = shut ? 0 : 1
                 } else if let host = hosts[id] {
-                    host.view.frame = CGRect(x: 0, y: top, width: width, height: shut ? 0 : height)
+                    // The header sits in its strip, under the part covering the status bar.
+                    host.view.frame = CGRect(x: 0, y: id == pinnedId ? scroll.adjustedContentInset.top : top, width: width, height: shut ? 0 : height)
                     host.view.alpha = shut ? 0 : 1
                 }
+            }
+            if !settling { placePin() }
+        }
+
+        /// The page's scroll from its top (0) to its end: a bounce past either doesn't move the header.
+        private func pageY() -> CGFloat {
+            let inset = scroll.adjustedContentInset
+            let end = max(0, scroll.contentSize.height + inset.top + inset.bottom - scroll.bounds.height)
+            return min(max(scroll.contentOffset.y + inset.top, 0), end)
+        }
+
+        /// How far the header goes to be away: itself and the status bar it covers.
+        private var span: CGFloat { scroll.adjustedContentInset.top + (pinnedId.flatMap { heights[$0] } ?? 0) }
+
+        /// The header where `offset` puts it, never below its own place on the page (at the top, or pulled down).
+        private func placePin() {
+            guard let id = pinnedId else { return }
+            let inset = scroll.adjustedContentInset.top, height = heights[id] ?? 0
+            let y = max(0, scroll.contentOffset.y + inset + offset)
+            pin.frame = CGRect(x: 0, y: y - inset, width: width, height: inset + height)
+            hosts[id]?.view.frame.origin.y = inset
+        }
+
+        /// The page moved (a finger, its own glide, a change in its size): the header goes with it, as the PWA's.
+        private func follow() {
+            guard pinnedId != nil else { return }
+            let y = pageY()
+            halt()
+            // The way it goes turns only past a slop: a glide's last point of jitter read as a turn (the PWA's).
+            if wentUp ? y < turn : y > turn { turn = y } else if abs(y - turn) >= Space.s2 { wentUp = y < turn; turn = y }
+            offset = min(0, max(offset - (y - lastY), -span))
+            lastY = y
+            placePin()
+            if !scroll.isTracking { settleSoon() }
+        }
+
+        /// Settles once the page has been still a moment with no finger on it (a drag held still doesn't snap it).
+        private func settleSoon() {
+            settleTicket += 1
+            let ticket = settleTicket, now = CACurrentMediaTime()
+            let wait = max(Motion.fast, (glideUntil.isFinite ? glideUntil : now) - now)
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+                guard let self, ticket == self.settleTicket, !self.scroll.isTracking else { return }
+                self.settle()
+            }
+        }
+
+        /// Left part way, it slides the way the page last went: shown after a scroll up, away after one down.
+        private func settle() {
+            let away = -min(pageY(), span)
+            guard pinnedId != nil, offset < 0, offset > away else { return aim(showing: true) }
+            offset = wentUp ? 0 : -span
+            guard !Motion.still else { placePin(); return aim(showing: true) }
+            settling = true
+            Moves.spring({ self.placePin() }) { [weak self] _ in
+                guard let self, self.settling else { return }
+                self.settling = false
+                self.aim(showing: true)
+            }
+        }
+
+        /// A scroll mid-settle carries on from where the header is.
+        private func halt() {
+            guard settling else { return }
+            settling = false
+            let shown = pin.layer.presentation()?.frame.minY ?? pin.frame.minY
+            pin.layer.removeAllAnimations()
+            offset = min(0, max(shown + scroll.adjustedContentInset.top - (scroll.contentOffset.y + scroll.adjustedContentInset.top), -span))
+            placePin()
+        }
+
+        /// The key over the rest timer's place, its right edge a little inside the timer's (the PWA's .jump).
+        private func placeJump() {
+            guard let window = view.window else { return }
+            let screen = window.bounds, pill = min(Size.navWidth, screen.width - Space.s4 * 2)
+            let center = CGPoint(x: (screen.width + pill) / 2 - Space.s2 - Size.control / 2,
+                                 y: screen.height - floatingGap - Size.nav - Space.s6 - Size.control / 2)
+            jump.center = view.convert(center, from: window)
+        }
+
+        /// The current card's next set (or the card, while it's closed), on the page.
+        private func currentPart() -> (id: String, card: CGRect, part: CGRect)? {
+            guard let id = order.first(where: { rows[$0]?.card?.current == true }), let card = rows[id]?.card, let top = tops[id] else { return nil }
+            let whole = CGRect(x: 0, y: top, width: width, height: heights[id] ?? 0)
+            guard card.open, let set = card.exercise.sets.first(where: { !$0.done }), let made = cards[id],
+                  let frame = made.frame(ofSet: set.id) else { return (id, whole, whole) }
+            return (id, whole, scroll.convert(frame, from: made))
+        }
+
+        /// Shows the key while the current set is off the screen (above the header, below the rest timer), pointing
+        /// to it; `showing` false only hides it. Not during the page's own glide: it would flash on the way.
+        private func aim(showing: Bool) {
+            var off: Bool?
+            if !quiet, let part = currentPart()?.part {
+                let top = max(scroll.contentOffset.y + scroll.adjustedContentInset.top, pinnedId == nil ? -CGFloat.infinity : pin.frame.maxY)
+                let bottom = scroll.contentOffset.y + scroll.bounds.height - scroll.adjustedContentInset.bottom
+                if part.maxY <= top { off = false } else if part.minY >= bottom { off = true }
+            }
+            guard let off else { return point(nil) }
+            guard showing, going == nil, CACurrentMediaTime() >= glideUntil, !settling else { return }
+            point(off)
+        }
+
+        private func point(_ down: Bool?) {
+            guard down != pointing else { return }
+            let was = pointing
+            pointing = down
+            jump.isUserInteractionEnabled = down != nil
+            jump.isAccessibilityElement = down != nil
+            if let down {
+                let turn = { self.jump.icon.transform = down ? CGAffineTransform(rotationAngle: .pi) : .identity }
+                if was == nil || Motion.still { UIView.performWithoutAnimation(turn) } else { Moves.spring(turn) }
+            }
+            guard (was == nil) != (down == nil) else { return }
+            let on = down != nil
+            let look = { self.jump.alpha = on ? 1 : 0 }, size = { self.jump.transform = on ? .identity : CGAffineTransform(scaleX: Pop.from, y: Pop.from) }
+            if Motion.still { look(); size(); return }
+            // The fade on its own even curve, quick; the swell on the app's move (the PWA's .jump transition).
+            UIView.animate(withDuration: Motion.fast, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState, .allowUserInteraction], animations: look)
+            Moves.spring(size)
+        }
+
+        /// To the whole card, its name in view under the header, unless that leaves the set off the screen (a long
+        /// card): then to the set. Another card open: the current one opens in its place, and the page goes to it.
+        @objc private func jumped() {
+            guard let now = currentPart() else { return }
+            guard rows[now.id]?.card?.open == true else { return onJump() }
+            let inset = scroll.adjustedContentInset
+            let room = scroll.bounds.height - inset.top - inset.bottom - (pinnedId.flatMap { heights[$0] } ?? 0)
+            if now.part.maxY - now.card.minY <= room {
+                go(now.id, top: true)
+            } else if let set = rows[now.id]?.card?.exercise.sets.first(where: { !$0.done }) {
+                go(set.id, top: false)
             }
         }
 
@@ -290,7 +485,16 @@ struct CardList: UIViewControllerRepresentable {
 
         private func makeInSight() { for id in order where cards[id] == nil && inSight(id) { build(id) } }
 
-        func scrollViewDidScroll(_ scrollView: UIScrollView) { makeInSight() }
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            makeInSight()
+            follow()
+            aim(showing: true)
+        }
+
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            settleTicket += 1
+            halt()
+        }
 
         /// A removed row closes up and clears as what's under it comes up, then goes.
         private func leave(_ id: String) {
@@ -361,7 +565,7 @@ struct CardList: UIViewControllerRepresentable {
 
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { prebuildSoon() }
         func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-            if !decelerate { prebuildSoon() }
+            if !decelerate { prebuildSoon(); settleSoon() }
         }
 
         /// A touch goes to the row shown under the finger: mid-move a row's frame is already where it's going.
@@ -374,7 +578,9 @@ struct CardList: UIViewControllerRepresentable {
 
             override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
                 guard isUserInteractionEnabled, !isHidden, alpha > 0, self.point(inside: point, with: event) else { return nil }
-                for row in subviews.reversed() {
+                // What's drawn over the rows (the header) first.
+                let front = subviews.reversed().filter { $0.layer.zPosition > 0 }, rest = subviews.reversed().filter { $0.layer.zPosition <= 0 }
+                for row in front + rest {
                     if let hit = row.hitTest(row.onScreen(convert(point, to: row)), with: event) { return hit }
                 }
                 return self

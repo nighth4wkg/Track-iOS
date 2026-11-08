@@ -35,7 +35,13 @@ struct WorkoutScreen: View {
                     if AB.uikitList {
                         // To the screen's edge under the rest timer, as the PWA's page runs under its floating timer.
                         // Kept while the cards are arranged, out of sight: made again on Done it cost ~30 ms (build 107).
-                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model, dock: dock, frozen: arranging)
+                        // The jump key rests while typing and while a done card hands over (its ✓, then the glide).
+                        CardList(rows: rows(active, expanded: expanded, current: current, previous: previous), model: model, dock: dock, frozen: arranging,
+                                 quiet: focus != nil || (here(following) ?? current) != current) {
+                            focus = nil
+                            Motion.tap { opened = nil; following = current }
+                            if let current { reveal(proxy, current, anchor: .top) }
+                        }
                             .ignoresSafeArea(.container, edges: .bottom)
                             .opacity(arranging ? 0 : 1).allowsHitTesting(!arranging).accessibilityHidden(arranging)
                     }
@@ -70,8 +76,8 @@ struct WorkoutScreen: View {
                             return
                         }
                         focus = nil
-                        // Its ✓ pops first (Motion.normal), then the next card opens as this one closes.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + (Motion.still ? 0 : Motion.normal)) {
+                        // Its ✓ pops (Motion.normal), then a beat (Motion.fast), then the next card opens as this one closes.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + (Motion.still ? 0 : Motion.normal + Motion.fast)) {
                             let next = model.training.active?.exercises.first { $0.doneCount < $0.setCount }?.id
                             Motion.tap {
                                 if opened == card.id { opened = nil }
@@ -153,7 +159,7 @@ struct WorkoutScreen: View {
                 .padding(.top, Space.s3)
                 .accessibilityLabel("Workout completion").accessibilityValue("\(done) of \(planned) sets")
         }
-        var rows = [CardList.Row(id: Self.top, value: "\(active.name) \(done) \(planned)", view: column(heading, Space.s4, Space.s4 - Space.s1))]
+        var rows = [CardList.Row(id: Self.top, value: "\(active.name) \(done) \(planned)", view: column(heading, Space.s4, Space.s4 - Space.s1), pinned: true)]
         for (index, exercise) in active.exercises.enumerated() {
             let card = card(index, exercise, active, expanded: expanded, current: current, previous: previous, unit: unit)
             if AB.uikitCard {
