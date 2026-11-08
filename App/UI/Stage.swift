@@ -167,7 +167,7 @@ struct Covering<Content: View>: View {
 
     var body: some View {
         Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left) {
-            Calm(model: model) { content.environment(\.shown, shown) }
+            Calm(model: model, live: shown) { content.environment(\.shown, shown) }
                 .onPreferenceChange(FloatingBar.self) { bar = $0 }
         }
         .ignoresSafeArea()
@@ -182,10 +182,16 @@ struct Covering<Content: View>: View {
 struct Calm<Content: View>: View {
     /// Given, not from the environment: this is the top of its screen, where the environment starts empty.
     let model: AppModel
+    /// Hidden (a page under another, the workout kept for later) it reads nothing, so no change elsewhere (a sheet,
+    /// a toast, a set) redraws it: shown again, it's given the latest (Stage). The hidden workout redrew in other
+    /// screens' first frames (build 122).
+    var live = true
     @ViewBuilder let content: Content
 
     var body: some View {
-        _ = (model.training, model.tab, model.pages, model.sheets.count, model.confirm?.id, model.toast?.id, model.workoutOpen, model.finished?.id, model.bench)
+        if live {
+            _ = (model.training, model.tab, model.pages, model.sheets.count, model.confirm?.id, model.toast?.id, model.workoutOpen, model.finished?.id, model.bench)
+        }
         return content
             .environment(model)
             .tint(Palette.accent)
