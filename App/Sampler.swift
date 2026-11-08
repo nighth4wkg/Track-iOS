@@ -247,8 +247,6 @@ enum AB {
     /// screen's own content against what's around it).
     static let emptyPages = args.contains("-ab-empty-pages")
     static let emptySheets = args.contains("-ab-empty-sheets")
-    /// The motion check's second causes pass: every tab, page, sheet and the recap empty, and the workout with no cards.
-    nonisolated(unsafe) static var emptyScreens = false
     /// Each change of this batch done the way before it (the motion check's ", old way" pass), so each is kept only
     /// if it measures better. Kept tabs are back to be measured fairly: 124's first pass alone timed each tab's first build.
     nonisolated(unsafe) static var oldWay = false

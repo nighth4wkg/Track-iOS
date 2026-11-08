@@ -58,17 +58,8 @@ final class MotionCheck {
                 await check.all()
                 check.reset()
                 await check.plainKeyboard()
-                check.suffix = ", empty"
-                AB.emptyScreens = true
-                // Each tab kept from the first pass takes its empty page now, unmeasured: else its empty run timed the
-                // full page being taken down (build 117's Progress, empty, still sampled its rows).
-                for tab in AppTab.allCases {
-                    model.go(tab)
-                    await Self.pause(Motion.travel)
-                }
-                await check.all()
-                AB.emptyScreens = false
-                check.suffix = ""
+                // No ", empty" pass any more (to builds 125's): every screen empty was smooth, so the waits are each
+                // screen's content; it made the check a third longer.
                 await check.oldWay()
                 Sampler.uninstall()
                 Sampler.found = [:]
@@ -137,9 +128,11 @@ final class MotionCheck {
     }
 
     /// One motion: what was late from the change until it settled.
-    private func step(_ title: String, settle: Double = 1, _ change: () -> Void) async {
+    private func step(_ title: String, settle given: Double? = nil, _ change: () -> Void) async {
         let name = title + suffix
-        await Self.pause(0.3)
+        // The move and a moment after it: late frames come in its first frames, a settled one just after it ends.
+        let settle = given ?? Motion.travel + Self.tail
+        await Self.pause(Self.tail)
         _ = meter.take()
         _ = Sampler.takeMarks()
         // Finding causes (or -probe): where the main thread's time went, the whole time it's watched.
@@ -170,6 +163,8 @@ final class MotionCheck {
 
     /// The first frames, where the late ones are (with -probe).
     private static let sampled = 0.25
+    /// Before each step and after its move: what the one before left settles (was 0.3 s before and 1 s a step).
+    private static let tail = 0.2
     /// How long the sampler takes to report a window.
     private static let reported = 0.25
 

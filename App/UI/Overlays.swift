@@ -33,7 +33,7 @@ struct SheetLayer: View {
                     ZStack(alignment: .bottom) {
                         // Above the sheet is its dim: a tap there closes it.
                         Color.clear.contentShape(Rectangle()).onTapGesture { close(sheet) }.accessibilityHidden(true)
-                        SheetBox(tall: sheet.tall, close: { close(sheet) }) { if AB.emptySheets || AB.emptyScreens { Color.clear.frame(height: Size.column / 2) } else { sheet.view } }
+                        SheetBox(tall: sheet.tall, close: { close(sheet) }) { if AB.emptySheets { Color.clear.frame(height: Size.column / 2) } else { sheet.view } }
                             .environment(\.closeSheet, { close(sheet) })
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { [heights] in heights.of[sheet.id] = $0 }
                     }
