@@ -21,7 +21,7 @@ final class MotionCheck {
     private let model: AppModel
     private let meter = Meter()
     private let causes: Bool
-    /// Added to each motion's name (", empty" in the empty pass).
+    /// Added to each motion's name (", old way" in the old-way pass).
     private var suffix = ""
     private var rows: [MotionRow] = []
     /// The training as the check began: every run opens the same split, past workout and lift (each run adds a workout).
@@ -58,7 +58,7 @@ final class MotionCheck {
                 await check.all()
                 check.reset()
                 await check.plainKeyboard()
-                // No ", empty" pass any more (to builds 125's): every screen empty was smooth, so the waits are each
+                // No ", empty" pass any more (to build 126): every screen empty was smooth, so the waits are each
                 // screen's content; it made the check a third longer.
                 await check.oldWay()
                 Sampler.uninstall()
