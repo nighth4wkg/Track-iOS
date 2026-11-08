@@ -85,15 +85,22 @@ final class MotionCheck {
         let name = title + suffix
         await Self.pause(0.3)
         _ = meter.take()
+        _ = Sampler.takeMarks()
         // Finding causes (or -probe): where the main thread's time went, the whole time it's watched.
         Sampler.begin("motion \(name)", for: causes ? settle : Self.sampled)
         Self.log.log("start \(name, privacy: .public)") // when the change happened, for lining up a screen recording
+        let start = CACurrentMediaTime()
         change()
         await Self.pause(settle)
-        let late = meter.take()
+        let frames = meter.take()
+        let late = frames.map(\.late)
+        // When each late frame and each note came, from the change (ms): which work landed in which frame.
+        let since = { (t: CFTimeInterval) in Int(((t - start) * 1000).rounded()) }
+        let timeline = (frames.map { (since($0.at), "late \($0.late)") } + Sampler.takeMarks().map { (since($0.at), $0.text) })
+            .sorted { $0.0 < $1.0 }.map { "\($0.0) \($0.1)" }
         // The sampler's report comes in once its window has closed, a moment after.
         if causes { await Self.pause(Self.reported) }
-        rows.append(MotionRow(name: name, late: late, found: Sampler.found.removeValue(forKey: "motion \(name)")))
+        rows.append(MotionRow(name: name, late: late, found: Sampler.found.removeValue(forKey: "motion \(name)"), timeline: causes ? timeline : []))
         Self.log.log("motion \(name, privacy: .public): \(late.map { "\($0)" }.joined(separator: " "), privacy: .public)")
     }
 
@@ -223,6 +230,8 @@ struct MotionRow: Identifiable {
     let late: [Int]
     /// Finding causes: where the main thread's time went.
     var found: Sampler.Found?
+    /// Finding causes: each late frame and note, ms from the change.
+    var timeline: [String] = []
     var summary: String { late.isEmpty ? "Smooth" : "\(late.count) late, worst \(late.max() ?? 0) ms" }
     /// The main thread's busy time and the libraries that took most of it, in short.
     var cause: String? {
@@ -240,6 +249,7 @@ struct MotionRow: Identifiable {
                 lines.append("  \(title): " + Self.list(list[...], "; "))
             }
         }
+        if !timeline.isEmpty { lines.append("  timeline: " + timeline.joined(separator: "; ")) }
         return lines.joined(separator: "\n")
     }
 
@@ -253,7 +263,8 @@ struct MotionRow: Identifiable {
 private final class Meter: NSObject {
     private var link: CADisplayLink?
     private var last: CFTimeInterval = 0
-    private var late: [Int] = []
+    /// Each late frame: ms past its time, and when it came.
+    private var late: [(late: Int, at: CFTimeInterval)] = []
 
     override init() {
         super.init()
@@ -266,10 +277,10 @@ private final class Meter: NSObject {
     @objc private func tick(_ link: CADisplayLink) {
         defer { last = link.timestamp }
         let gap = link.timestamp - last, slot = link.targetTimestamp - link.timestamp
-        if last > 0, gap > slot * 1.5 { late.append(Int(((gap - slot) * 1000).rounded())) }
+        if last > 0, gap > slot * 1.5 { late.append((Int(((gap - slot) * 1000).rounded()), link.timestamp)) }
     }
 
-    func take() -> [Int] {
+    func take() -> [(late: Int, at: CFTimeInterval)] {
         defer { late = [] }
         return late
     }

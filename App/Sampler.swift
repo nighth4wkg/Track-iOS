@@ -18,6 +18,8 @@ final class Sampler: Thread, @unchecked Sendable {
     /// The main thread is waiting in its run loop (set by its own observers): a sample there would only show idling.
     fileprivate var waiting = false
     private var idle = 0
+    /// Each note while a window is watched, with when it was made, for the motion check's timeline.
+    private var marks: [(at: CFTimeInterval, text: String)] = []
     private let log = Logger(subsystem: "Track", category: "probe")
     private var observers: [CFRunLoopObserver] = []
     private var stopped = false
@@ -64,6 +66,14 @@ final class Sampler: Thread, @unchecked Sendable {
         guard let s = shared else { return }
         let line = text()
         s.log.log("probe note \(line, privacy: .public)")
+        s.lock.lock(); if s.window != nil { s.marks.append((CACurrentMediaTime(), line)) }; s.lock.unlock()
+    }
+
+    /// The notes made since the last take, with when each was made.
+    static func takeMarks() -> [(at: CFTimeInterval, text: String)] {
+        guard let s = shared else { return [] }
+        s.lock.lock(); defer { s.marks = []; s.lock.unlock() }
+        return s.marks
     }
 
     static func begin(_ name: String, for seconds: CFTimeInterval) {

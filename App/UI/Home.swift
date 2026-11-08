@@ -190,6 +190,7 @@ extension AppModel {
     func prepareHome() {
         let (sessions, now) = (training.sessions, nowMillis())
         _ = (weekDays(sessions, now), weekVolume(sessions, now), nearestQuest(sessions))
+        Sampler.note("home figures worked out")
     }
 }
 

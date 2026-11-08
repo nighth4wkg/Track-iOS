@@ -545,13 +545,19 @@ struct CardList: UIViewControllerRepresentable {
             DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in self?.prebuild() }
         }
 
+        /// The screen the list is on is still moving in (Stage's slide, a layer animation on an ancestor): a card made
+        /// now lands in its frames (Start workout 106 ms late with the cards made 0.48 s after: build 118).
+        private var arriving: Bool {
+            sequence(first: view as UIView, next: { $0.superview }).contains { $0.layer.animationKeys()?.isEmpty == false }
+        }
+
         /// When the last move settles, and whether idle work is under way (one chain, however many moves).
         private var settled: CFTimeInterval = 0
         private var preparing = false
 
         private func prebuild() {
             let wait = settled - CACurrentMediaTime()
-            guard wait <= 0, !scroll.isTracking, !scroll.isDecelerating else {
+            guard wait <= 0, !scroll.isTracking, !scroll.isDecelerating, !arriving else {
                 DispatchQueue.main.asyncAfter(deadline: .now() + max(wait, Motion.normal)) { [weak self] in self?.prebuild() }
                 return
             }

@@ -113,6 +113,7 @@ extension AppModel {
         leaving = workout
         DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in
             self?.leaving = nil
+            Sampler.note("workout screen taken down")
             self?.prepareHome()
         }
     }
