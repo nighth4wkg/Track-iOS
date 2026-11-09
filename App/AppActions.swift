@@ -100,7 +100,7 @@ extension AppModel {
         update { try $0.finish(); $0.awardLatestQuests() }
         guard training.active == nil, let session = training.sessions.first, session.finishedAt != nil else { return }
         let after = xp(), ranksAfter = ranked()
-        leave(kept)
+        leave(kept, after: AB.oldWay ? Motion.travel : CompleteScreen.settles)
         workoutOpen = false
         go(.progress)
         finished = Finished(id: session.id, xp: after.total - before.total, level: after.level, leveledUp: after.level > before.level,
@@ -108,10 +108,11 @@ extension AppModel {
     }
 
     /// The workout's screen stays made, out of sight, until what replaces it has arrived: taking its cards down was
-    /// part of the recap's first frame (Finish 49 ms late, CardView deinit in its samples: build 117).
-    private func leave(_ workout: Session?) {
+    /// part of the recap's first frame (Finish 49 ms late, CardView deinit in its samples: build 117). After Finish
+    /// it waits for the recap's badges too: kept in the window, it came down in their pop (25 ms late, build 130).
+    private func leave(_ workout: Session?, after wait: Double = Motion.travel) {
         leaving = workout
-        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
             self?.leaving = nil
             Sampler.note("workout screen taken down")
             self?.prepareHome()

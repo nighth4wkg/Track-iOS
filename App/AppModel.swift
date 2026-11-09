@@ -96,6 +96,7 @@ final class AppModel {
         if swaps { swapAt = ProcessInfo.processInfo.systemUptime }
         if tab != next { tab = next }
         if !pages.isEmpty { pages = [] }
+        if leftPage != nil { leftPage = nil }
         if !sheets.isEmpty { sheets = [] }
     }
     /// When go() last ran: a screen shown just after was swapped to (it just shows), not come back to (it shifts in).
@@ -103,20 +104,34 @@ final class AppModel {
     var swapping: Bool { ProcessInfo.processInfo.systemUptime - swapAt < Motion.fast }
     /// A page being built as its button is held (Shell builds it hidden, where it goes); opened, it just shows.
     var readyPage: Route?
+    /// The page just gone back from, kept hidden until the screen under it has come in: torn down in the tap's frame,
+    /// leaving a page was 20-45 ms late (build 130).
+    var leftPage: Route?
     /// A sheet being built as its button is held; presented (as the same kind of sheet), it just comes up.
     var readySheet: Presented?
     func open(_ route: Route) {
         pages.append(route)
         if readyPage != nil { readyPage = nil }
+        if leftPage != nil { leftPage = nil }
     }
-    func ready(_ route: Route) { if pages.last != route { readyPage = route } }
+    func ready(_ route: Route) {
+        guard pages.last != route else { return }
+        if leftPage != nil { leftPage = nil }
+        readyPage = route
+    }
     func ready(_ view: some View, tall: Bool = false) { readySheet = Presented(view: AnyView(view), tall: tall, kind: ObjectIdentifier(type(of: view))) }
     /// What was built for a button let go without opening it.
     func unready() {
         if readyPage != nil { readyPage = nil }
         if readySheet != nil { readySheet = nil }
     }
-    func back() { if !pages.isEmpty { pages.removeLast() } }
+    func back() {
+        guard let left = pages.popLast(), !AB.oldWay else { return }
+        leftPage = left
+        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in
+            if self?.leftPage == left { self?.leftPage = nil }
+        }
+    }
     /// Shows a sheet (it closes itself through closeSheet).
     func present(_ view: some View, tall: Bool = false) {
         if let ready = readySheet, ready.kind == ObjectIdentifier(type(of: view)) {

@@ -35,7 +35,7 @@ struct SheetLayer: View {
                 let gone = leaving.contains(sheet.id)
                 let ready = sheet.id == model.readySheet?.id
                 Stage(shown: !ready, first: moving ? .up : .none, dim: true, leaving: gone && moving, height: { [heights] in heights.of[sheet.id] },
-                      keep: { true }) {
+                      keep: { true }, once: true) {
                     ZStack(alignment: .bottom) {
                         // Above the sheet is its dim: a tap there closes it.
                         Color.clear.contentShape(Rectangle()).onTapGesture { close(sheet) }.accessibilityHidden(true)

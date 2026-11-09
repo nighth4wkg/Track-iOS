@@ -1,5 +1,6 @@
 import SwiftUI
 import TrackCore
+import UIKit
 
 /// Rest (the PWA's timer floating where the nav pill sits): a ring running down, the time left, −15s, +15s and Skip.
 /// It shows only while the rest runs; running out buzzes. `compact` is just the ring and the time, for the keyboard's
@@ -30,10 +31,10 @@ struct RestTimer: View {
                         let total = Double(max(1, model.training.settings.restSeconds))
                         if left > 0 {
                             if compact {
-                                ring(left, total).accessibilityLabel("Rest, \(time(left)) left").padding(.horizontal, Space.s2)
+                                ring(left, total, until).accessibilityLabel("Rest, \(time(left)) left").padding(.horizontal, Space.s2)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             } else {
-                                full(left, total)
+                                full(left, total, until)
                             }
                         }
                     }
@@ -57,9 +58,9 @@ struct RestTimer: View {
         .sensoryFeedback(.warning, trigger: ended)
     }
 
-    private func full(_ left: Double, _ total: Double) -> some View {
+    private func full(_ left: Double, _ total: Double, _ until: Int) -> some View {
         HStack(spacing: Space.s2) {
-            ring(left, total).accessibilityLabel("\(time(left)) of rest left")
+            ring(left, total, until).accessibilityLabel("\(time(left)) of rest left")
             Spacer(minLength: 0)
             shift("−\(RestIntent.step)s", "\(RestIntent.step) seconds less") { shiftRest(by: -RestIntent.step) }
             shift("+\(RestIntent.step)s", "\(RestIntent.step) seconds more") { shiftRest(by: RestIntent.step) }
@@ -76,9 +77,17 @@ struct RestTimer: View {
     }
 
     /// The ring running down beside the time left.
-    private func ring(_ left: Double, _ total: Double) -> some View {
+    private func ring(_ left: Double, _ total: Double, _ until: Int) -> some View {
         HStack(spacing: Space.s2) {
-            Ring(value: left / total, size: Rings.rest.size, stroke: Rings.rest.stroke, label: "") { EmptyView() }
+            if AB.oldWay {
+                Ring(value: left / total, size: Rings.rest.size, stroke: Rings.rest.stroke, label: "") { EmptyView() }
+            } else {
+                ZStack {
+                    Circle().inset(by: Rings.rest.stroke / 2).stroke(Palette.well, lineWidth: Rings.rest.stroke)
+                    RestArc(until: until, total: total, left: left)
+                }
+                .frame(width: Rings.rest.size, height: Rings.rest.size)
+            }
             Text(time(left)).type(.t20).monospacedDigit().foregroundStyle(Palette.text)
         }
         .accessibilityElement(children: .ignore)
@@ -99,5 +108,62 @@ struct RestTimer: View {
         }
         .buttonStyle(CardStyle())
         .accessibilityLabel(label)
+    }
+}
+
+/// The rest ring's green arc, run down by Core Animation from the time left to none in one smooth move. Redrawn at
+/// each tick with animations off, it moved in half-second steps (owner, build 130). Given each tick (`left`), it
+/// starts again only for a new or shifted rest, or when iOS took its move away (the app sent to the background).
+private struct RestArc: UIViewRepresentable {
+    let until: Int
+    let total: Double
+    let left: Double
+
+    func makeUIView(context: Context) -> Arc { Arc() }
+    func updateUIView(_ arc: Arc, context: Context) { arc.run(until: until, total: total, left: left) }
+
+    final class Arc: UIView {
+        private let shape = CAShapeLayer()
+        private var running: (until: Int, total: Double)?
+        private static let key = "left"
+
+        init() {
+            super.init(frame: .zero)
+            isUserInteractionEnabled = false
+            shape.fillColor = nil
+            shape.lineCap = .round
+            shape.lineWidth = Rings.rest.stroke
+            shape.strokeColor = UIColor(Palette.accent).cgColor
+            shape.strokeEnd = 0
+            layer.addSublayer(shape)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            shape.frame = bounds
+            // As Ring's: from the top, clockwise, its stroke inside the box.
+            let radius = (min(bounds.width, bounds.height) - Rings.rest.stroke) / 2
+            shape.path = UIBezierPath(arcCenter: CGPoint(x: bounds.midX, y: bounds.midY), radius: radius,
+                                      startAngle: -.pi / 2, endAngle: .pi * 3 / 2, clockwise: true).cgPath
+        }
+
+        func run(until: Int, total: Double, left: Double) {
+            guard running?.until != until || running?.total != total || shape.animation(forKey: Self.key) == nil else { return }
+            running = (until, total)
+            shape.removeAnimation(forKey: Self.key)
+            guard left > 0 else { return }
+            // Where it ends (none left) is its own value; the move only shows the way there.
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            shape.strokeEnd = 0
+            let move = CABasicAnimation(keyPath: "strokeEnd")
+            move.fromValue = min(1, left / total)
+            move.toValue = 0
+            move.duration = left
+            shape.add(move, forKey: Self.key)
+            CATransaction.commit()
+        }
     }
 }

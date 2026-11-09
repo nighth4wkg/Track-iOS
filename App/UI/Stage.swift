@@ -26,6 +26,9 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
     /// Hidden, it stays in the window, only hidden (a tab; AB.oldWay takes it out, as before build 124): taken out and put back, a tab's first frame
     /// was 15-42 ms of SwiftUI re-attaching the whole page (build 121-122), though nothing in it had changed.
     var keep: () -> Bool = { false }
+    /// Given its content only as it's made (a sheet: what it holds never changes). Given it again as it opened and
+    /// closed, a sheet ran its box and what it holds again and measured its height again (build 130: 12-27 ms).
+    var once = false
     @ViewBuilder let content: Content
 
     func makeUIViewController(context: Context) -> Holder {
@@ -42,9 +45,9 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
     func updateUIViewController(_ holder: Holder, context: Context) {
         // Hidden, it isn't given each new version: it gets the latest when it's shown again.
         guard shown || holder.shown else { return }
-        let start = CACurrentMediaTime(), was = holder.shown
+        let start = CACurrentMediaTime(), was = holder.shown, ready = holder.built
         // Going away it keeps what it showed: drawn again as it went, the picker searched its whole library (build 117).
-        if !leaving { holder.host.rootView = content }
+        if !leaving, !once || AB.oldWay { holder.host.rootView = content }
         holder.height = height
         let given = CACurrentMediaTime()
         // Built hidden (readied as its button was held), its first showing is still its first way in.
@@ -52,7 +55,8 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         if shown { holder.everShown = true }
         if leaving { holder.leave() }
         if shown != was {
-            Sampler.note("stage \(shown ? "shown" : "hidden"): content \(Int((given - start) * 1000)) ms, show \(Int((CACurrentMediaTime() - given) * 1000)) ms")
+            let ahead = shown && !ready ? ", not built ahead" : ""
+            Sampler.note("stage \(shown ? "shown" : "hidden"): content \(Int((given - start) * 1000)) ms, show \(Int((CACurrentMediaTime() - given) * 1000)) ms\(ahead)")
         }
     }
 
@@ -63,10 +67,13 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         private(set) var shown = false
         /// Shown by its screen at least once (not just built while hidden).
         var everShown = false
+        /// Put in the window and laid out at least once (shown, or built hidden ahead of it).
+        private(set) var built = false
         private let dim: UIView?
         /// Each move's number: a move waiting for its next frame doesn't start if another has come since.
         private var moves = 0
         private var gone = false
+        private static var tries: Int { 3 }
 
         init(_ host: UIHostingController<Content>, dim: Bool) {
             self.host = host
@@ -90,8 +97,14 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
             }
         }
 
-        func prebuild() {
-            guard !shown, host.view.superview == nil, view.window != nil else { return }
+        /// Not in the window yet (SwiftUI puts it there after it's made), it tries again a few turns later: built as
+        /// it showed instead, a readied page was 40 ms late (Past workout, build 130).
+        func prebuild(tries: Int = 0) {
+            guard !shown, host.view.superview == nil else { return }
+            guard view.window != nil else {
+                if tries < Self.tries { DispatchQueue.main.async { [weak self] in self?.prebuild(tries: tries + 1) } }
+                return
+            }
             show(true, coming: .none)
             host.view.layoutIfNeeded()
             show(false, coming: .none)
@@ -104,6 +117,8 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
                 view.addSubview(host.view)
             } else if !on, host.view.superview != nil, keep() {
+                // Hidden, a field in it would keep the keyboard up over what shows instead.
+                host.view.endEditing(true)
                 // Its safe area is left as it is: switched off while hidden and on as it showed, the whole screen was
                 // laid out again in the tap's frame (128: a readied Split page 0 ms -> 45, every move and tab too).
                 host.view.isHidden = true
@@ -116,6 +131,7 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
             } else {
                 dim?.alpha = 0
             }
+            if on { built = true }
             if on, !shown { arrive(way) }
             // An empty holder over the shown screen mustn't take its touches.
             view.isUserInteractionEnabled = on

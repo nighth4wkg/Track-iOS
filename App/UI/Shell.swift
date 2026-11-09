@@ -42,7 +42,9 @@ struct Shell: View {
                 }
             }
             // The page being readied comes last, hidden: opened, it's the same view in the same place, so it only shows.
-            ForEach(Array((model.pages + [model.readyPage].compactMap { $0 }).enumerated()), id: \.offset) { index, route in
+            // The one just gone back from is there, hidden, until the screen under it has come in (AppModel.back);
+            // readying or opening another takes its place.
+            ForEach(Array((model.pages + [model.leftPage, model.readyPage].compactMap { $0 }).enumerated()), id: \.offset) { index, route in
                 let shown = index == model.pages.count - 1 && !model.workoutOpen && model.finished == nil
                 Covering(shown: shown) { deeper(route).swipeBack(shown) { model.back() } }
                     .id(route)
