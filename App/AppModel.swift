@@ -110,14 +110,25 @@ final class AppModel {
     /// A sheet being built as its button is held; presented (as the same kind of sheet), it just comes up.
     var readySheet: Presented?
     func open(_ route: Route) {
+        // The page just gone back from, opened again: a new one, a turn later (`reopened`).
+        guard !reopened(route, then: { $0.open(route) }) else { return }
         pages.append(route)
         if readyPage != nil { readyPage = nil }
         if leftPage != nil { leftPage = nil }
     }
     func ready(_ route: Route) {
-        guard pages.last != route else { return }
+        guard pages.last != route, !reopened(route, then: { $0.ready(route) }) else { return }
         if leftPage != nil { leftPage = nil }
         readyPage = route
+    }
+    /// The page just gone back from is opened or readied again: in its place (the same route there) it would be that
+    /// same page shown again, coming in from the left, scrolled as it was left. It's taken down first, then `then` runs
+    /// a turn later, when the place is free.
+    private func reopened(_ route: Route, then: @escaping (AppModel) -> Void) -> Bool {
+        guard leftPage == route else { return false }
+        leftPage = nil
+        DispatchQueue.main.async { [weak self] in if let self { then(self) } }
+        return true
     }
     func ready(_ view: some View, tall: Bool = false) { readySheet = Presented(view: AnyView(view), tall: tall, kind: ObjectIdentifier(type(of: view))) }
     /// What was built for a button let go without opening it.

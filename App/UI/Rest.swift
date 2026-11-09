@@ -113,7 +113,8 @@ struct RestTimer: View {
 
 /// The rest ring's green arc, run down by Core Animation from the time left to none in one smooth move. Redrawn at
 /// each tick with animations off, it moved in half-second steps (owner, build 130). Given each tick (`left`), it
-/// starts again only for a new or shifted rest, or when iOS took its move away (the app sent to the background).
+/// starts again only for a new or shifted rest, or if its move was ever taken away; each tick also sets where it
+/// stands, so without its move it would still step as before rather than show nothing.
 private struct RestArc: UIViewRepresentable {
     let until: Int
     let total: Double
@@ -150,20 +151,24 @@ private struct RestArc: UIViewRepresentable {
         }
 
         func run(until: Int, total: Double, left: Double) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            defer { CATransaction.commit() }
+            shape.strokeEnd = CGFloat(min(1, max(0, left / total)))
             guard running?.until != until || running?.total != total || shape.animation(forKey: Self.key) == nil else { return }
             running = (until, total)
             shape.removeAnimation(forKey: Self.key)
             guard left > 0 else { return }
-            // Where it ends (none left) is its own value; the move only shows the way there.
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            shape.strokeEnd = 0
+            // A rest made longer than the setting (+15s) stays full until it's back to the setting's length, as Ring did.
             let move = CABasicAnimation(keyPath: "strokeEnd")
             move.fromValue = min(1, left / total)
             move.toValue = 0
-            move.duration = left
+            move.duration = min(left, total)
+            move.beginTime = shape.convertTime(CACurrentMediaTime(), from: nil) + max(0, left - total)
+            move.fillMode = .both
+            // Kept when it's done or the app goes to the background, so it isn't started again (or lost) on the way back.
+            move.isRemovedOnCompletion = false
             shape.add(move, forKey: Self.key)
-            CATransaction.commit()
         }
     }
 }
