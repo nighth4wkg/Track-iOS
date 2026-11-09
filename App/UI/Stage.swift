@@ -104,17 +104,15 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
                 view.addSubview(host.view)
             } else if !on, host.view.superview != nil, keep() {
+                // Its safe area is left as it is: switched off while hidden and on as it showed, the whole screen was
+                // laid out again in the tap's frame (128: a readied Split page 0 ms -> 45, every move and tab too).
                 host.view.isHidden = true
-                // Hidden in the window, the keyboard still laid it out each time it moved (127: keyboard 34 ms with
-                // screens kept, 23 without); shown again, it follows the keyboard (no change while it's down).
-                if host.safeAreaRegions != .container { host.safeAreaRegions = .container }
             } else if !on, host.view.superview != nil {
                 host.view.layoutIfNeeded() // `shown` false reaches it while it's still in the window
                 host.view.removeFromSuperview()
             }
             if on {
                 host.view.isHidden = false
-                if host.safeAreaRegions != .all { host.safeAreaRegions = .all }
             } else {
                 dim?.alpha = 0
             }
@@ -184,16 +182,16 @@ struct Covering<Content: View>: View {
         // all of itself first (the tabs' 15-42 ms: build 126 measured keeping them better).
         Stage(shown: shown, first: .right, again: anew ? .right : model.swapping ? .none : .left, keep: { !AB.oldWay }) {
             Calm(model: model, live: shown) { content.environment(\.shown, shown) }
-                .readsBar($bar)
+                .onPreferenceChange(FloatingBar.self) { bar = $0 }
         }
         .ignoresSafeArea()
-        .preference(key: FloatingBar.self, value: shown ? bar : 0)
+        .floatingBar(shown ? bar : 0)
     }
 }
 
 /// The app's way inside a screen of its own, as Shell's: words and numbers change in place, and a change shows at once
-/// unless it says how it moves. It reads what Shell reads, so each change passes through it on the way down, as it
-/// did through Shell; without that, a change drawn only below it (the rest's ±15s) took a part's own animation (the
+/// unless it says how it moves. It reads what its screen draws from, so each change passes through it on the way
+/// down, as it did through Shell; without that, a change drawn only below it (the rest's ±15s) took a part's own animation (the
 /// rest timer rose in again: build 102).
 struct Calm<Content: View>: View {
     /// Given, not from the environment: this is the top of its screen, where the environment starts empty.
@@ -206,8 +204,13 @@ struct Calm<Content: View>: View {
 
     var body: some View {
         Sampler.note("calm \(live ? "live" : "hidden")")
-        if live {
+        // Only what's drawn below it (the training, the question SetRow closes the keyboard for, the workout's bench):
+        // reading the pages, sheets and toast too, a page re-ran as it was left (Split back: its body 19 ms after the
+        // tab showed, 129) and under each sheet or toast.
+        if live, AB.oldWay {
             _ = (model.training, model.tab, model.pages, model.sheets.count, model.confirm?.id, model.toast?.id, model.workoutOpen, model.finished?.id, model.bench)
+        } else if live {
+            _ = (model.training, model.confirm?.id, model.bench)
         }
         return content
             .environment(model)
