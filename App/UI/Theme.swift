@@ -160,15 +160,14 @@ enum Motion {
     /// The pick kept, or Default for none or one no longer listed (0.87, 0.77 from before).
     static func picked(_ kept: Double?) -> Double { kept.flatMap { kept in speeds.first { $0.scale == kept }?.scale } ?? defaultSpeed }
     static var pace: Double { AB.pace * picked(UserDefaults.standard.object(forKey: speedKey) as? Double) }
-    /// However far it goes, a move takes no longer than this.
-    static var longest: Double { 0.8 * pace / speed }
     /// How long a move of `distance` points takes at the app's pace, at the screen's rate: no shorter than `normal`
-    /// (a small move still eases), no longer than `longest`. -ab-fixed: as long as `travel`, as before build 110.
+    /// (a small move still eases), no longer than `travel`: nothing a tap moves takes longer than a page coming in (owner,
+    /// 2026-11-09: "some is fast some is slow"; a long move took up to 0.8 s, as the PWA). -ab-fixed: as long as `travel`.
     static func length(_ distance: CGFloat) -> Double {
         guard !AB.fixedPace else { return travel }
         // iOS's spring without bounce over d seconds peaks at 2π/(e·d) of its distance a second.
         let even = Double(abs(distance)) * 2 * .pi / (exp(1) * step * min(Refresh.rate, paceRate))
-        return min(max(even * pace / speed, normal), longest)
+        return min(max(even * pace / speed, normal), travel)
     }
     /// iOS's own: no bounce, a gentle start. The PWA's 0.24 s bezier put half the way into 3 frames at 60 Hz (up to
     /// 131 pt a frame on a sheet), then crawled: it read as a low frame rate. This spring, as long, moves ~95 pt a frame at most.
