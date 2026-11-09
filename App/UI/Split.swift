@@ -100,6 +100,7 @@ struct SplitScreen: View {
                         Label { Text(model.training.active == nil ? "Start workout" : "Workout in progress") } icon: { Icon.play.image(IconSize.small) }
                     }
                     .buttonStyle(PrimaryStyle())
+                    .readies { model.ready(workout: split) }
                     .disabled(split.exercises.isEmpty)
                     .padding(.horizontal, Space.s4)
                     .frame(maxWidth: Size.column)

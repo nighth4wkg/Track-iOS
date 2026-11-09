@@ -132,6 +132,7 @@ private struct UpNextCard: View {
         } else if let next {
             Button { model.start(next.split) } label: { Label { Text("Start workout") } icon: { Icon.play.image(IconSize.small) } }
                 .buttonStyle(PrimaryStyle())
+                .readies { model.ready(workout: next.split) }
         } else {
             Button { model.present(NewSplitSheet()) } label: { Label { Text("New split") } icon: { Icon.plus.image(IconSize.small) } }
                 .buttonStyle(PrimaryStyle())

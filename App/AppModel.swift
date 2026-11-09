@@ -109,6 +109,15 @@ final class AppModel {
     var leftPage: Route?
     /// A sheet being built as its button is held; presented (as the same kind of sheet), it just comes up.
     var readySheet: Presented?
+    /// The workout Start would begin, built (hidden, never saved) as Start is held: started, the workout takes its ids,
+    /// so its screen is the one already built and only shows (built in the tap, Start was 53 ms late: build 132).
+    var readyWorkout: Session?
+    func ready(workout split: Split) {
+        guard training.active == nil else { return }
+        var next = training
+        guard (try? next.start(split)) != nil else { return }
+        readyWorkout = next.active
+    }
     func open(_ route: Route) {
         // The page just gone back from, opened again: a new one, a turn later (`reopened`).
         guard !reopened(route, then: { $0.open(route) }) else { return }
@@ -135,6 +144,7 @@ final class AppModel {
     func unready() {
         if readyPage != nil { readyPage = nil }
         if readySheet != nil { readySheet = nil }
+        if readyWorkout != nil { readyWorkout = nil }
     }
     func back() {
         guard let left = pages.popLast(), !AB.oldWay else { return }
@@ -289,8 +299,25 @@ final class AppModel {
     // MARK: Workouts
 
     func start(_ split: Split, carryOver: Bool = true) {
-        update { try $0.start(split, carryOver: carryOver) }
+        let ready = readyWorkout
+        update { training in
+            try training.start(split, carryOver: carryOver)
+            if let ready, var started = training.active, Self.adopt(ready, into: &started) { training.active = started }
+        }
+        if readyWorkout != nil { readyWorkout = nil }
         if training.active != nil { workoutOpen = true }
+    }
+
+    /// The started workout takes the readied one's ids when it's the same workout (the same exercises, as many sets
+    /// each): its numbers are the started one's, worked out now.
+    private static func adopt(_ ready: Session, into started: inout Session) -> Bool {
+        guard ready.splitId == started.splitId, ready.exercises.map(\.id) == started.exercises.map(\.id),
+              ready.exercises.map(\.sets.count) == started.exercises.map(\.sets.count) else { return false }
+        started.id = ready.id
+        for e in started.exercises.indices {
+            for s in started.exercises[e].sets.indices { started.exercises[e].sets[s].id = ready.exercises[e].sets[s].id }
+        }
+        return true
     }
 
     /// Starts a past workout again with its own numbers.

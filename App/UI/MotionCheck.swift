@@ -234,7 +234,7 @@ final class MotionCheck {
     private func workout() async {
         if model.training.active == nil {
             guard let split = model.training.splits.first(where: { !$0.exercises.isEmpty }) else { return }
-            await step("Start workout", settle: 1.5) { model.start(split) }
+            await step("Start workout", settle: 1.5, ready: { self.model.ready(workout: split) }) { model.start(split) }
         } else {
             await step("Continue workout", settle: 1.5) { model.workoutOpen = true }
         }
