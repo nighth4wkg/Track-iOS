@@ -151,11 +151,15 @@ enum Motion {
     static let fastSpeedup = 1.75
     /// How much faster than at 60 Hz every length is on this screen: `fastSpeedup` above `paceRate`, else 1.
     static var speed: Double { Refresh.rate > paceRate ? fastSpeedup : 1 }
-    /// Settings › Motion: every length of the app's own times the one picked (Default, 1, is the baseline and never
-    /// changes; each step either side is a little slower or faster). Read on each move, so a pick shows at once.
+    /// Settings › Motion: every length of the app's own times the one picked (the lengths above are Faster, 1; each
+    /// step a little slower or faster). Read on each move, so a pick shows at once. The owner's pick (2026-11-09, as the
+    /// PWA): Default is the old Slow and Faster the old Default, in even steps.
     static let speedKey = "motionSpeed"
-    static let speeds: [(name: String, scale: Double)] = [("Slower", 1.3), ("Slow", 1.15), ("Default", 1), ("Fast", 0.87), ("Faster", 0.77)]
-    static var pace: Double { AB.pace * (UserDefaults.standard.object(forKey: speedKey) as? Double ?? 1) }
+    static let speeds: [(name: String, scale: Double)] = [("Slower", 1.32), ("Slow", 1.23), ("Default", 1.15), ("Fast", 1.07), ("Faster", 1)]
+    static let defaultSpeed = 1.15
+    /// The pick kept, or Default for none or one no longer listed (0.87, 0.77 from before).
+    static func picked(_ kept: Double?) -> Double { kept.flatMap { kept in speeds.first { $0.scale == kept }?.scale } ?? defaultSpeed }
+    static var pace: Double { AB.pace * picked(UserDefaults.standard.object(forKey: speedKey) as? Double) }
     /// However far it goes, a move takes no longer than this.
     static var longest: Double { 0.8 * pace / speed }
     /// How long a move of `distance` points takes at the app's pace, at the screen's rate: no shorter than `normal`

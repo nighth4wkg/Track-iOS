@@ -14,7 +14,7 @@ struct SettingsScreen: View {
     @State private var restored = 0
     @State private var copied = false
     @State private var part = Part.training
-    @AppStorage(Motion.speedKey) private var motion = 1.0
+    @AppStorage(Motion.speedKey) private var motion = Motion.defaultSpeed
     static let contact = "n1ghthawq"
     /// How long "Copied" shows before the row reads as before (the PWA's COPIED_MS).
     private static let copiedFor = Duration.seconds(2)
@@ -130,7 +130,7 @@ struct SettingsScreen: View {
                     .buttonStyle(RowStyle())
                     .readies { model.ready(PrivacyPage()) }
                 Button { model.present(MotionList()) } label: {
-                    Row(title: "Motion", value: Motion.speeds.first { $0.scale == motion }?.name ?? "", chevron: true)
+                    Row(title: "Motion", value: Motion.speeds.first { $0.scale == Motion.picked(motion) }?.name ?? "", chevron: true)
                 }
                 .buttonStyle(RowStyle())
                 .readies { model.ready(MotionList()) }
@@ -272,7 +272,7 @@ struct RestList: View {
 /// How fast the app moves: Default, or a step slower or faster (Motion.speeds), as the rest presets are picked.
 struct MotionList: View {
     @Environment(\.closeSheet) private var close
-    @AppStorage(Motion.speedKey) private var motion = 1.0
+    @AppStorage(Motion.speedKey) private var motion = Motion.defaultSpeed
 
     var body: some View {
         SheetFrame(title: "Motion", subtitle: "How fast Track moves") {
@@ -280,10 +280,10 @@ struct MotionList: View {
                 ForEach(Motion.speeds.indices, id: \.self) { at in
                     let speed = Motion.speeds[at]
                     Button { motion = speed.scale; close() } label: {
-                        Row(title: speed.name) { if speed.scale == motion { Icon.check.image(IconSize.medium).foregroundStyle(Palette.accent) } }
+                        Row(title: speed.name) { if speed.scale == Motion.picked(motion) { Icon.check.image(IconSize.medium).foregroundStyle(Palette.accent) } }
                     }
                     .buttonStyle(RowStyle())
-                    .accessibilityAddTraits(speed.scale == motion ? .isSelected : [])
+                    .accessibilityAddTraits(speed.scale == Motion.picked(motion) ? .isSelected : [])
                 }
             }
             .padding(.top, Space.s3)
