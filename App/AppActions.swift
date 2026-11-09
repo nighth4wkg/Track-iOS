@@ -110,7 +110,7 @@ extension AppModel {
     /// The workout's screen stays made, out of sight, until what replaces it has arrived: taking its cards down was
     /// part of the recap's first frame (Finish 49 ms late, CardView deinit in its samples: build 117). After Finish
     /// it waits for the recap's badges too: kept in the window, it came down in their pop (25 ms late, build 130).
-    private func leave(_ workout: Session?, after wait: Double = Motion.travel) {
+    private func leave(_ workout: Session?, after wait: Double = AB.oldWay ? Motion.travel : Motion.settled) {
         leaving = workout
         DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
             self?.leaving = nil

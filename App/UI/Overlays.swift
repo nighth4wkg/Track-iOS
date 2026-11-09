@@ -66,7 +66,7 @@ struct SheetLayer: View {
         guard moving else { shown.removeAll { closed.contains($0.id) }; return }
         leaving += closed
         Task {
-            try? await Task.sleep(for: .seconds(Motion.travel))
+            try? await Task.sleep(for: .seconds(AB.oldWay ? Motion.travel : Motion.settled))
             shown.removeAll { closed.contains($0.id) }
             leaving.removeAll { closed.contains($0) }
             for id in closed { heights.of[id] = nil }

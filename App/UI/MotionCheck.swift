@@ -383,11 +383,11 @@ private final class Meter: NSObject {
     @objc private func tick(_ link: CADisplayLink) {
         defer { last = link.timestamp }
         let gap = link.timestamp - last, slot = link.targetTimestamp - link.timestamp
-        if last > 0, gap > slot * 1.5 { late.append((Int(((gap - slot) * 1000).rounded()), link.timestamp, link.timestamp - since < Motion.travel * 1.5 || Self.animating())) }
+        if last > 0, gap > slot * 1.5 { late.append((Int(((gap - slot) * 1000).rounded()), link.timestamp, link.timestamp - since < Motion.settled || Self.animating())) }
     }
 
     /// A Core Animation move still running in any of the app's windows (looked at only when a frame was late). SwiftUI's
-    /// own moves don't show here: the motion's first Motion.travel × 1.5 counts as moving whatever runs.
+    /// own moves don't show here: the motion's first Motion.settled counts as moving whatever runs.
     private static func animating() -> Bool {
         func moving(_ layer: CALayer) -> Bool { layer.animationKeys()?.isEmpty == false || (layer.sublayers ?? []).contains(where: moving) }
         return UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).contains { moving($0.layer) }

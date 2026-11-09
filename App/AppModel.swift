@@ -128,7 +128,7 @@ final class AppModel {
     func back() {
         guard let left = pages.popLast(), !AB.oldWay else { return }
         leftPage = left
-        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.travel) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.settled) { [weak self] in
             if self?.leftPage == left { self?.leftPage = nil }
         }
     }

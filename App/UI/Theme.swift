@@ -134,6 +134,9 @@ enum Motion {
     /// the owner chose 0.48 by eye (build 106). The PWA's --motion-travel.
     static var travel: Double { (AB.number("-ab-travel60") ?? travelAt60) * pace / speed }
     static let travelAt60 = 0.48
+    /// A move and the frames just after it are over: what's taken down after one waits this long (a page gone back
+    /// from, a closed sheet, the workout). At `travel` it came down in a move's last frames (build 131: 27-34 ms).
+    static var settled: Double { travel * 1.5 }
     /// The app's pace: the most anything moving a distance (a card, the page's scroll) goes in one frame at its
     /// fastest, in points. A move as long whatever its distance stepped further a frame the further it went, so a
     /// card opening on many sets read as a stutter at 60 Hz while a set added didn't (build 109). The owner's pick by

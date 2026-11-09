@@ -37,8 +37,9 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         holder.keep = keep
         holder.show(shown, coming: first)
         holder.everShown = shown
-        // Built once in the window as the app starts, so the first time it's shown isn't the build.
-        if !shown { DispatchQueue.main.async { holder.prebuild() } }
+        // Built once in the window as soon as it's there and sized (a tab as the app starts, a page or sheet readied as
+        // its button is held), so the first time it's shown isn't the build.
+        if !shown { holder.prebuildWhenPlaced() }
         return holder
     }
 
@@ -73,7 +74,6 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
         /// Each move's number: a move waiting for its next frame doesn't start if another has come since.
         private var moves = 0
         private var gone = false
-        private static var tries: Int { 3 }
 
         init(_ host: UIHostingController<Content>, dim: Bool) {
             self.host = host
@@ -97,14 +97,17 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
             }
         }
 
-        /// Not in the window yet (SwiftUI puts it there after it's made), it tries again a few turns later: built as
-        /// it showed instead, a readied page was 40 ms late (Past workout, build 130).
-        func prebuild(tries: Int = 0) {
-            guard !shown, host.view.superview == nil else { return }
-            guard view.window != nil else {
-                if tries < Self.tries { DispatchQueue.main.async { [weak self] in self?.prebuild(tries: tries + 1) } }
-                return
-            }
+        override func loadView() { view = StageView() }
+
+        /// Waits for SwiftUI to put it in the window and size it: tried on the next turn instead, most readied sheets
+        /// and the Lift page weren't there yet and were built as they showed (build 131: 10 of 11 sheets).
+        func prebuildWhenPlaced() {
+            loadViewIfNeeded()
+            (view as? StageView)?.placed = { [weak self] in self?.prebuild() }
+        }
+
+        private func prebuild() {
+            guard !shown, host.view.superview == nil, view.window != nil else { return }
             show(true, coming: .none)
             host.view.layoutIfNeeded()
             show(false, coming: .none)
@@ -179,6 +182,19 @@ struct Stage<Content: View>: UIViewControllerRepresentable {
                 Moves.travel { moving.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height); self.dim?.alpha = 0 }
             }
         }
+    }
+}
+
+/// A Stage's own view: tells once when it's in the window and sized, on the turn after (its subviews aren't changed
+/// in the middle of a layout).
+private final class StageView: UIView {
+    var placed: (() -> Void)?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard window != nil, !bounds.isEmpty, let placed else { return }
+        self.placed = nil
+        DispatchQueue.main.async(execute: placed)
     }
 }
 
