@@ -266,7 +266,7 @@ private final class SetsView: UIView {
     private let add = PressControl()
     private let addFill = RaisedView(.control, radius: nil)
     private let addIcon = UIImageView(image: Icon.plus.ui(IconSize.medium))
-    private let addWords = Words(.t16, .text, lines: 1)
+    private let addWords = Words(.button, .text, lines: 1)
 
     init() {
         columns = (0..<6).map { _ in Words(.t12, .muted, lines: 1, align: .center) }

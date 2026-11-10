@@ -214,8 +214,10 @@ struct KnobRow<Value: Hashable, Cell: View>: View {
 
 /// Tells its owner when a button is pressed and let go (a knob row's choice; a card whose edge is outside its button).
 struct Press: ButtonStyle {
-    /// A pressed button's look: a little darker (CardStyle).
+    /// A pressed card's look: a little darker (CardStyle).
     static let dim = 0.75
+    /// A pressed button's: this small (the PWA's --press).
+    static let scale = 0.97
     /// A disabled control, card or row (the PWA's button:disabled).
     static let faded = 0.45
     let changed: (Bool) -> Void
@@ -573,11 +575,7 @@ final class EdgeScroll: NSObject {
         self.y = y
         self.update = update
         update(page.contentOffset.y - (startOffset ?? 0))
-        if link == nil {
-            let link = CADisplayLink(target: self, selector: #selector(tick))
-            link.add(to: .main, forMode: .common)
-            self.link = link
-        }
+        if link == nil { link = Refresh.link(self, #selector(tick)) }
     }
 
     func stop() {

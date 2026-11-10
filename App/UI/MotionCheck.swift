@@ -374,10 +374,7 @@ private final class Meter: NSObject {
 
     override init() {
         super.init()
-        let link = CADisplayLink(target: self, selector: #selector(tick))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120) // the screen's full rate
-        link.add(to: .main, forMode: .common)
-        self.link = link
+        link = Refresh.link(self, #selector(tick)) // the screen's full rate
     }
 
     @objc private func tick(_ link: CADisplayLink) {

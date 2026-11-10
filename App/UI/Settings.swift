@@ -22,12 +22,7 @@ struct SettingsScreen: View {
     var body: some View {
         let settings = model.training.settings
         DeepPage {
-            HStack(spacing: Space.s3) {
-                Text("Settings").type(.t32).foregroundStyle(Palette.text).frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityAddTraits(.isHeader)
-                Button("Done") { model.back() }.buttonStyle(SecondaryStyle(hug: true))
-            }
-            .frame(minHeight: Size.control)
+            TitleBar(title: "Settings")
             PillTabs(label: "Settings sections", items: Self.parts, chosen: part, width: .infinity) { part = $0 }
                 .padding(.top, Space.s4)
             Group {

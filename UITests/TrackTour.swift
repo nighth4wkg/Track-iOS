@@ -54,7 +54,7 @@ final class TrackTour: XCTestCase {
         tap(app.buttons["Home"].firstMatch, "Home")
         tap(app.buttons["Settings"].firstMatch, "Settings"); snap("settings", after: 0.8)
         app.swipeUp(); snap("settings-scrolled"); app.swipeUp(); snap("settings-bottom")
-        app.swipeDown(); app.swipeDown(); tap(app.buttons["Done"].firstMatch, "Settings Done")
+        app.swipeDown(); app.swipeDown(); tap(app.buttons["Back"].firstMatch, "Settings back")
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Upper'")).firstMatch, "a split"); snap("split", after: 1)
         app.swipeUp(); snap("split-scrolled"); back("split"); snap("home-end", after: 0.6)
     }

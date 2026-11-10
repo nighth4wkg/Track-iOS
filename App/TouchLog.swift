@@ -37,9 +37,7 @@ import os
               let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
         let log = TouchLog()
         log.scene = scene
-        let link = CADisplayLink(target: log, selector: #selector(tick))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
-        link.add(to: .main, forMode: .common)
+        _ = Refresh.link(log, #selector(tick))
         // After everything else in a pass, the system's commit (2000000) included: the frame is handed over.
         let idle = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, Int(Int32.max)) { _, _ in
             MainActor.assumeIsolated { log.idle() }

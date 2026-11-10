@@ -19,9 +19,7 @@ import os
         guard shared == nil, ProcessInfo.processInfo.arguments.contains("-frameLog"),
               let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
         let log = FrameLog()
-        let link = CADisplayLink(target: log, selector: #selector(tick))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120) // ProMotion stays at full rate
-        link.add(to: .main, forMode: .common)
+        _ = Refresh.link(log, #selector(tick)) // ProMotion stays at full rate
         // Its own window, above everything (a workout covers the app's), taking no touches.
         let window = UIWindow(windowScene: scene)
         window.windowLevel = .alert + 1

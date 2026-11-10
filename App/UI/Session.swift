@@ -35,12 +35,21 @@ struct SessionScreen: View {
                 }
                 .padding(.top, Space.s2)
                 noteCard(current).padding(.top, Space.s6)
-                VStack(spacing: Space.s3) {
-                    Button { repeatWorkout(current) } label: { Label { Text("Repeat workout") } icon: { Icon.play.image(IconSize.medium) } }
+                Button("Delete workout") { model.deleteWorkout(current) }.buttonStyle(SecondaryStyle(danger: true))
+                    .padding(.top, Space.s6)
+                // Room for the dock, so Delete scrolls clear of it.
+                if !typing { Color.clear.frame(height: Size.primary + floatingGap - homeIndicator) }
+            }
+            // Docked as a split's Start is, and away from Delete (side by side, a slip deleted the workout).
+            .overlay(alignment: .bottom) {
+                if !typing {
+                    Button { repeatWorkout(current) } label: { Label { Text("Repeat workout") } icon: { Icon.play.image(IconSize.small) } }
                         .buttonStyle(PrimaryStyle())
-                    Button("Delete workout") { model.deleteWorkout(current) }.buttonStyle(SecondaryStyle(danger: true))
+                        .padding(.horizontal, Space.s4)
+                        .frame(maxWidth: Size.column)
+                        .floatingBottom()
+                        .floatingBar(Size.primary)
                 }
-                .padding(.top, Space.s6)
             }
             .onAppear { Sampler.note("past workout appears"); note = current.notes ?? "" }
             .onChange(of: typing) { _, now in if !now { save(current); editing = false } }

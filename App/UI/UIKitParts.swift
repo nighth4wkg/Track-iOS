@@ -12,10 +12,10 @@ extension UIColor {
 
 extension TextStyle {
     private var uiStyle: UIFont.TextStyle {
-        switch self { case .t12: .caption1; case .t14: .subheadline; case .t16: .headline; case .t20: .title3; case .t28: .title1; case .t32: .largeTitle }
+        switch self { case .t12: .caption1; case .t14: .subheadline; case .t16: .headline; case .t20: .title3; case .t28: .title1; case .t32: .largeTitle; case .button: .callout }
     }
     private var uiWeight: UIFont.Weight {
-        switch self { case .t12, .t16: .semibold; case .t14: .regular; case .t20, .t28, .t32: .bold }
+        switch self { case .t12, .t16, .button: .semibold; case .t14: .regular; case .t20, .t28, .t32: .bold }
     }
 
     /// At the system text size, as Typeset's @ScaledMetric.
@@ -102,6 +102,31 @@ final class Words: UILabel {
     private static let shared = Refresh()
     private var link: CADisplayLink?
     private var ticks = 0
+    /// The link that keeps the screen at its full rate, and until when (`hold`).
+    private var holding: CADisplayLink?
+    private var until: CFTimeInterval = 0
+
+    /// A link on the main loop that asks for the screen's full rate: every one in the app, so none ticks out of step.
+    nonisolated static func link(_ target: Any, _ selector: Selector) -> CADisplayLink {
+        let link = CADisplayLink(target: target, selector: selector)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        link.add(to: .main, forMode: .common)
+        return link
+    }
+
+    /// Keeps the screen at its full rate for `seconds`, a move's length: iOS picks each move's rate itself and may give a
+    /// slow or small one (a fade, a page's short shift) less than 120 Hz. A link that asks holds it there, as the motion
+    /// check's does, so what's measured is what's seen. Asked again meanwhile, it only lasts longer.
+    static func hold(_ seconds: Double) {
+        shared.until = max(shared.until, CACurrentMediaTime() + seconds)
+        if shared.holding == nil { shared.holding = link(shared, #selector(held)) }
+    }
+
+    @objc private func held(_ link: CADisplayLink) {
+        guard link.timestamp >= until else { return }
+        link.invalidate()
+        holding = nil
+    }
 
     static func start() {
         rate = Double(UIScreen.main.maximumFramesPerSecond)
@@ -114,10 +139,7 @@ final class Words: UILabel {
     private func time() {
         guard link == nil else { return }
         ticks = 0
-        let link = CADisplayLink(target: self, selector: #selector(tick))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
-        link.add(to: .main, forMode: .common)
-        self.link = link
+        link = Self.link(self, #selector(tick))
     }
 
     /// The third frame's length: the first ones come as the screen picks up speed.
@@ -141,10 +163,7 @@ final class Words: UILabel {
     static func run(_ action: @escaping () -> Void) {
         let next = NextFrame(action)
         // The link holds its target until it's invalidated, on its one tick.
-        let link = CADisplayLink(target: next, selector: #selector(tick))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
-        next.link = link
-        link.add(to: .main, forMode: .common)
+        next.link = Refresh.link(next, #selector(tick))
     }
 
     @objc private func tick() {
@@ -197,10 +216,10 @@ final class RaisedView: UIView {
             addSubview(view)
         }
         shade.layer.shadowColor = UIColor.black.cgColor
-        shade.layer.shadowOpacity = AB.noShadow ? 0 : 0.45
-        shade.layer.shadowRadius = 4
-        shade.layer.shadowOffset = CGSize(width: 0, height: 3)
-        fade.gradient.locations = [0, 0.12]
+        shade.layer.shadowOpacity = AB.noShadow ? 0 : Float(Depth.drop)
+        shade.layer.shadowRadius = Depth.dropRadius
+        shade.layer.shadowOffset = CGSize(width: 0, height: Depth.dropY)
+        fade.gradient.locations = [0, NSNumber(value: Depth.edgeStop)]
         round()
         paint()
     }
@@ -212,7 +231,7 @@ final class RaisedView: UIView {
             let colors = surface.shade.map { UIColor($0).cgColor }
             shade.gradient.colors = colors
             inner.gradient.colors = colors
-            fade.gradient.colors = [UIColor.white.withAlphaComponent(surface.edge).cgColor, UIColor.white.withAlphaComponent(0.04).cgColor]
+            fade.gradient.colors = [UIColor.white.withAlphaComponent(surface.edge).cgColor, UIColor.white.withAlphaComponent(Depth.edgeEnd).cgColor]
         }
     }
 
@@ -245,9 +264,9 @@ final class SunkView: UIView {
         layer.masksToBounds = true // the inner shadow stays in the well
         if !AB.noInner {
             caster.shadowColor = UIColor.black.cgColor
-            caster.shadowOpacity = 0.65
-            caster.shadowRadius = 1.5
-            caster.shadowOffset = CGSize(width: 0, height: 1)
+            caster.shadowOpacity = Float(Depth.well)
+            caster.shadowRadius = Depth.wellRadius
+            caster.shadowOffset = CGSize(width: 0, height: Depth.wellY)
             layer.addSublayer(caster)
         }
         edge()
@@ -256,8 +275,8 @@ final class SunkView: UIView {
     required init?(coder: NSCoder) { nil }
 
     private func edge() {
-        layer.borderWidth = ring == nil ? Size.hairline : 2
-        layer.borderColor = (ring ?? UIColor.white.withAlphaComponent(0.03)).cgColor
+        layer.borderWidth = ring == nil ? Size.hairline : Depth.ring
+        layer.borderColor = (ring ?? UIColor.white.withAlphaComponent(Depth.rim)).cgColor
     }
 
     override func layoutSubviews() {
@@ -308,13 +327,26 @@ class PressControl: UIControl {
     override var isHighlighted: Bool {
         didSet {
             guard isHighlighted != oldValue else { return }
-            if let onPress { onPress(isHighlighted) } else { look() }
+            if let onPress { onPress(isHighlighted) } else { press(isHighlighted) }
         }
     }
 
-    override var isEnabled: Bool { didSet { look() } }
+    override var isEnabled: Bool { didSet { alpha = isEnabled ? 1 : Press.faded } }
 
-    private func look() { alpha = (isEnabled ? 1 : Press.faded) * (isHighlighted ? Press.dim : 1) }
+    /// Pressed, it dips and springs back (Pressed, Theme): drawn that small only, its own size and place untouched, so
+    /// a layout meanwhile sets its frame as ever.
+    private func press(_ on: Bool) {
+        let key = "transform.scale"
+        let move = CABasicAnimation(keyPath: key)
+        move.fromValue = layer.presentation()?.value(forKeyPath: key) ?? 1
+        move.toValue = on ? Press.scale : 1
+        // With Reduce Motion it's that small at once (no length at all would be Core Animation's own quarter second).
+        move.duration = Motion.still ? .leastNonzeroMagnitude : Motion.fast
+        move.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        move.fillMode = .forwards
+        move.isRemovedOnCompletion = !on
+        layer.add(move, forKey: "press")
+    }
 }
 
 /// A round button holding one icon (RoundButton).
@@ -411,12 +443,14 @@ enum Moves {
 
     @MainActor private static func move(_ length: Double, _ change: @escaping () -> Void) {
         guard AB.evenCurve, !Motion.still else { return spring(length, change) }
+        Refresh.hold(length)
         UIView.animate(withDuration: length, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut], animations: change)
     }
 
     @MainActor private static func spring(_ length: Double, _ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
         // Reduce Motion, here for every move: a caller without its own check moved (a card resized by typing).
         if Motion.still { UIView.performWithoutAnimation(change); completion?(true); return }
+        Refresh.hold(length)
         UIView.animate(springDuration: length, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState], animations: change, completion: completion)
     }
 

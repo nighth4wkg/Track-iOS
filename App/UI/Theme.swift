@@ -5,7 +5,7 @@ import UIKit
 // Track's look, token for token the PWA's (Track-pwa pwa/src/styles.css :root): dark only, solid surfaces lit from
 // above, built from two recipes. RAISED (cards, sheets, controls, tiles, buttons, the nav pill): a top-to-bottom shade,
 // a faint light line along the top edge and a small soft shadow. SUNK (fields, segment tracks, bars): a darker well
-// with a soft inner shadow at the top. Nothing animates: every change shows at once.
+// with a soft inner shadow at the top (Depth). How it moves is Motion, below.
 enum Palette {
     static let background = Color(hex: Hex.night)
     static let text = Color(hex: 0xF7F8F6)
@@ -90,8 +90,8 @@ enum Size {
 
 /// Insets of single parts (the PWA's --pad-*).
 enum Pad {
-    /// A secondary button's sides, a field's sides, a pill's message side, a badge's top and bottom.
-    static let secondary: CGFloat = 18, field: CGFloat = 14, toast: CGFloat = 20, badge: CGFloat = 3
+    /// A main button's sides, a secondary button's, a field's, a pill's message side, a badge's top and bottom.
+    static let primary: CGFloat = 20, secondary: CGFloat = 18, field: CGFloat = 14, toast: CGFloat = 20, badge: CGFloat = 3
 }
 
 /// Gaps of single parts (the PWA's --gap-*): a tab's icon to its word, a chart key's swatch to its word.
@@ -186,7 +186,7 @@ enum Motion {
     /// A finger's own move (an arranged row let go, typing) changes without it.
     /// Callable from the model (not main-actor isolated), whose changes all run on the main thread.
     static func tap(_ change: () -> Void) {
-        MainActor.assumeIsolated { if still || AB.stillTap { change() } else { withAnimation(move, change) } }
+        MainActor.assumeIsolated { if still || AB.stillTap { change() } else { Refresh.hold(travel); withAnimation(move, change) } }
     }
 }
 
@@ -354,23 +354,24 @@ enum Corner {
     }
 }
 
-/// The PWA's t-12 to t-32: size, line height and weight, growing with the system text size.
+/// The PWA's t-12 to t-32: size, line height and weight, growing with the system text size. The names are the design
+/// canvas's steps, not the sizes (t14 is 15, t16 is 17). `button` is the words on a button (the PWA's --text-button).
 enum TextStyle {
-    case t12, t14, t16, t20, t28, t32
+    case t12, t14, t16, t20, t28, t32, button
 
     var size: CGFloat {
-        switch self { case .t12: 12; case .t14: 15; case .t16: 17; case .t20: 20; case .t28: 28; case .t32: 32 }
+        switch self { case .t12: 12; case .t14: 15; case .t16: 17; case .t20: 20; case .t28: 28; case .t32: 32; case .button: 16 }
     }
     var lineHeight: CGFloat {
-        switch self { case .t12: 16; case .t14: 20; case .t16: 22; case .t20: 28; case .t28: 34; case .t32: 40 }
+        switch self { case .t12: 16; case .t14: 20; case .t16, .button: 22; case .t20: 28; case .t28: 34; case .t32: 40 }
     }
     var weight: Font.Weight {
-        switch self { case .t12, .t16: .semibold; case .t14: .regular; case .t20, .t28, .t32: .bold }
+        switch self { case .t12, .t16, .button: .semibold; case .t14: .regular; case .t20, .t28, .t32: .bold }
     }
     /// t-32 sits a little tighter (-0.01em).
     var tracking: CGFloat { self == .t32 ? -size / 100 : 0 }
     var relative: Font.TextStyle {
-        switch self { case .t12: .caption; case .t14: .subheadline; case .t16: .headline; case .t20: .title3; case .t28: .title; case .t32: .largeTitle }
+        switch self { case .t12: .caption; case .t14: .subheadline; case .t16: .headline; case .t20: .title3; case .t28: .title; case .t32: .largeTitle; case .button: .callout }
     }
 }
 
@@ -416,6 +417,18 @@ struct Backdrop: View {
     var body: some View { Palette.background.ignoresSafeArea() }
 }
 
+/// What RAISED and SUNK are drawn with, beside their fills (the PWA's --shine, --rim, --drop and --shadow-sunk).
+enum Depth {
+    /// RAISED's small soft shadow: how dark, how soft, how far down.
+    static let drop = 0.45, dropRadius: CGFloat = 4, dropY: CGFloat = 3
+    /// The light line along a RAISED top edge fades to this, this share of the way down.
+    static let edgeEnd = 0.04, edgeStop = 0.12
+    /// SUNK's inner shadow at its top: how dark, how soft, how far down; and its faint rim.
+    static let well = 0.65, wellRadius: CGFloat = 1.5, wellY: CGFloat = 1, rim = 0.03
+    /// A field's ring (focused, wrong): twice the hairline.
+    static let ring = Size.hairline * 2
+}
+
 /// RAISED: the shade, a light line along the top edge, a small soft shadow drawn from the shape alone.
 struct Raised: ViewModifier {
     let surface: Surface
@@ -425,15 +438,15 @@ struct Raised: ViewModifier {
         let shape = corner.shape
         let shade = LinearGradient(colors: surface.shade, startPoint: .top, endPoint: .bottom)
         let fade = LinearGradient(stops: [.init(color: .white.opacity(surface.edge), location: 0),
-                                          .init(color: .white.opacity(0.04), location: 0.12)], startPoint: .top, endPoint: .bottom)
+                                          .init(color: .white.opacity(Depth.edgeEnd), location: Depth.edgeStop)], startPoint: .top, endPoint: .bottom)
         // The edge line as three plain fills (shade, the fading white over it, the shade again 1 pt in): no mask or
         // stroke, so no offscreen pass per card.
         content.background {
             if AB.flatSurfaces { shape.fill(Palette.well) } else {
                 shape.fill(shade)
-                    .shadow(color: .black.opacity(AB.noShadow ? 0 : 0.45), radius: AB.noShadow ? 0 : 4, y: AB.noShadow ? 0 : 3)
+                    .shadow(color: .black.opacity(AB.noShadow ? 0 : Depth.drop), radius: AB.noShadow ? 0 : Depth.dropRadius, y: AB.noShadow ? 0 : Depth.dropY)
                     .overlay(shape.fill(fade))
-                    .overlay(shape.inset(by: 1).fill(shade))
+                    .overlay(shape.inset(by: Size.hairline).fill(shade))
                     .drawingGroup(when: AB.surfaceGroup)
             }
         }
@@ -450,9 +463,9 @@ struct Sunk: ViewModifier {
         content.background {
             if AB.flatSurfaces { shape.fill(Palette.well) } else {
                 Group {
-                    if AB.noInner { shape.fill(Palette.well) } else { shape.fill(Palette.well.shadow(.inner(color: .black.opacity(0.65), radius: 1.5, y: 1))) }
+                    if AB.noInner { shape.fill(Palette.well) } else { shape.fill(Palette.well.shadow(.inner(color: .black.opacity(Depth.well), radius: Depth.wellRadius, y: Depth.wellY))) }
                 }
-                .overlay(shape.strokeBorder(ring ?? .white.opacity(0.03), lineWidth: ring == nil ? 1 : 2))
+                .overlay(shape.strokeBorder(ring ?? .white.opacity(Depth.rim), lineWidth: ring == nil ? Size.hairline : Depth.ring))
                 .drawingGroup(when: AB.surfaceGroup)
             }
         }
@@ -466,10 +479,16 @@ extension View {
     func pad() -> some View { padding(Space.s4) }
 }
 
-/// How a pressed button answers, at once (no motion yet): a little darker. Disabled ones don't answer.
+/// How a pressed button answers: it dips a little and springs back (the PWA's button:active; at once with Reduce
+/// Motion). Disabled ones don't answer. The move is set here: its screen turns every other one off (Calm).
 private struct Pressed: ViewModifier {
     let on: Bool
-    func body(content: Content) -> some View { content.opacity(on ? Press.dim : 1).modifier(Readies(on: on)) }
+    func body(content: Content) -> some View {
+        let move: Animation? = Motion.still ? nil : .smooth(duration: Motion.fast)
+        return content.scaleEffect(on ? Press.scale : 1)
+            .transaction(value: on) { $0.animation = move }
+            .modifier(Readies(on: on))
+    }
 }
 
 extension EnvironmentValues {
@@ -516,9 +535,9 @@ struct PrimaryStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .type(.t16).fontWeight(.bold)
+            .type(.button).fontWeight(.bold)
             .foregroundStyle(enabled ? Palette.onGreen : Palette.muted)
-            .padding(.horizontal, compact ? Space.s4 : Space.s6)
+            .padding(.horizontal, Pad.primary)
             .frame(maxWidth: compact ? nil : .infinity, minHeight: compact ? Size.control : Size.primary)
             .modifier(Fill(enabled: enabled))
             .modifier(Pressed(on: configuration.isPressed && enabled))
@@ -542,7 +561,7 @@ struct SecondaryStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .type(.t16)
+            .type(.button)
             .foregroundStyle(danger ? Palette.danger : Palette.text)
             .padding(.horizontal, hug ? Pad.secondary : 0)
             .frame(maxWidth: hug ? nil : .infinity, minHeight: height)
