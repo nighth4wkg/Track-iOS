@@ -651,7 +651,7 @@ private struct Follow: ViewModifier {
                 let speed = finger.speed
                 finger.y = 0
                 finger.speed = 0
-                guard settle != 0 else { return }
+                guard settle != 0, !Motion.still else { settle = 0; return }
                 // A spring's starting speed is a share of the distance it covers per second.
                 withAnimation(.interpolatingSpring(duration: Motion.fast, bounce: 0, initialVelocity: speed / -settle)) { settle = 0 }
             }

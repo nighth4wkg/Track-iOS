@@ -410,11 +410,13 @@ enum Moves {
     }
 
     @MainActor private static func move(_ length: Double, _ change: @escaping () -> Void) {
-        guard AB.evenCurve else { return spring(length, change) }
+        guard AB.evenCurve, !Motion.still else { return spring(length, change) }
         UIView.animate(withDuration: length, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut], animations: change)
     }
 
     @MainActor private static func spring(_ length: Double, _ change: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
+        // Reduce Motion, here for every move: a caller without its own check moved (a card resized by typing).
+        if Motion.still { UIView.performWithoutAnimation(change); completion?(true); return }
         UIView.animate(springDuration: length, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState], animations: change, completion: completion)
     }
 
